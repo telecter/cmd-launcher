@@ -2,7 +2,7 @@ import { type VersionData, type AssetData } from "./types.ts"
 import { exists, existsSync, walk } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import * as api from "./api.ts"
-console.log("a")
+
 const writeOnLine = (s: string) => { Deno.stdout.write(new TextEncoder().encode("\x1b[1K\r" + s)) }
 
 function initDirectory(version: string) {
@@ -96,7 +96,7 @@ async function main(args: string[]) {
     java: ["-cp", `client.jar:${(await findLibraries()).join(":")}`, "-XstartOnFirstThread", data.mainClass],
     game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id]
   }
-  console.log(`Starting Minecraft ${version}...`)
+  console.log(`\nStarting Minecraft ${version}...`)
   new Deno.Command("java", { args: cmdArgs.java.concat(cmdArgs.game) }).spawn()
 }
 
