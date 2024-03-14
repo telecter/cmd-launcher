@@ -8,7 +8,7 @@ This will download libraries, assets, and the client.
 
 ### Not Implemented
 - Skins
-- Authentication
+- Authentication (you will not be able to log on to `online-mode` servers)
 
 ## Warning!
 This launcher does not yet implement authentication.  
