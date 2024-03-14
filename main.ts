@@ -1,41 +1,23 @@
 import { type VersionData, type AssetData } from "./types.ts"
-import { exists, existsSync, walk } from "https://deno.land/std@0.219.1/fs/mod.ts";
+import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import * as api from "./api.ts"
-
+import * as util from "./util.ts"
 const writeOnLine = (s: string) => { Deno.stdout.write(new TextEncoder().encode("\x1b[1K\r" + s)) }
 
-function initDirectory(version: string) {
-  const versionPath = `minecraft/${version}`
-  if (!existsSync(versionPath)) {
-    Deno.mkdirSync(versionPath, {recursive:true})
-  }
-  return versionPath
-}
-
-export async function findLibraries() {
-  const libPaths = []
-  for await (const walkEntry of walk("libraries")) {
-    if (walkEntry.isFile) {
-      libPaths.push(walkEntry.path)
-    }
-  }
-  return libPaths
-}
 async function update() {
   const tags = await (await fetch("https://api.github.com/repos/telectr/minecraft-launcher/tags")).json()
   const latestTag = tags[0].name
   console.log(latestTag)
-  await api.download(`https://github.com/telectr/minecraft-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`, "updated-launcher")
-  console.log(`Downloaded update.
-  1. Delete the current launcher
-  2. Rename the updated launcher (updated-launcher -> minecraft-launcher)
-  3. Run: chmod +x minecraft-launcher
-  `)
-
+  const data = await (await fetch(`https://github.com/telectr/minecraft-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`)).arrayBuffer()
+  if (Deno.execPath().includes("deno")) {
+    throw Error("Cannot update non-executable")
+  }
+  Deno.writeFile(Deno.execPath(), new Uint8Array(data))
+  Deno.exit()
 }
 
-function getArgs(args: string[]) {
+async function getArgs(args: string[]) {
   const flags = parseArgs(args, {
     string: ["version", "username"],
     boolean: ["help", "list-releases", "list-snapshots", "update"]
@@ -64,14 +46,15 @@ Usage: minecraft-launcher [options]
     }).finally(() => Deno.exit())
   }
   else if (flags.update) {
-    update()
-    Deno.exit()
+    await update()
+    Deno.exit(0)
   }
 
   return flags
 }
 async function main(args: string[]) {
-  const flags = getArgs(args)
+  console.log("a")
+  const flags = await getArgs(args)
   let version = null
   if (flags.version) {
     version = flags.version
@@ -83,7 +66,7 @@ async function main(args: string[]) {
       Deno.exit(1)
   })
   version = data.id
-  Deno.chdir(initDirectory(version))
+  Deno.chdir(await util.initDirectory(version))
 
   if (!await exists("client.jar")) {
     console.log("Downloading client...")
@@ -110,7 +93,7 @@ async function main(args: string[]) {
   }
 
   const cmdArgs = {
-    java: ["-cp", `client.jar:${(await findLibraries()).join(":")}`, "-XstartOnFirstThread", data.mainClass],
+    java: ["-cp", `client.jar:${(await util.findLibraries()).join(":")}`, "-XstartOnFirstThread", data.mainClass],
     game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id]
   }
   console.log(`\nStarting Minecraft ${version}...`)
