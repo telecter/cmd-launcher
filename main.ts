@@ -23,10 +23,17 @@ export async function findLibraries() {
   return libPaths
 }
 
+async function update() {
+  const tags = await (await fetch("https://api.github.com/repos/telectr/minecraft-launcher/tags")).json()
+  const latestTag = tags[0].name
+  const data = await (await fetch(`https://github.com/denoland/deno/releases/download/${latestTag}/launcher-${Deno.build.target}`)).arrayBuffer()
+  await Deno.writeFile(import.meta.url, new Uint8Array(data))
+}
+
 function getArgs(args: string[]) {
   const flags = parseArgs(args, {
     string: ["version", "username"],
-    boolean: ["help", "list-releases", "list-snapshots"]
+    boolean: ["help", "list-releases", "list-snapshots", "update"]
   })
   if (flags.help) {
     console.log(`
@@ -34,6 +41,7 @@ Command Line Minecraft Launcher
 Usage: minecraft-launcher [options]
 --version     Version of Minecraft to launch
 --username    Username, defaults to random
+--update      Update the launcher
 --help        Display this help and exit
     `)
     Deno.exit()
@@ -49,6 +57,10 @@ Usage: minecraft-launcher [options]
     api.getVersionManifest().then((data) => {
       data.versions.filter((element) => element.type == versionType).forEach((element) => console.log(element.id))
     }).finally(() => Deno.exit())
+  }
+  else if (flags.update) {
+    update()
+    Deno.exit()
   }
 
   return flags
