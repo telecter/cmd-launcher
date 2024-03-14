@@ -22,12 +22,17 @@ export async function findLibraries() {
   }
   return libPaths
 }
-
 async function update() {
   const tags = await (await fetch("https://api.github.com/repos/telectr/minecraft-launcher/tags")).json()
   const latestTag = tags[0].name
-  const data = await (await fetch(`https://github.com/denoland/deno/releases/download/${latestTag}/launcher-${Deno.build.target}`)).arrayBuffer()
-  await Deno.writeFile(import.meta.url, new Uint8Array(data))
+  console.log(latestTag)
+  await api.download(`https://github.com/telectr/minecraft-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`, "updated-launcher")
+  console.log(`Downloaded update.
+  1. Delete the current launcher
+  2. Rename the updated launcher (updated-launcher -> minecraft-launcher)
+  3. Run: chmod +x minecraft-launcher
+  `)
+
 }
 
 function getArgs(args: string[]) {
