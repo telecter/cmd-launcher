@@ -53,7 +53,6 @@ Usage: minecraft-launcher [options]
   return flags
 }
 async function main(args: string[]) {
-  console.log("a")
   const flags = await getArgs(args)
   let version = null
   if (flags.version) {
