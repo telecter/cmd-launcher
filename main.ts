@@ -43,7 +43,7 @@ Usage: minecraft-launcher [options]
     }
     api.getVersionManifest().then((data) => {
       data.versions.filter((element) => element.type == versionType).forEach((element) => console.log(element.id))
-    })
+    }).finally(() => Deno.exit())
   }
   else if (flags.update) {
     await update()
