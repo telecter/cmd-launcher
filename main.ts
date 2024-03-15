@@ -13,7 +13,7 @@ async function update() {
   if (Deno.execPath().includes("deno")) {
     throw Error("Cannot update non-executable")
   }
-  Deno.writeFile(Deno.execPath(), new Uint8Array(data))
+  await Deno.writeFile(Deno.execPath(), new Uint8Array(data))
   Deno.exit()
 }
 
