@@ -10,10 +10,14 @@ export async function download(url: string, dest: string) {
     }
     await Deno.writeFile(dest, new Uint8Array(data))
     return dest
-  }
+}
 
 export async function getVersionManifest() {
   return <VersionManifest>(await (await fetch("https://launchermeta.mojang.com/mc/game/version_manifest.json")).json())
+}
+
+export async function filterVersions(filter: "release"|"snapshot") {
+  return (await getVersionManifest()).versions.filter((element) => element.type == filter)
 }
 
 
