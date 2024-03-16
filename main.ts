@@ -4,12 +4,9 @@ import { parseArgs } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import * as api from "./api.ts"
 import * as util from "./util.ts"
 
-const isCompiled = true;
-
-const writeOnLine = (s: string) => { Deno.stdout.write(new TextEncoder().encode("\x1b[1K\r" + s)) }
 
 async function update() {
-  if (!isCompiled) {
+  if (Deno.execPath().includes("deno")) {
     throw Error("Cannot update non-executable")
   }
   const tags = await (await fetch("https://api.github.com/repos/telectr/minecraft-launcher/tags")).json()
@@ -27,7 +24,7 @@ function getArgs(args: string[]) {
   })
   if (flags.help) {
     console.log(`
-Command Line Minecraft Launcher
+Command Line Minecraft Launcher v0.3.1-alpha
 Usage: minecraft-launcher [options]
 --version         Version of Minecraft to launch
 --username        Username, defaults to random
@@ -38,13 +35,16 @@ Usage: minecraft-launcher [options]
     `)
     Deno.exit()
   }
-
+  if (flags._.length > 0) {
+    console.log("Invalid argument")
+    Deno.exit(1)
+  }
   return flags
 }
 
 async function main(args: string[]) {
   const flags = getArgs(args)
-  let version = null
+  let version: string|null = null
   if (flags.version) {
     version = flags.version
   }
@@ -64,35 +64,49 @@ async function main(args: string[]) {
       console.error(`Failed to get version data: ${err.message}`)
       Deno.exit(1)
   })
+
   version = data.id
-  Deno.chdir(await util.initDirectory(version))
-  if (!await exists("client.jar")) {
-    console.log("Downloading client...")
-    await api.download(data.downloads.client.url, "client.jar")
+
+  if (!await exists("minecraft")) {
+    await Deno.mkdir("minecraft")
   }
+  Deno.chdir("minecraft")
+
+  const versionPath = `${Deno.cwd()}/${version}`
+
   if (!await exists("libraries")) {
     console.log("Downloading libraries...")
     for (const library of data.libraries) {
-      writeOnLine(library.downloads.artifact.path)
-      await api.downloadLibrary(library)
+      util.writeOnLine(library.downloads.artifact.path)
+      await api.downloadLibrary(library, Deno.cwd())
     }
   }
-  if (!await exists("assets")) {
+
+  if (!await exists(version)) {
+    await Deno.mkdir(version, {recursive:true})
+  }
+
+  if (!await exists(`${versionPath}/client.jar`)) {
+    console.log("\nDownloading client...")
+    await util.download(data.downloads.client.url, `${versionPath}/client.jar`)
+  }
+
+  if (!await exists(`${versionPath}/assets`)) {
     console.log("\nDownloading assets...")
     const assets: AssetData = await (await fetch(data.assetIndex.url)).json()
     const numberOfAssets = Object.keys(assets.objects).length
     let i = 0;
     for (const [name, asset] of Object.entries(assets.objects)) {
-      writeOnLine(`${i}/${numberOfAssets} ${name}`)
-      await api.downloadAsset(asset)
+      util.writeOnLine(`${i}/${numberOfAssets} ${name}`)
+      await api.downloadAsset(asset, versionPath)
       i++
     }
-    await api.download(data.assetIndex.url, `assets/indexes/${data.assetIndex.id}.json`)
+    await api.downloadAssetData(data.assetIndex.url, data.assetIndex.id, versionPath)
   }
 
   const cmdArgs = {
-    java: ["-cp", `client.jar:${(await util.findLibraries()).join(":")}`, "-XstartOnFirstThread", data.mainClass],
-    game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id]
+    java: ["-cp", `${versionPath}/client.jar:${util.getLibraryPaths(data.libraries).join(":")}`, "-XstartOnFirstThread", data.mainClass],
+    game: ["--version", "", "--accessToken", "abc", "--assetsDir", `${versionPath}/assets`, "--assetIndex", data.assetIndex.id, "--gameDir", versionPath]
   }
   if (flags.username) {
     cmdArgs.game.push("--username", flags.username)
