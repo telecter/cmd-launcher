@@ -20,7 +20,7 @@ async function update() {
 function getArgs(args: string[]) {
   const flags = parseArgs(args, {
     string: ["version", "username"],
-    boolean: ["help", "list-releases", "list-snapshots", "update"]
+    boolean: ["help", "list-releases", "list-snapshots", "update"],
   })
   if (flags.help) {
     console.log(`
@@ -70,9 +70,13 @@ async function main(args: string[]) {
   if (!await exists("minecraft")) {
     await Deno.mkdir("minecraft")
   }
+
   Deno.chdir("minecraft")
 
-  const versionPath = `${Deno.cwd()}/${version}`
+  if (!await exists(version)) {
+    await Deno.mkdir(version, {recursive:true})
+  }
+
 
   if (!await exists("libraries")) {
     console.log("Downloading libraries...")
@@ -82,31 +86,29 @@ async function main(args: string[]) {
     }
   }
 
-  if (!await exists(version)) {
-    await Deno.mkdir(version, {recursive:true})
-  }
+  Deno.chdir(version)
 
-  if (!await exists(`${versionPath}/client.jar`)) {
+  if (!await exists("client.jar")) {
     console.log("\nDownloading client...")
-    await util.download(data.downloads.client.url, `${versionPath}/client.jar`)
+    await util.download(data.downloads.client.url, "client.jar")
   }
 
-  if (!await exists(`${versionPath}/assets`)) {
+  if (!await exists("assets")) {
     console.log("\nDownloading assets...")
     const assets: AssetData = await (await fetch(data.assetIndex.url)).json()
     const numberOfAssets = Object.keys(assets.objects).length
     let i = 0;
     for (const [name, asset] of Object.entries(assets.objects)) {
       util.writeOnLine(`${i}/${numberOfAssets} ${name}`)
-      await api.downloadAsset(asset, versionPath)
+      await api.downloadAsset(asset, Deno.cwd())
       i++
     }
-    await api.downloadAssetData(data.assetIndex.url, data.assetIndex.id, versionPath)
+    await api.downloadAssetData(data.assetIndex.url, data.assetIndex.id, Deno.cwd())
   }
 
   const cmdArgs = {
-    java: ["-cp", `${versionPath}/client.jar:${util.getLibraryPaths(data.libraries).join(":")}`, "-XstartOnFirstThread", data.mainClass],
-    game: ["--version", "", "--accessToken", "abc", "--assetsDir", `${versionPath}/assets`, "--assetIndex", data.assetIndex.id, "--gameDir", versionPath]
+    java: ["-cp", `client.jar:${util.getLibraryPaths(data.libraries, "../libraries").join(":")}`, "-XstartOnFirstThread", data.mainClass],
+    game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id, "--gameDir", Deno.cwd()]
   }
   if (flags.username) {
     cmdArgs.game.push("--username", flags.username)

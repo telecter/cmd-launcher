@@ -4,9 +4,11 @@ import { Library } from "./types.ts";
 
 export const writeOnLine = (s: string) => { Deno.stdout.write(new TextEncoder().encode("\x1b[1K\r" + s)) }
 
-export function getLibraryPaths(libraries: Library[]) {
+export function getLibraryPaths(libraries: Library[], rootDir: string) {
     const paths: string[] = []
-    libraries.forEach((element) => paths.push(`libraries/${element.downloads.artifact.path}`))
+    libraries.forEach((element) => {
+      paths.push(`${rootDir}/${element.downloads.artifact.path}`)
+  })
     return paths
 }
 
