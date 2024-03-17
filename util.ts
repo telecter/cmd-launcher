@@ -7,7 +7,6 @@ export const writeOnLine = (s: string) => { Deno.stdout.write(new TextEncoder().
 export function getLibraryPaths(libraries: Library[]) {
     const paths: string[] = []
     libraries.forEach((element) => paths.push(`libraries/${element.downloads.artifact.path}`))
-    console.log(paths)
     return paths
 }
 
