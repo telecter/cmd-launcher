@@ -24,7 +24,7 @@ function getArgs(args: string[]) {
   })
   if (flags.help) {
     console.log(`
-Command Line Minecraft Launcher v0.3.1-alpha
+Command Line Minecraft Launcher
 Usage: minecraft-launcher [options]
 --version         Version of Minecraft to launch
 --username        Username, defaults to random
