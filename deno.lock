@@ -12,7 +12,8 @@
     }
   },
   "redirects": {
-    "https://deno.land/std/fs/mod.ts": "https://deno.land/std@0.219.1/fs/mod.ts"
+    "https://deno.land/std/fs/mod.ts": "https://deno.land/std@0.219.1/fs/mod.ts",
+    "https://deno.land/x/is_docker/mod.ts": "https://deno.land/x/is_docker@v2.0.0/mod.ts"
   },
   "remote": {
     "https://deno.land/std@0.207.0/assert/assert.ts": "9a97dad6d98c238938e7540736b826440ad8c1c1e54430ca4c4e623e585607ee",
