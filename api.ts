@@ -5,7 +5,10 @@ export async function getVersionManifest() {
   return <VersionManifest>(await (await fetch("https://launchermeta.mojang.com/mc/game/version_manifest.json")).json())
 }
 
-export async function filterVersions(filter: "release"|"snapshot") {
+export async function filterVersions(filter: string) {
+  if (!["release", "snapshot"].includes(filter)) {
+    throw TypeError(`${filter} is not a version type`)
+  }
   return (await getVersionManifest()).versions.filter((element) => element.type == filter)
 }
 
@@ -82,7 +85,7 @@ export async function getAuthToken() {
   const xboxJson = await (await fetch("https://user.auth.xboxlive.com/user/authenticate", {
     method: "POST",
     body: JSON.stringify({
-      Properties: {
+        Properties: {
         AuthMethod: "RPS",
         SiteName: "user.auth.xboxlive.com",
         RpsTicket: `d=${token}`
@@ -120,6 +123,5 @@ export async function getAuthToken() {
     method: "POST",
     body: data
   })
-  console.log(loginXboxJson.status, loginXboxJson.statusText)
+  console.log(await loginXboxJson.json())
 }
-await getAuthToken()

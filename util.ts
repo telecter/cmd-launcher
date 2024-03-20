@@ -9,7 +9,7 @@ export function getLibraryPaths(libraries: Library[], rootDir: string) {
     libraries.forEach((element) => {
       paths.push(`${rootDir}/${element.downloads.artifact.path}`)
   })
-    return paths
+    return paths.join(":")
 }
 
 export async function download(url: string, dest: string) {

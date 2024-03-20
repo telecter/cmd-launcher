@@ -19,19 +19,23 @@ async function update() {
 
 function getArgs(args: string[]) {
   const flags = parseArgs(args, {
-    string: ["version", "username"],
-    boolean: ["help", "list-releases", "list-snapshots", "update"],
+    string: ["version", "username", "list"],
+    boolean: ["help", "update"],
+    alias: {
+      "version": "v",
+      "username": "u",
+      "list": "l"
+    }
   })
   if (flags.help) {
     console.log(`
 Command Line Minecraft Launcher
 Usage: minecraft-launcher [options]
---version         Version of Minecraft to launch
---username        Username, defaults to random
---list-snapshots  List all snapshots
---list-releases   List all releases
---update          Update the launcher
---help            Display this help and exit
+-v, --version         Version of Minecraft to launch
+-u, --username        Username for offline mode, defaults to random
+-l, --list <type>     List all versions of the specified type
+--update              Update the launcher
+--help                Display this help and exit
     `)
     Deno.exit()
   }
@@ -48,17 +52,22 @@ async function main(args: string[]) {
   if (flags.version) {
     version = flags.version
   }
+
   if (flags.update) {
     await update()
   }
-  if (flags["list-releases"]) {
-    (await api.filterVersions("release")).forEach((element) => console.log(element.id))
+
+  if (flags.list) {
+    try {
+      (await api.filterVersions(flags.list)).forEach((element) => console.log(element.id))
+    }
+    catch (err) {
+      console.log(`Failed to list versions: ${err.message}`)
+      Deno.exit(1)
+    }
     Deno.exit()
   }
-  else if (flags["list-snapshots"]) {
-    (await api.filterVersions("snapshot")).forEach((element) => console.log(element.id))
-    Deno.exit()
-  }
+
   console.log(`Getting version data for ${version ?? "latest"}`)
   const data: VersionData = await api.getVersionData(version).catch((err) => {
       console.error(`Failed to get version data: ${err.message}`)
@@ -66,17 +75,18 @@ async function main(args: string[]) {
   })
 
   version = data.id
+  const rootDir = `${Deno.cwd()}/minecraft`
+  const instanceDir = `${rootDir}/instances/${flags.name ?? version}`
 
-  if (!await exists("minecraft")) {
-    await Deno.mkdir("minecraft")
+  if (!await exists(rootDir)) {
+    await Deno.mkdir(rootDir)
   }
 
-  Deno.chdir("minecraft")
+  Deno.chdir(rootDir)
 
-  if (!await exists(version)) {
-    await Deno.mkdir(version, {recursive:true})
+  if (!await exists(instanceDir)) {
+    await Deno.mkdir(instanceDir, {recursive:true})
   }
-
 
   if (!await exists("libraries")) {
     console.log("Downloading libraries...")
@@ -86,7 +96,7 @@ async function main(args: string[]) {
     }
   }
 
-  Deno.chdir(version)
+  Deno.chdir(instanceDir)
 
   if (!await exists("client.jar")) {
     console.log("\nDownloading client...")
@@ -106,15 +116,19 @@ async function main(args: string[]) {
     await api.downloadAssetData(data.assetIndex.url, data.assetIndex.id, Deno.cwd())
   }
 
+  const classPath = `client.jar:${util.getLibraryPaths(data.libraries, `${rootDir}/libraries`)}`
   const cmdArgs = {
-    java: ["-cp", `client.jar:${util.getLibraryPaths(data.libraries, "../libraries").join(":")}`, "-XstartOnFirstThread", data.mainClass],
-    game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id, "--gameDir", Deno.cwd()]
+    java: ["-cp", classPath],
+    game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id, "--gameDir", instanceDir]
   }
   if (flags.username) {
     cmdArgs.game.push("--username", flags.username)
   }
+  if (Deno.build.os == "darwin") {
+    cmdArgs.java.push("-XstartOnFirstThread")
+  }
   console.log(`\nStarting Minecraft ${version}...`)
-  new Deno.Command("java", { args: cmdArgs.java.concat(cmdArgs.game) }).spawn()
+  new Deno.Command("java", { args: [...cmdArgs.java, data.mainClass, ...cmdArgs.game] }).spawn()
 }
 
 
