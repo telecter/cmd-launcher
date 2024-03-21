@@ -1,4 +1,3 @@
-import { type VersionData, type AssetData } from "./types.ts"
 import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import * as api from "./api.ts"
@@ -69,58 +68,56 @@ async function main(args: string[]) {
   }
 
   console.log(`Getting version data for ${version ?? "latest"}`)
-  const data: VersionData = await api.getVersionData(version).catch((err) => {
+  const data = await api.getVersionData(version).catch((err) => {
       console.error(`Failed to get version data: ${err.message}`)
       Deno.exit(1)
   })
 
   version = data.id
+
   const rootDir = `${Deno.cwd()}/minecraft`
   const instanceDir = `${rootDir}/instances/${flags.name ?? version}`
 
   if (!await exists(rootDir)) {
     await Deno.mkdir(rootDir)
   }
-
-  Deno.chdir(rootDir)
-
   if (!await exists(instanceDir)) {
     await Deno.mkdir(instanceDir, {recursive:true})
   }
 
-  if (!await exists("libraries")) {
-    console.log("Downloading libraries...")
-    for (const library of data.libraries) {
-      util.writeOnLine(library.downloads.artifact.path)
-      await api.downloadLibrary(library, Deno.cwd())
-    }
+  Deno.chdir(rootDir)
+
+  console.log("Loading libraries...")
+  for (const library of data.libraries) {
+    util.writeOnLine(library.downloads.artifact.path)
+    await api.downloadLibrary(library, "libraries")
   }
 
-  Deno.chdir(instanceDir)
+  console.log("\nDownloading assets...")
+  const assets = await api.getAssetData(data.assetIndex.url)
+  const numberOfAssets = Object.keys(assets.objects).length
+  let i = 0
+  for (const [name, asset] of Object.entries(assets.objects)) {
+    i++
+    util.writeOnLine(`${i}/${numberOfAssets} ${name}`)
+    await api.downloadAsset(asset, "assets")
+  }
+  await util.saveFile(JSON.stringify(assets), `assets/indexes/${data.assetIndex.id}.json`)
 
-  if (!await exists("client.jar")) {
+  const clientPath = `${instanceDir}/client.jar`
+  if (!await exists(clientPath)) {
     console.log("\nDownloading client...")
-    await util.download(data.downloads.client.url, "client.jar")
+    await util.download(data.downloads.client.url, classPath)
   }
 
-  if (!await exists("assets")) {
-    console.log("\nDownloading assets...")
-    const assets: AssetData = await (await fetch(data.assetIndex.url)).json()
-    const numberOfAssets = Object.keys(assets.objects).length
-    let i = 0;
-    for (const [name, asset] of Object.entries(assets.objects)) {
-      util.writeOnLine(`${i}/${numberOfAssets} ${name}`)
-      await api.downloadAsset(asset, Deno.cwd())
-      i++
-    }
-    await api.downloadAssetData(data.assetIndex.url, data.assetIndex.id, Deno.cwd())
-  }
 
-  const classPath = `client.jar:${util.getLibraryPaths(data.libraries, `${rootDir}/libraries`)}`
+  const classPath = `${clientPath}:${util.getLibraryPaths(data.libraries, `${rootDir}/libraries`)}`
+
   const cmdArgs = {
     java: ["-cp", classPath],
     game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id, "--gameDir", instanceDir]
   }
+
   if (flags.username) {
     cmdArgs.game.push("--username", flags.username)
   }

@@ -1,5 +1,8 @@
+import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
 import { type Asset, type Library, type VersionManifest } from "./types.ts";
 import { download } from "./util.ts";
+import { AssetData } from "./types.ts";
+import { VersionData } from "./types.ts";
 
 export async function getVersionManifest() {
   return <VersionManifest>(await (await fetch("https://launchermeta.mojang.com/mc/game/version_manifest.json")).json())
@@ -22,21 +25,27 @@ export async function getVersionData(version: string|null) {
     if (!release) {
       throw Error("Invalid version")
     }
-    return (await fetch(release.url)).json()
+    return <VersionData>await (await fetch(release.url)).json()
 }
 
-export async function downloadAssetData(url: string, id: string, rootDir: string) {
-  await download(url, `${rootDir}/assets/indexes/${id}.json`)
+export async function getAssetData(url: string) {
+  return <AssetData>await (await fetch(url)).json()
 }
 
 export async function downloadLibrary(library: Library, rootDir: string) {
     const artifact = library.downloads.artifact
-    await download(artifact.url, `${rootDir}/libraries/${artifact.path}`)
+    const path = `${rootDir}/${artifact.path}`
+    if (!await exists(path)) {
+      await download(artifact.url, path)
+    }
 }
+
 export async function downloadAsset(asset: Asset, rootDir: string) {
       const objectPath = `${asset.hash.slice(0, 2)}/${asset.hash}`
-      const path = `${rootDir}/assets/objects/${objectPath}`
-      await download(`https://resources.download.minecraft.net/${objectPath}`, path)
+      const path = `${rootDir}/objects/${objectPath}`
+      if (!await exists(path)) {
+        await download(`https://resources.download.minecraft.net/${objectPath}`, path)
+      }
 }
 
 export async function getAuthToken() {

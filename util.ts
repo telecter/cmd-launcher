@@ -18,6 +18,14 @@ export async function download(url: string, dest: string) {
   if (!await exists(dir)) {
     await Deno.mkdir(dir, {recursive:true})
   }
+
   await Deno.writeFile(dest, new Uint8Array(data))
-  return dest
+}
+
+export async function saveFile(data: string, path: string) {
+  const dir = dirname(path)
+  if (!await exists(dir)) {
+    await Deno.mkdir(dir, {recursive:true})
+  }
+  await Deno.writeFile(path, new TextEncoder().encode(data))
 }
