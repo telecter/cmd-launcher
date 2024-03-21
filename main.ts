@@ -107,7 +107,7 @@ async function main(args: string[]) {
   const clientPath = `${instanceDir}/client.jar`
   if (!await exists(clientPath)) {
     console.log("\nDownloading client...")
-    await util.download(data.downloads.client.url, classPath)
+    await util.download(data.downloads.client.url, clientPath)
   }
 
 
