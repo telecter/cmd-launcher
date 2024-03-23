@@ -16,16 +16,21 @@ async function update() {
   Deno.exit()
 }
 
+function printHelp() {
+  console.log(`
+  usage: minecraft-launcher [...options]
+  A command line Minecraft launcher.
+
+  Options:
+    -u, --username    Set the username
+  `)
+}
 
 async function main(args: string[]) {
   const flags = parseArgs(args, { 
     string: ["version", "username"],
     boolean: ["help"],
-    alias: {
-      "version": "v",
-      "username": "u",
-      "help": "help"
-    },
+    alias: { "version": "v", "username": "u", "help": "help" },
     unknown: (arg) => { 
       console.log(`Invalid argument: ${arg}`)
       Deno.exit(1)
