@@ -1,18 +1,10 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
-import { type Asset, type Library, type VersionManifest } from "./types.ts";
+import {  Asset, Library, VersionManifest } from "./types.ts";
 import { download } from "./util.ts";
-import { AssetData } from "./types.ts";
-import { VersionData } from "./types.ts";
+import { AssetData, VersionData } from "./types.ts";
 
 export async function getVersionManifest() {
   return <VersionManifest>(await (await fetch("https://launchermeta.mojang.com/mc/game/version_manifest.json")).json())
-}
-
-export async function filterVersions(filter: string) {
-  if (!["release", "snapshot"].includes(filter)) {
-    throw TypeError(`${filter} is not a version type`)
-  }
-  return (await getVersionManifest()).versions.filter((element) => element.type == filter)
 }
 
 
@@ -50,19 +42,18 @@ export async function downloadAsset(asset: Asset, rootDir: string) {
 
 export async function getAuthToken() {
   const client_id = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
+  const scope = "XboxLive.SignIn"
+  const redirect_uri = "http://localhost:8000/signin"
   const url = new URL("https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize")
-  const params = new URLSearchParams({
+  url.search = new URLSearchParams({
     "client_id": client_id,
     "response_type": "code",
-    "redirect_uri": "http://localhost:8000/signin",
-    "scope": "XboxLive.SignIn",
+    "redirect_uri": redirect_uri,
+    "scope": scope,
     "response_mode": "query"
-  })
-  url.search = params.toString()
+  }).toString()
 
-  new Deno.Command("open", {
-    args: [url.toString()]
-  }).spawn()
+  new Deno.Command("open", { args: [url.toString()] }).spawn()
 
   let authCode: string
 
@@ -70,7 +61,6 @@ export async function getAuthToken() {
     const url = new URL(req.url)
     if (url.pathname == "/signin") {
       authCode = <string>url.searchParams.get("code")
-      console.log(authCode)
       queueMicrotask(server.shutdown)
       return new Response("Response recorded", { status: 200 })
     }
@@ -78,26 +68,27 @@ export async function getAuthToken() {
   })
   await server.finished
 
-  const tokenJson = await (await fetch("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", {
+  const authTokenData = await (await fetch("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", {
     method: "POST",
     body: new URLSearchParams({
-      "client_id": "6a533aa3-afbf-45a4-91bc-8c35a37e35c7",
-      "scope": "XboxLive.SignIn",
-      "redirect_uri": "http://localhost:8000/signin",
+      "client_id": client_id,
+      "scope": scope,
+      "redirect_uri": redirect_uri,
       "grant_type": "authorization_code",
       "code": authCode!
     }),
     headers: { "Content-Type": "application/x-www-form-urlencoded" }
   })).json()
-  const token = tokenJson.access_token
 
-  const xboxJson = await (await fetch("https://user.auth.xboxlive.com/user/authenticate", {
+  const authToken = authTokenData.access_token
+
+  const xboxAuthData = await (await fetch("https://user.auth.xboxlive.com/user/authenticate", {
     method: "POST",
     body: JSON.stringify({
         Properties: {
         AuthMethod: "RPS",
         SiteName: "user.auth.xboxlive.com",
-        RpsTicket: `d=${token}`
+        RpsTicket: `d=${authToken}`
       },
       RelyingParty: "http://auth.xboxlive.com",
       TokenType: "JWT"
@@ -107,10 +98,10 @@ export async function getAuthToken() {
       "Accept": "application/json"
     }
   })).json()
-  const xblToken = xboxJson.Token
-  const userhash = xboxJson.DisplayClaims.xui[0].uhs
-  console.log(`USERHASH: ${userhash}`)
-  const xstsJson = await (await fetch("https://xsts.auth.xboxlive.com/xsts/authorize", {
+  const xblToken = xboxAuthData.Token
+  const userhash = xboxAuthData.DisplayClaims.xui[0].uhs
+
+  const xstsData = await (await fetch("https://xsts.auth.xboxlive.com/xsts/authorize", {
     method: "POST",
     body: JSON.stringify({
       Properties: {
@@ -123,14 +114,17 @@ export async function getAuthToken() {
       TokenType: "JWT"
     })
   })).json()
-  const xstsToken = xstsJson.Token
-  const data = JSON.stringify({
-    identityToken: `XBL3.0 x=${userhash};${xstsToken}`
-  })
-  console.log(data)
-  const loginXboxJson = await fetch("https://api.minecraftservices.com/authentication/login_with_xbox", {
+  const xstsToken = xstsData.Token
+  const loginXboxData = await fetch("https://api.minecraftservices.com/authentication/login_with_xbox", {
     method: "POST",
-    body: data
+    body: JSON.stringify({
+      identityToken: `XBL3.0 x=${userhash};${xstsToken}`
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    }
   })
-  console.log(await loginXboxJson.json())
+  console.log(await loginXboxData.json())
+  console.log(loginXboxData.status, loginXboxData.statusText)
 }

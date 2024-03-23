@@ -1,5 +1,5 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
-import { parseArgs } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
+import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts"
 import * as api from "./api.ts"
 import * as util from "./util.ts"
 
@@ -16,57 +16,32 @@ async function update() {
   Deno.exit()
 }
 
-function getArgs(args: string[]) {
-  const flags = parseArgs(args, {
-    string: ["version", "username", "list"],
-    boolean: ["help", "update"],
+
+async function main(args: string[]) {
+  const flags = parseArgs(args, { 
+    string: ["version", "username"],
+    boolean: ["help"],
     alias: {
       "version": "v",
       "username": "u",
-      "list": "l"
-    }
-  })
+      "help": "help"
+    },
+    unknown: (arg) => { 
+      console.log(`Invalid argument: ${arg}`)
+      Deno.exit(1)
+     }
+   })
+  let version = flags.version ?? null
+
   if (flags.help) {
     console.log(`
-Command Line Minecraft Launcher
-Usage: minecraft-launcher [options]
--v, --version         Version of Minecraft to launch
--u, --username        Username for offline mode, defaults to random
--l, --list <type>     List all versions of the specified type
---update              Update the launcher
---help                Display this help and exit
+    usage: minecraft-launcher [...options]
+    Options:
+      -h, --help      Display this help and exit
+      -v, --version   Set version of game to launcher
+      -u, --username  Set username, defaults to random
     `)
-    Deno.exit()
   }
-  if (flags._.length > 0) {
-    console.log("Invalid argument")
-    Deno.exit(1)
-  }
-  return flags
-}
-
-async function main(args: string[]) {
-  const flags = getArgs(args)
-  let version: string|null = null
-  if (flags.version) {
-    version = flags.version
-  }
-
-  if (flags.update) {
-    await update()
-  }
-
-  if (flags.list) {
-    try {
-      (await api.filterVersions(flags.list)).forEach((element) => console.log(element.id))
-    }
-    catch (err) {
-      console.log(`Failed to list versions: ${err.message}`)
-      Deno.exit(1)
-    }
-    Deno.exit()
-  }
-
   console.log(`Getting version data for ${version ?? "latest"}`)
   const data = await api.getVersionData(version).catch((err) => {
       console.error(`Failed to get version data: ${err.message}`)
@@ -111,21 +86,20 @@ async function main(args: string[]) {
   }
 
 
-  const classPath = `${clientPath}:${util.getLibraryPaths(data.libraries, `${rootDir}/libraries`)}`
+  const classPath = [clientPath, ...data.libraries.map((element) => `libraries/${element.downloads.artifact.path}`)].join(":")
 
-  const cmdArgs = {
-    java: ["-cp", classPath],
-    game: ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id, "--gameDir", instanceDir]
-  }
-
-  if (flags.username) {
-    cmdArgs.game.push("--username", flags.username)
-  }
+  const javaArgs = ["-cp", classPath]
+  const gameArgs = ["--version", "", "--accessToken", "abc", "--assetsDir", "assets", "--assetIndex", data.assetIndex.id, "--gameDir", instanceDir]
   if (Deno.build.os == "darwin") {
-    cmdArgs.java.push("-XstartOnFirstThread")
+    javaArgs.push("-XstartOnFirstThread")
+  }
+  if (flags.username) {
+    gameArgs.push("--username", flags.username)
   }
   console.log(`\nStarting Minecraft ${version}...`)
-  new Deno.Command("java", { args: [...cmdArgs.java, data.mainClass, ...cmdArgs.game] }).spawn()
+  new Deno.Command("java", {
+    args: [...javaArgs, data.mainClass, ...gameArgs]
+  }).spawn()
 }
 
 

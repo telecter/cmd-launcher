@@ -1,16 +1,8 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
 import { dirname } from "https://deno.land/std@0.219.1/path/dirname.ts";
-import { Library } from "./types.ts";
+import { getVersionManifest } from "./api.ts";
 
 export const writeOnLine = (s: string) => { Deno.stdout.write(new TextEncoder().encode("\x1b[1K\r" + s)) }
-
-export function getLibraryPaths(libraries: Library[], rootDir: string) {
-    const paths: string[] = []
-    libraries.forEach((element) => {
-      paths.push(`${rootDir}/${element.downloads.artifact.path}`)
-  })
-    return paths.join(":")
-}
 
 export async function download(url: string, dest: string) {
   const data = await (await fetch(url)).arrayBuffer()
@@ -28,4 +20,11 @@ export async function saveFile(data: string, path: string) {
     await Deno.mkdir(dir, {recursive:true})
   }
   await Deno.writeFile(path, new TextEncoder().encode(data))
+}
+
+export async function filterVersions(filter: string) {
+  if (!["release", "snapshot"].includes(filter)) {
+    throw TypeError(`${filter} is not a version type`)
+  }
+  return (await getVersionManifest()).versions.filter((element) => element.type == filter).map((element) => element.id)
 }
