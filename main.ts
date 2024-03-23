@@ -8,13 +8,13 @@ async function update() {
     throw Error("Cannot update non-executable");
   }
   const tags = await (
-    await fetch("https://api.github.com/repos/telectr/minecraft-launcher/tags")
+    await fetch("https://api.github.com/repos/telectr/cmd-launcher/tags")
   ).json();
   const latestTag = tags[0].name;
   console.log(`Upgrading to ${latestTag}`);
   const data = await (
     await fetch(
-      `https://github.com/telectr/minecraft-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`,
+      `https://github.com/telectr/cmd-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`,
     )
   ).arrayBuffer();
   await Deno.writeFile(Deno.execPath(), new Uint8Array(data));
@@ -28,13 +28,16 @@ function printHelp() {
 
   Options:
     -u, --username    Set the username
+    -v, --version     Set the version of the game to launch
+    --update          Update the launcher
+    -h, --help        Show this help and exit
   `);
 }
 
 async function main(args: string[]) {
   const flags = parseArgs(args, {
     string: ["version", "username"],
-    boolean: ["help"],
+    boolean: ["help", "update"],
     alias: { version: "v", username: "u", help: "help" },
     unknown: (arg) => {
       console.log(`Invalid argument: ${arg}`);
@@ -47,6 +50,9 @@ async function main(args: string[]) {
   if (flags.help) {
     printHelp();
     Deno.exit();
+  }
+  if (flags.update) {
+    await update();
   }
 
   console.log(`Getting version data for ${version ?? "latest"}`);
