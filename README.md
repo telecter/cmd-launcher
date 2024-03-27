@@ -1,11 +1,11 @@
-## `minecraft-launcher`
+## `cmd-launcher`
 
 A basic command line Minecraft launcher.
 
 ### Usage
 
 To start the latest version, run the binary.
-`./minecraft-launcher`.
+`./cmd-launcher`.
 This will download libraries, assets, and the client.
 
 ### Not Implemented
