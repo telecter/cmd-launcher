@@ -4,9 +4,7 @@ A basic command line Minecraft launcher.
 
 ### Usage
 
-To start the latest version, run the binary.
-`./cmd-launcher`.
-This will download libraries, assets, and the client.
+To start the latest version, run the binary. This will downloads assets, libraries, and the client to launch the game.  
 
 ### Not Implemented
 
