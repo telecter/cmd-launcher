@@ -32,13 +32,7 @@ type ReleaseString = `${number}.${number}`;
 type SnapshotString = `${number}w${number}${string}`;
 
 export type VersionData = {
-  assetIndex: {
-    id: string;
-    sha1: string;
-    size: number;
-    totalSize: number;
-    url: string;
-  };
+  assetIndex: AssetIndexData;
   assets: string;
   downloads: {
     client: {
@@ -56,6 +50,14 @@ export type VersionData = {
   mainClass: string;
 };
 
-export type AssetData = {
+export type AssetIndexData = {
+  id: string;
+  sha1: string;
+  size: number;
+  totalSize: number;
+  url: string;
+};
+
+export type AssetIndex = {
   objects: { [asset: string]: Asset };
 };

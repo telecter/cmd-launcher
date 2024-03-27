@@ -2,6 +2,7 @@ import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts";
 import * as api from "./api.ts";
 import * as util from "./util.ts";
+import { getAuthData } from "./auth.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
@@ -55,7 +56,7 @@ async function main(args: string[]) {
     await update();
   }
 
-  console.log(`Getting version data for ${version ?? "latest"}`);
+  console.log(`Getting version data for ${version ?? "latest version"}`);
   const data = await api.getVersionData(version).catch((err) => {
     console.error(`Failed to get version data: ${err.message}`);
     Deno.exit(1);
@@ -78,22 +79,18 @@ async function main(args: string[]) {
   console.log("Loading libraries...");
   for (const library of data.libraries) {
     util.writeOnLine(library.downloads.artifact.path);
-    await api.downloadLibrary(library, "libraries");
+    await api.downloadLibrary(library, rootDir);
   }
 
   console.log("\nDownloading assets...");
-  const assets = await api.getAssetData(data.assetIndex.url);
+  const assets = await api.downloadAssetData(data.assetIndex, rootDir);
   const numberOfAssets = Object.keys(assets.objects).length;
   let i = 0;
   for (const [name, asset] of Object.entries(assets.objects)) {
     i++;
     util.writeOnLine(`${i}/${numberOfAssets} ${name}`);
-    await api.downloadAsset(asset, "assets");
+    await api.downloadAsset(asset, rootDir);
   }
-  await util.saveFile(
-    JSON.stringify(assets),
-    `assets/indexes/${data.assetIndex.id}.json`,
-  );
 
   const clientPath = `${instanceDir}/client.jar`;
   if (!(await exists(clientPath))) {
@@ -109,23 +106,25 @@ async function main(args: string[]) {
   ].join(":");
 
   const javaArgs = ["-cp", classPath];
+  const [accessToken, username, uuid] = await getAuthData(rootDir);
   const gameArgs = [
     "--version",
     "",
     "--accessToken",
-    "abc",
+    accessToken,
     "--assetsDir",
     "assets",
     "--assetIndex",
     data.assetIndex.id,
     "--gameDir",
     instanceDir,
+    "--uuid",
+    uuid,
+    "--username",
+    username,
   ];
   if (Deno.build.os == "darwin") {
     javaArgs.push("-XstartOnFirstThread");
-  }
-  if (flags.username) {
-    gameArgs.push("--username", flags.username);
   }
   console.log(`\nStarting Minecraft ${version}...`);
   new Deno.Command("java", {

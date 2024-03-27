@@ -4,9 +4,8 @@ A basic command line Minecraft launcher.
 
 ### Usage
 
-To start the latest version, run the binary.
-`./minecraft-launcher`.
-This will download libraries, assets, and the client.
+To start the latest version, run the binary. `./minecraft-launcher`. This will
+download libraries, assets, and the client.
 
 ### Not Implemented
 
@@ -15,5 +14,5 @@ This will download libraries, assets, and the client.
 
 ## Warning!
 
-This launcher does not yet implement authentication.
-This means you can run it without owning a copy of Minecraft. **Doing so is considered piracy.**
+This launcher does not yet implement authentication. This means you can run it
+without owning a copy of Minecraft. **Doing so is considered piracy.**
