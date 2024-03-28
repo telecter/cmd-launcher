@@ -28,8 +28,7 @@ function printHelp() {
   A command line Minecraft launcher.
 
   Options:
-    -u, --username    Set the username
-    -v, --version     Set the version of the game to launch
+    -l, --launch      Launch a specific version of the game
     --update          Update the launcher
     -h, --help        Show this help and exit
   `);
