@@ -24,7 +24,7 @@ async function update() {
 
 function printHelp() {
   console.log(`
-  usage: minecraft-launcher [...options]
+  usage: cmd-launcher [...options]
   A command line Minecraft launcher.
 
   Options:
