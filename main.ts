@@ -37,16 +37,16 @@ function printHelp() {
 
 async function main(args: string[]) {
   const flags = parseArgs(args, {
-    string: ["version", "username"],
+    string: ["version", "launch"],
     boolean: ["help", "update"],
-    alias: { version: "v", username: "u", help: "help" },
+    alias: { help: "help" },
     unknown: (arg) => {
       console.log(`Invalid argument: ${arg}`);
       printHelp();
       Deno.exit(1);
     },
   });
-  let version = flags.version ?? null;
+  let version = flags.launch ?? null;
 
   if (flags.help) {
     printHelp();
@@ -77,13 +77,16 @@ async function main(args: string[]) {
   Deno.chdir(rootDir);
 
   console.log("Loading libraries...");
+
+  const libraryPathList = [];
   for (const library of data.libraries) {
     util.writeOnLine(library.downloads.artifact.path);
-    await api.downloadLibrary(library, rootDir);
+    const libraryPath = await api.fetchLibrary(library, rootDir);
+    libraryPathList.push(libraryPath);
   }
 
   console.log("\nDownloading assets...");
-  const assets = await api.downloadAssetData(data.assetIndex, rootDir);
+  const assets = await api.getAndSaveAssetData(data.assetIndex, rootDir);
   const numberOfAssets = Object.keys(assets.objects).length;
   let i = 0;
   for (const [name, asset] of Object.entries(assets.objects)) {
@@ -98,15 +101,13 @@ async function main(args: string[]) {
     await util.download(data.downloads.client.url, clientPath);
   }
 
-  const classPath = [
-    clientPath,
-    ...data.libraries.map(
-      (element) => `libraries/${element.downloads.artifact.path}`,
-    ),
-  ].join(":");
+  const classPath = [clientPath, ...libraryPathList].join(":");
 
   const javaArgs = ["-cp", classPath];
-  const [accessToken, username, uuid] = await getAuthData(rootDir);
+
+  const [accessToken, username, uuid] = await getAuthData(
+    `${rootDir}/accounts.json`,
+  );
   const gameArgs = [
     "--version",
     "",

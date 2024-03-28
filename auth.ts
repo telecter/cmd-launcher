@@ -1,7 +1,7 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
 
 const client_id = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7";
-const scope = "XboxLive.SignIn";
+const scope = "XboxLive.SignIn,offline_access";
 const redirect_uri = "http://localhost:8000/signin";
 
 async function getMsaAuthCode() {
@@ -23,7 +23,7 @@ async function getMsaAuthCode() {
   const server = Deno.serve((req) => {
     const url = new URL(req.url);
     if (url.pathname == "/signin") {
-      authCode = <string> url.searchParams.get("code");
+      authCode = <string>url.searchParams.get("code");
       queueMicrotask(server.shutdown);
       return new Response("Response recorded", { status: 200 });
     }
@@ -33,25 +33,28 @@ async function getMsaAuthCode() {
   return authCode!;
 }
 
-async function getMsaAuthToken(authCode: string): Promise<string> {
+async function getMsaAuthToken(
+  authCode: string,
+  refresh: boolean,
+): Promise<string[]> {
+  const searchParams = new URLSearchParams({
+    client_id: client_id,
+    scope: scope,
+    redirect_uri: redirect_uri,
+    grant_type: refresh ? "refresh_token" : "authorization_code",
+  });
+  searchParams.append(refresh ? "refresh_token" : "code", authCode);
   const authTokenData = await (
     await fetch(
       "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
       {
         method: "POST",
-        body: new URLSearchParams({
-          client_id: client_id,
-          scope: scope,
-          redirect_uri: redirect_uri,
-          grant_type: "authorization_code",
-          code: authCode!,
-        }),
+        body: searchParams,
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       },
     )
   ).json();
-
-  return authTokenData.access_token;
+  return [authTokenData.access_token, authTokenData.refresh_token];
 }
 
 async function getXboxAuthData(msaAuthToken: string) {
@@ -73,7 +76,6 @@ async function getXboxAuthData(msaAuthToken: string) {
       },
     })
   ).json();
-  console.log(xboxAuthData);
   return [xboxAuthData.Token, xboxAuthData.DisplayClaims.xui[0].uhs];
 }
 
@@ -91,7 +93,6 @@ async function getXstsToken(xblToken: string) {
       }),
     })
   ).json();
-  console.log(xstsData);
   return xstsData.Token;
 }
 
@@ -133,20 +134,31 @@ async function getProfileData(jwtToken: string) {
   return [profileData.name, profileData.id];
 }
 
-export async function getAuthData(rootDir: string) {
-  if (await exists(`${rootDir}/accounts.json`)) {
+/** Returns authentication data to launch the game. This opens the default web browser to complete the authentication. */
+export async function getAuthData(accountDataFile: string): Promise<string[]> {
+  let msaAuthToken;
+  let refreshToken;
+  if (await exists(accountDataFile)) {
+    const refreshTokenData = JSON.parse(
+      await Deno.readTextFile(accountDataFile),
+    ).refresh_token;
+    [msaAuthToken, refreshToken] = await getMsaAuthToken(
+      refreshTokenData,
+      true,
+    );
+  } else {
+    const authCode = await getMsaAuthCode();
+    [msaAuthToken, refreshToken] = await getMsaAuthToken(authCode, false);
   }
 
-  const authCode = await getMsaAuthCode();
-  const msaAuthToken = await getMsaAuthToken(authCode);
   const [xblToken, userhash] = await getXboxAuthData(msaAuthToken);
   const xstsToken = await getXstsToken(xblToken);
   const jwtToken = await getMinecraftAuthToken(xstsToken, userhash);
   const [username, uuid] = await getProfileData(jwtToken);
   await Deno.writeTextFile(
-    `${rootDir}/accounts.json`,
+    accountDataFile,
     JSON.stringify({
-      username: username,
+      refresh_token: refreshToken,
     }),
   );
   return [jwtToken, username, uuid];

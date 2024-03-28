@@ -29,7 +29,7 @@ export async function getVersionData(
 }
 
 /** Download the asset data from the specified URL, save it to the `assets` directory, and return the JSON file. Only downloads if the file does not already exist. */
-export async function downloadAssetData(
+export async function getAndSaveAssetData(
   assetIndex: AssetIndexData,
   rootDir: string,
 ): Promise<AssetIndex> {
@@ -44,16 +44,17 @@ export async function downloadAssetData(
   return data;
 }
 
-/** Download the specified game library to the `libraries` directory. Only downloads if the file does not already exist. */
-export async function downloadLibrary(library: Library, rootDir: string) {
+/** Fetch the specified game library to the `libraries` directory. Only downloads if the file does not already exist. */
+export async function fetchLibrary(library: Library, rootDir: string) {
   const artifact = library.downloads.artifact;
   const path = `${rootDir}/libraries/${artifact.path}`;
   if (!(await exists(path))) {
     await download(artifact.url, path);
   }
+  return path;
 }
 
-/** Download the specified asset to the `assets` directory. Only downloads if the file does not already exist. */
+/** Fetch the specified asset to the `assets` directory. Only downloads if the file does not already exist. */
 export async function downloadAsset(asset: Asset, rootDir: string) {
   const objectPath = `${asset.hash.slice(0, 2)}/${asset.hash}`;
   const path = `${rootDir}/assets/objects/${objectPath}`;
@@ -63,4 +64,5 @@ export async function downloadAsset(asset: Asset, rootDir: string) {
       path,
     );
   }
+  return path;
 }
