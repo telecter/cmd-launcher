@@ -14,7 +14,7 @@ export type Asset = {
   size: number;
 };
 export type Version = {
-  id: ReleaseString | SnapshotString;
+  id: string;
   type: "release" | "snapshot";
   url: string;
   time: string;
@@ -23,13 +23,11 @@ export type Version = {
 
 export type VersionManifest = {
   latest: {
-    snapshot: ReleaseString;
-    release: SnapshotString;
+    snapshot: string;
+    release: string;
   };
   versions: Version[];
 };
-type ReleaseString = `${number}.${number}`;
-type SnapshotString = `${number}w${number}${string}`;
 
 export type VersionData = {
   assetIndex: AssetIndexData;
@@ -41,7 +39,7 @@ export type VersionData = {
       url: string;
     };
   };
-  id: ReleaseString | SnapshotString;
+  id: string;
   javaVersion: {
     component: string;
     majorVersion: number;

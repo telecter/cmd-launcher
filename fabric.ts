@@ -17,10 +17,14 @@ export async function fetchFabricLibrary(library: any, rootDir: string) {
   return fsPath;
 }
 
-export async function getFabricMeta() {
+export async function getFabricMeta(gameVersion: string) {
+  const versionList = await (
+    await fetch("https://meta.fabricmc.net/v2/versions/loader/1.20.4")
+  ).json();
+
   return (
     await fetch(
-      "https://meta.fabricmc.net/v2/versions/loader/24w13a/0.15.7/profile/json",
+      `https://meta.fabricmc.net/v2/versions/loader/${gameVersion}/${versionList[0].loader.version}/profile/json`,
     )
   ).json();
 }

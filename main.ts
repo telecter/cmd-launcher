@@ -89,7 +89,7 @@ async function main(args: string[]) {
 
   if (flags.fabric) {
     console.log("\nLoading Fabric mod loader...");
-    const fabricData = await getFabricMeta();
+    const fabricData = await getFabricMeta(version);
     for (const library of fabricData.libraries) {
       util.writeOnLine(library.name);
       const libraryPath = await fetchFabricLibrary(library, rootDir);
@@ -127,7 +127,7 @@ async function main(args: string[]) {
     "--accessToken",
     accessToken,
     "--assetsDir",
-    "assets",
+    `${rootDir}/assets`,
     "--assetIndex",
     data.assetIndex.id,
     "--gameDir",
@@ -144,6 +144,8 @@ async function main(args: string[]) {
     javaArgs.push("-DFabricMcEmu= net.minecraft.client.main.Main ");
   }
   console.log(`\nStarting Minecraft ${version}...`);
+
+  Deno.chdir(instanceDir);
   new Deno.Command("java", {
     args: [...javaArgs, mainClass, ...gameArgs],
   }).spawn();
