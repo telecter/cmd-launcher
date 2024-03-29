@@ -3,6 +3,7 @@ import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts";
 import * as api from "./api.ts";
 import * as util from "./util.ts";
 import { getAuthData } from "./auth.ts";
+import { fetchFabricLibrary, getFabricMeta } from "./fabric.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
@@ -29,6 +30,7 @@ function printHelp() {
 
   Options:
     -l, --launch      Launch a specific version of the game
+    --fabric          Launch the game with the Fabric mod loader
     --update          Update the launcher
     -h, --help        Show this help and exit
   `);
@@ -37,8 +39,8 @@ function printHelp() {
 async function main(args: string[]) {
   const flags = parseArgs(args, {
     string: ["version", "launch"],
-    boolean: ["help", "update"],
-    alias: { help: "help" },
+    boolean: ["help", "update", "fabric"],
+    alias: { help: "help", launch: "l" },
     unknown: (arg) => {
       console.log(`Invalid argument: ${arg}`);
       printHelp();
@@ -62,6 +64,7 @@ async function main(args: string[]) {
   });
 
   version = data.id;
+  let mainClass = data.mainClass;
 
   const rootDir = `${Deno.cwd()}/minecraft`;
   const instanceDir = `${rootDir}/instances/${flags.name ?? version}`;
@@ -84,6 +87,17 @@ async function main(args: string[]) {
     libraryPathList.push(libraryPath);
   }
 
+  if (flags.fabric) {
+    console.log("\nLoading Fabric mod loader...");
+    const fabricData = await getFabricMeta();
+    for (const library of fabricData.libraries) {
+      util.writeOnLine(library.name);
+      const libraryPath = await fetchFabricLibrary(library, rootDir);
+      libraryPathList.push(libraryPath);
+    }
+    mainClass = fabricData.mainClass;
+  }
+
   console.log("\nDownloading assets...");
   const assets = await api.getAndSaveAssetData(data.assetIndex, rootDir);
   const numberOfAssets = Object.keys(assets.objects).length;
@@ -100,9 +114,9 @@ async function main(args: string[]) {
     await util.download(data.downloads.client.url, clientPath);
   }
 
-  const classPath = [clientPath, ...libraryPathList].join(":");
+  const classPath = [clientPath, ...libraryPathList];
 
-  const javaArgs = ["-cp", classPath];
+  const javaArgs = ["-cp", classPath.join(":")];
 
   const [accessToken, username, uuid] = await getAuthData(
     `${rootDir}/accounts.json`,
@@ -126,9 +140,12 @@ async function main(args: string[]) {
   if (Deno.build.os == "darwin") {
     javaArgs.push("-XstartOnFirstThread");
   }
+  if (flags.fabric) {
+    javaArgs.push("-DFabricMcEmu= net.minecraft.client.main.Main ");
+  }
   console.log(`\nStarting Minecraft ${version}...`);
   new Deno.Command("java", {
-    args: [...javaArgs, data.mainClass, ...gameArgs],
+    args: [...javaArgs, mainClass, ...gameArgs],
   }).spawn();
 }
 
