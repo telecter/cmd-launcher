@@ -30,7 +30,9 @@ function printHelp() {
 
   Options:
     -l, --launch      Launch a specific version of the game
-    --fabric          Launch the game with the Fabric mod loader
+    -f, --fabric      Launch the game with the Fabric mod loader
+    -s, --server      Join the specified server on launch
+
     --update          Update the launcher
     -h, --help        Show this help and exit
   `);
@@ -38,9 +40,9 @@ function printHelp() {
 
 async function main(args: string[]) {
   const flags = parseArgs(args, {
-    string: ["version", "launch"],
+    string: ["version", "launch", "server"],
     boolean: ["help", "update", "fabric"],
-    alias: { help: "help", launch: "l" },
+    alias: { help: "help", launch: "l", server: "s" },
     unknown: (arg) => {
       console.log(`Invalid argument: ${arg}`);
       printHelp();
@@ -143,6 +145,10 @@ async function main(args: string[]) {
   if (flags.fabric) {
     javaArgs.push("-DFabricMcEmu= net.minecraft.client.main.Main ");
   }
+  if (flags.server) {
+    gameArgs.push("--quickPlayMultiplayer", flags.server);
+  }
+
   console.log(`\nStarting Minecraft ${version}...`);
 
   Deno.chdir(instanceDir);
