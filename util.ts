@@ -18,12 +18,3 @@ export async function saveFile(data: string, path: string) {
   }
   await Deno.writeFile(path, new TextEncoder().encode(data));
 }
-
-export function log(s: string, level: "INFO" | "ERROR" = "INFO") {
-  const output = `[%c${level}%c] ${s}`;
-  if (level == "INFO") {
-    console.log(output, "color: blue", "");
-  } else if (level == "ERROR") {
-    console.error(output, "color: red", "");
-  }
-}

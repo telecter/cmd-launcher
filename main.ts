@@ -4,7 +4,6 @@ import * as api from "./api/game.ts";
 import { getAuthData } from "./api/auth.ts";
 import { fetchFabricLibraries, getFabricMeta } from "./api/fabric.ts";
 import { fetchClient } from "./api/game.ts";
-import { log } from "./util.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
@@ -14,7 +13,7 @@ async function update() {
     await fetch("https://api.github.com/repos/telectr/cmd-launcher/tags")
   ).json();
   const latestTag = tags[0].name;
-  console.log(`Upgrading to ${latestTag}`);
+  console.console.log(`Upgrading to ${latestTag}`);
   const data = await (
     await fetch(
       `https://github.com/telectr/cmd-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`,
@@ -44,7 +43,7 @@ async function main(args: string[]) {
     boolean: ["help", "update", "fabric"],
     alias: { help: "help", launch: "l", server: "s" },
     unknown: (arg) => {
-      log(`Unknown argument: ${arg}`, "ERROR");
+      console.log(`Unknown argument: ${arg}`, "ERROR");
       printHelp();
       Deno.exit(1);
     },
@@ -60,7 +59,7 @@ async function main(args: string[]) {
   }
 
   const data = await api.getVersionData(version).catch((err) => {
-    log(`Failed to get version data: ${err.message}`, "ERROR");
+    console.log(`Failed to get version data: ${err.message}`, "ERROR");
     Deno.exit(1);
   });
 
@@ -79,7 +78,7 @@ async function main(args: string[]) {
 
   Deno.chdir(rootDir);
 
-  log("Downloading libraries...");
+  console.log("Downloading libraries...");
   let libraryPaths = await api.fetchLibraries(data.libraries, rootDir);
 
   if (flags.fabric) {
@@ -89,7 +88,7 @@ async function main(args: string[]) {
     mainClass = fabricData.mainClass;
   }
 
-  log("Downloading assets...");
+  console.log("Downloading assets...");
 
   const assets = await api.getAndSaveAssetData(data, rootDir);
   await api.fetchAssets(assets, rootDir);
@@ -130,7 +129,7 @@ async function main(args: string[]) {
     gameArgs.push("--quickPlayMultiplayer", flags.server);
   }
 
-  log(`Starting Minecraft ${version}...`);
+  console.log(`Starting Minecraft ${version}...`);
 
   Deno.chdir(instanceDir);
   new Deno.Command("java", {
