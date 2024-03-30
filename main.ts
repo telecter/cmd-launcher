@@ -1,9 +1,9 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts";
-import * as api from "./api.ts";
-import * as util from "./util.ts";
-import { getAuthData } from "./auth.ts";
-import { fetchFabricLibrary, getFabricMeta } from "./fabric.ts";
+import * as api from "./api/mojang.ts";
+import { log, download, writeOnLine } from "./util.ts";
+import { getAuthData } from "./api/auth.ts";
+import { fetchFabricLibrary, getFabricMeta } from "./mod_loaders/fabric.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
@@ -44,7 +44,7 @@ async function main(args: string[]) {
     boolean: ["help", "update", "fabric"],
     alias: { help: "help", launch: "l", server: "s" },
     unknown: (arg) => {
-      console.log(`Invalid argument: ${arg}`);
+      console.log(`[Invalid argument: ${arg}`);
       printHelp();
       Deno.exit(1);
     },
@@ -59,9 +59,8 @@ async function main(args: string[]) {
     await update();
   }
 
-  console.log(`Getting version data for ${version ?? "latest version"}`);
   const data = await api.getVersionData(version).catch((err) => {
-    console.error(`Failed to get version data: ${err.message}`);
+    log(`Failed to get version data: ${err.message}`, "ERROR");
     Deno.exit(1);
   });
 
@@ -80,40 +79,39 @@ async function main(args: string[]) {
 
   Deno.chdir(rootDir);
 
-  console.log("Loading libraries...");
-
   const libraryPathList = [];
+
+  log("Downloading libraries...");
   for (const library of data.libraries) {
-    util.writeOnLine(library.downloads.artifact.path);
-    const libraryPath = await api.fetchLibrary(library, rootDir);
-    libraryPathList.push(libraryPath);
+    const path = await api.fetchLibrary(library, rootDir);
+    libraryPathList.push(path);
+    writeOnLine(library.downloads.artifact.path);
   }
 
   if (flags.fabric) {
-    console.log("\nLoading Fabric mod loader...");
+    log("Loading Fabric...");
     const fabricData = await getFabricMeta(version);
     for (const library of fabricData.libraries) {
-      util.writeOnLine(library.name);
       const libraryPath = await fetchFabricLibrary(library, rootDir);
       libraryPathList.push(libraryPath);
     }
     mainClass = fabricData.mainClass;
   }
 
-  console.log("\nDownloading assets...");
+  log("Downloading assets...");
   const assets = await api.getAndSaveAssetData(data.assetIndex, rootDir);
-  const numberOfAssets = Object.keys(assets.objects).length;
   let i = 0;
-  for (const [name, asset] of Object.entries(assets.objects)) {
+  const numOfAssets = Object.keys(assets).length;
+  for (const asset of Object.values(assets)) {
     i++;
-    util.writeOnLine(`${i}/${numberOfAssets} ${name}`);
-    await api.downloadAsset(asset, rootDir);
+    await api.fetchAsset(asset, rootDir);
+    writeOnLine(`${i}/${numOfAssets}`);
   }
 
   const clientPath = `${instanceDir}/client.jar`;
   if (!(await exists(clientPath))) {
-    console.log("\nDownloading client...");
-    await util.download(data.downloads.client.url, clientPath);
+    log("Downloading client...");
+    await download(data.downloads.client.url, clientPath);
   }
 
   const classPath = [clientPath, ...libraryPathList];
@@ -149,7 +147,7 @@ async function main(args: string[]) {
     gameArgs.push("--quickPlayMultiplayer", flags.server);
   }
 
-  console.log(`\nStarting Minecraft ${version}...`);
+  log(`Starting Minecraft ${version}...`);
 
   Deno.chdir(instanceDir);
   new Deno.Command("java", {
