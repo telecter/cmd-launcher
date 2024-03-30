@@ -1,9 +1,10 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts";
-import * as api from "./api/mojang.ts";
-import { log, download, writeOnLine } from "./util.ts";
+import * as api from "./api/game.ts";
 import { getAuthData } from "./api/auth.ts";
-import { fetchFabricLibrary, getFabricMeta } from "./mod_loaders/fabric.ts";
+import { fetchFabricLibraries, getFabricMeta } from "./api/fabric.ts";
+import { fetchClient } from "./api/game.ts";
+import { log } from "./util.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
@@ -25,17 +26,16 @@ async function update() {
 
 function printHelp() {
   console.log(`
-  usage: cmd-launcher [...options]
-  A command line Minecraft launcher.
+usage: cmd-launcher [...options]
+A command line Minecraft launcher.
 
-  Options:
-    -l, --launch      Launch a specific version of the game
-    -f, --fabric      Launch the game with the Fabric mod loader
-    -s, --server      Join the specified server on launch
+Options:
+  -l, --launch      Launch a specific version of the game
+  -f, --fabric      Launch the game with the Fabric mod loader
+  -s, --server      Join the specified server on launch
 
-    --update          Update the launcher
-    -h, --help        Show this help and exit
-  `);
+  --update          Update the launcher
+  -h, --help        Show this help and exit`);
 }
 
 async function main(args: string[]) {
@@ -44,7 +44,7 @@ async function main(args: string[]) {
     boolean: ["help", "update", "fabric"],
     alias: { help: "help", launch: "l", server: "s" },
     unknown: (arg) => {
-      console.log(`[Invalid argument: ${arg}`);
+      log(`Unknown argument: ${arg}`, "ERROR");
       printHelp();
       Deno.exit(1);
     },
@@ -79,48 +79,31 @@ async function main(args: string[]) {
 
   Deno.chdir(rootDir);
 
-  const libraryPathList = [];
-
   log("Downloading libraries...");
-  for (const library of data.libraries) {
-    const path = await api.fetchLibrary(library, rootDir);
-    libraryPathList.push(path);
-    writeOnLine(library.downloads.artifact.path);
-  }
+  let libraryPaths = await api.fetchLibraries(data.libraries, rootDir);
 
   if (flags.fabric) {
-    log("Loading Fabric...");
     const fabricData = await getFabricMeta(version);
-    for (const library of fabricData.libraries) {
-      const libraryPath = await fetchFabricLibrary(library, rootDir);
-      libraryPathList.push(libraryPath);
-    }
+    const paths = await fetchFabricLibraries(fabricData.libraries, rootDir);
+    libraryPaths = [...libraryPaths, ...paths];
     mainClass = fabricData.mainClass;
   }
 
   log("Downloading assets...");
-  const assets = await api.getAndSaveAssetData(data.assetIndex, rootDir);
-  let i = 0;
-  const numOfAssets = Object.keys(assets).length;
-  for (const asset of Object.values(assets)) {
-    i++;
-    await api.fetchAsset(asset, rootDir);
-    writeOnLine(`${i}/${numOfAssets}`);
-  }
 
-  const clientPath = `${instanceDir}/client.jar`;
-  if (!(await exists(clientPath))) {
-    log("Downloading client...");
-    await download(data.downloads.client.url, clientPath);
-  }
+  const assets = await api.getAndSaveAssetData(data, rootDir);
+  await api.fetchAssets(assets, rootDir);
 
-  const classPath = [clientPath, ...libraryPathList];
+  const clientPath = await fetchClient(data, rootDir);
+
+  const classPath = [clientPath, ...libraryPaths];
 
   const javaArgs = ["-cp", classPath.join(":")];
 
   const [accessToken, username, uuid] = await getAuthData(
     `${rootDir}/accounts.json`,
   );
+
   const gameArgs = [
     "--version",
     "",

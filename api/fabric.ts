@@ -8,13 +8,20 @@ function getPathFromMaven(mavenPath: string) {
   return path;
 }
 
-export async function fetchFabricLibrary(library: any, rootDir: string) {
-  const path = getPathFromMaven(library.name);
-  const fsPath = `${rootDir}/libraries/${path}`;
-  if (!(await exists(fsPath))) {
-    await download(`https://maven.fabricmc.net/${path}`, fsPath);
+export async function fetchFabricLibraries(
+  libraries: { name: string }[],
+  rootDir: string,
+) {
+  const paths = [];
+  for (const library of libraries) {
+    const path = getPathFromMaven(library.name);
+    const fsPath = `${rootDir}/libraries/${path}`;
+    if (!(await exists(fsPath))) {
+      await download(`https://maven.fabricmc.net/${path}`, fsPath);
+    }
+    paths.push(fsPath);
   }
-  return fsPath;
+  return paths;
 }
 
 export async function getFabricMeta(gameVersion: string) {

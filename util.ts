@@ -20,8 +20,10 @@ export async function saveFile(data: string, path: string) {
 }
 
 export function log(s: string, level: "INFO" | "ERROR" = "INFO") {
-  console.log(`[%c${level}%c] ${s}`, `color: ${level ? "blue" : "red"}`, "");
-}
-export function writeOnLine(s: string) {
-  Deno.stdout.write(new TextEncoder().encode("\x1b[1K\r" + s));
+  const output = `[%c${level}%c] ${s}`;
+  if (level == "INFO") {
+    console.log(output, "color: blue", "");
+  } else if (level == "ERROR") {
+    console.error(output, "color: red", "");
+  }
 }

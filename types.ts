@@ -57,5 +57,5 @@ export type AssetIndexData = {
 };
 
 export type AssetIndex = {
-  objects: { [asset: string]: Asset };
+  objects: { [name: string]: Asset };
 };
