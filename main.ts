@@ -13,7 +13,7 @@ async function update() {
     await fetch("https://api.github.com/repos/telectr/cmd-launcher/tags")
   ).json();
   const latestTag = tags[0].name;
-  console.console.log(`Upgrading to ${latestTag}`);
+  console.log(`Upgrading to ${latestTag}`);
   const data = await (
     await fetch(
       `https://github.com/telectr/cmd-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`,
@@ -26,7 +26,7 @@ async function update() {
 function printHelp() {
   console.log(`
 usage: cmd-launcher [...options]
-A command line Minecraft launcher.
+A minimal command line Minecraft launcher.
 
 Options:
   -l, --launch      Launch a specific version of the game
