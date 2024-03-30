@@ -2,6 +2,11 @@ import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
 import { download, saveFile } from "../util.ts";
 import { AssetIndex, VersionData, Library, VersionManifest } from "../types.ts";
 
+let downloadListener = (_url: string) => {};
+export function registerDownloadListener(callback: (url: string) => void) {
+  downloadListener = callback;
+}
+
 /** Downloads the Minecraft version manifest, containing the URL and ID for each version. */
 export async function getVersionManifest() {
   return <VersionManifest>(
@@ -34,10 +39,12 @@ export async function getAndSaveAssetData(
   versionData: VersionData,
   rootDir: string,
 ) {
-  const data = await (await fetch(versionData.assetIndex.url)).json();
+  const url = versionData.assetIndex.url;
+  const data = await (await fetch(url)).json();
   const path = `${rootDir}/assets/indexes/${versionData.assetIndex.id}.json`;
   if (!(await exists(path))) {
     await saveFile(JSON.stringify(data), path);
+    downloadListener(url);
   }
   return <AssetIndex>data;
 }
@@ -50,6 +57,7 @@ export async function fetchLibraries(libraries: Library[], rootDir: string) {
     const path = `${rootDir}/libraries/${artifact.path}`;
     if (!(await exists(path))) {
       await download(artifact.url, path);
+      downloadListener(artifact.url);
     }
     paths.push(path);
   }
@@ -64,6 +72,7 @@ export async function fetchAssets(assets: AssetIndex, rootDir: string) {
     if (!(await exists(path))) {
       const url = `https://resources.download.minecraft.net/${objectPath}`;
       await download(url, path);
+      downloadListener(url);
     }
   }
 }
@@ -73,6 +82,7 @@ export async function fetchClient(versionData: VersionData, rootDir: string) {
   if (!(await exists(clientPath))) {
     const url = versionData.downloads.client.url;
     await download(versionData.downloads.client.url, `${rootDir}/client.jar`);
+    downloadListener(url);
   }
   return clientPath;
 }

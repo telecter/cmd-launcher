@@ -38,6 +38,9 @@ Options:
 }
 
 async function main(args: string[]) {
+  api.registerDownloadListener((url) => {
+    console.log(`Doenloading ${url}`);
+  });
   const flags = parseArgs(args, {
     string: ["version", "launch", "server"],
     boolean: ["help", "update", "fabric"],
@@ -79,7 +82,14 @@ async function main(args: string[]) {
   Deno.chdir(rootDir);
 
   console.log("Downloading libraries...");
-  let libraryPaths = await api.fetchLibraries(data.libraries, rootDir);
+  let libraryPaths = await api
+    .fetchLibraries(data.libraries, rootDir)
+    .catch((err) => {
+      console.error(
+        `An error occurred while downloading a library: ${err.message}`,
+      );
+      Deno.exit(1);
+    });
 
   if (flags.fabric) {
     const fabricData = await getFabricMeta(version);
@@ -91,9 +101,17 @@ async function main(args: string[]) {
   console.log("Downloading assets...");
 
   const assets = await api.getAndSaveAssetData(data, rootDir);
-  await api.fetchAssets(assets, rootDir);
+  await api.fetchAssets(assets, rootDir).catch((err) => {
+    console.error(
+      `An error occurred while downloading an asset: ${err.message}`,
+    );
+    Deno.exit(1);
+  });
 
-  const clientPath = await fetchClient(data, rootDir);
+  const clientPath = await fetchClient(data, rootDir).catch((err) => {
+    console.error(`Failed to download Minecraft client: ${err.message}`);
+    Deno.exit(1);
+  });
 
   const classPath = [clientPath, ...libraryPaths];
 
