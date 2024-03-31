@@ -46,9 +46,9 @@ async function main(args: string[]) {
     console.log(`Downloading ${url}`);
   });
   const flags = parseArgs(args, {
-    string: ["launch", "server"],
+    string: ["launch", "server", "username"],
     boolean: ["help", "update", "fabric", "quilt"],
-    alias: { help: "help", launch: "l", server: "s" },
+    alias: { help: "help", launch: "l", server: "s", username: "u" },
     unknown: (arg) => {
       console.log(`Unknown argument: ${arg}`);
       printHelp();
@@ -119,9 +119,9 @@ async function main(args: string[]) {
   const classPath = [clientPath, ...libraryPaths];
   const javaArgs = ["-cp", classPath.join(":")];
 
-  const [accessToken, username, uuid] = await getAuthData(
-    `${rootDir}/accounts.json`,
-  );
+  const [accessToken, username, uuid] = flags.username
+    ? ["abc", flags.username, crypto.randomUUID()]
+    : await getAuthData(`${rootDir}/accounts.json`);
 
   const gameArgs = [
     "--version",
