@@ -3,7 +3,6 @@ import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts";
 import * as api from "./api/game.ts";
 import { getAuthData } from "./api/auth.ts";
 import { fetchFabricLibraries, getFabricMeta } from "./api/fabric.ts";
-import { fetchClient } from "./api/game.ts";
 import { getQuiltMeta } from "./api/fabric.ts";
 
 async function update() {
