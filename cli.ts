@@ -116,7 +116,6 @@ async function main(args: string[]) {
   });
 
   const classPath = [clientPath, ...libraryPaths];
-  console.log(libraryPaths.slice(10));
   const javaArgs = ["-cp", classPath.join(":")];
 
   const [accessToken, username, uuid] = await getAuthData(
