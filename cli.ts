@@ -112,7 +112,7 @@ async function main(args: string[]) {
     Deno.exit(1);
   });
 
-  const clientPath = await fetchClient(data, instanceDir).catch((err) => {
+  const clientPath = await api.fetchClient(data, instanceDir).catch((err) => {
     console.error(`Failed to download Minecraft client: ${err.message}`);
     Deno.exit(1);
   });
