@@ -15,6 +15,7 @@ A minimal command line Minecraft launcher.
 
 Options:
   -l, --launch      Launch a specific version of the game
+  -u, --usernam     Set the offline mode username
   --fabric      Launch the game with the Fabric mod loader
   --quilt       Launch the game with the Quilt mod loader
   -s, --server      Join the specified server on launch
