@@ -46,11 +46,11 @@ async function main(args: string[]) {
     console.log(`Downloading ${url}`);
   });
   const flags = parseArgs(args, {
-    string: ["version", "launch", "server"],
+    string: ["launch", "server"],
     boolean: ["help", "update", "fabric", "quilt"],
     alias: { help: "help", launch: "l", server: "s" },
     unknown: (arg) => {
-      console.log(`Unknown argument: ${arg}`, "ERROR");
+      console.log(`Unknown argument: ${arg}`);
       printHelp();
       Deno.exit(1);
     },
