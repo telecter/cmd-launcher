@@ -4,6 +4,7 @@ import * as api from "./api/game.ts";
 import { getAuthData } from "./api/auth.ts";
 import { fetchFabricLibraries, getFabricMeta } from "./api/fabric.ts";
 import { fetchClient } from "./api/game.ts";
+import { getQuiltMeta } from "./api/fabric.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
@@ -30,7 +31,8 @@ A minimal command line Minecraft launcher.
 
 Options:
   -l, --launch      Launch a specific version of the game
-  -f, --fabric      Launch the game with the Fabric mod loader
+  --fabric      Launch the game with the Fabric mod loader
+  --quilt       Launch the game with the Quilt mod loader
   -s, --server      Join the specified server on launch
 
   --update          Update the launcher
@@ -39,11 +41,11 @@ Options:
 
 async function main(args: string[]) {
   api.registerDownloadListener((url) => {
-    console.log(`Doenloading ${url}`);
+    console.log(`Downloading ${url}`);
   });
   const flags = parseArgs(args, {
     string: ["version", "launch", "server"],
-    boolean: ["help", "update", "fabric"],
+    boolean: ["help", "update", "fabric", "quilt"],
     alias: { help: "help", launch: "l", server: "s" },
     unknown: (arg) => {
       console.log(`Unknown argument: ${arg}`, "ERROR");
@@ -81,7 +83,6 @@ async function main(args: string[]) {
 
   Deno.chdir(rootDir);
 
-  console.log("Downloading libraries...");
   let libraryPaths = await api
     .fetchLibraries(data.libraries, rootDir)
     .catch((err) => {
@@ -91,14 +92,15 @@ async function main(args: string[]) {
       Deno.exit(1);
     });
 
-  if (flags.fabric) {
-    const fabricData = await getFabricMeta(version);
+  if (flags.fabric || flags.quilt) {
+    const fabricData = flags.quilt
+      ? await getQuiltMeta(version)
+      : await getFabricMeta(version);
     const paths = await fetchFabricLibraries(fabricData.libraries, rootDir);
+    console.log(paths);
     libraryPaths = [...libraryPaths, ...paths];
     mainClass = fabricData.mainClass;
   }
-
-  console.log("Downloading assets...");
 
   const assets = await api.getAndSaveAssetData(data, rootDir);
   await api.fetchAssets(assets, rootDir).catch((err) => {
@@ -108,13 +110,13 @@ async function main(args: string[]) {
     Deno.exit(1);
   });
 
-  const clientPath = await fetchClient(data, rootDir).catch((err) => {
+  const clientPath = await fetchClient(data, instanceDir).catch((err) => {
     console.error(`Failed to download Minecraft client: ${err.message}`);
     Deno.exit(1);
   });
 
   const classPath = [clientPath, ...libraryPaths];
-
+  console.log(libraryPaths.slice(10));
   const javaArgs = ["-cp", classPath.join(":")];
 
   const [accessToken, username, uuid] = await getAuthData(

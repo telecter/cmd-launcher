@@ -9,7 +9,7 @@ function getPathFromMaven(mavenPath: string) {
 }
 
 export async function fetchFabricLibraries(
-  libraries: { name: string }[],
+  libraries: { name: string; url: string }[],
   rootDir: string,
 ) {
   const paths = [];
@@ -17,7 +17,7 @@ export async function fetchFabricLibraries(
     const path = getPathFromMaven(library.name);
     const fsPath = `${rootDir}/libraries/${path}`;
     if (!(await exists(fsPath))) {
-      await download(`https://maven.fabricmc.net/${path}`, fsPath);
+      await download(`${library.url}/${path}`, fsPath);
     }
     paths.push(fsPath);
   }
@@ -26,12 +26,20 @@ export async function fetchFabricLibraries(
 
 export async function getFabricMeta(gameVersion: string) {
   const versionList = await (
-    await fetch("https://meta.fabricmc.net/v2/versions/loader/1.20.4")
+    await fetch(`https://meta.fabricmc.net/v2/versions/loader/${gameVersion}`)
   ).json();
 
   return (
     await fetch(
       `https://meta.fabricmc.net/v2/versions/loader/${gameVersion}/${versionList[0].loader.version}/profile/json`,
+    )
+  ).json();
+}
+
+export async function getQuiltMeta(gameVersion: string) {
+  return (
+    await fetch(
+      `https://meta.quiltmc.org/v3/versions/loader/${gameVersion}/0.24.0/profile/json`,
     )
   ).json();
 }

@@ -77,11 +77,17 @@ export async function fetchAssets(assets: AssetIndex, rootDir: string) {
   }
 }
 
-export async function fetchClient(versionData: VersionData, rootDir: string) {
-  const clientPath = `${rootDir}/client.jar`;
+export async function fetchClient(
+  versionData: VersionData,
+  instanceDir: string,
+) {
+  const clientPath = `${instanceDir}/client.jar`;
   if (!(await exists(clientPath))) {
     const url = versionData.downloads.client.url;
-    await download(versionData.downloads.client.url, `${rootDir}/client.jar`);
+    await download(
+      versionData.downloads.client.url,
+      `${instanceDir}/client.jar`,
+    );
     downloadListener(url);
   }
   return clientPath;
