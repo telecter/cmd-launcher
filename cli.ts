@@ -8,24 +8,6 @@ import {
   getQuiltMeta,
 } from "./api/fabric.ts";
 
-async function update() {
-  if (Deno.execPath().includes("deno")) {
-    throw Error("Cannot update non-executable");
-  }
-  const tags = await (
-    await fetch("https://api.github.com/repos/telectr/cmd-launcher/tags")
-  ).json();
-  const latestTag = tags[0].name;
-  console.log(`Upgrading to ${latestTag}`);
-  const data = await (
-    await fetch(
-      `https://github.com/telectr/cmd-launcher/releases/download/${latestTag}/launcher-${Deno.build.target}`,
-    )
-  ).arrayBuffer();
-  await Deno.writeFile(Deno.execPath(), new Uint8Array(data));
-  Deno.exit();
-}
-
 function printHelp() {
   console.log(`
 usage: cmd-launcher [...options]
@@ -36,8 +18,6 @@ Options:
   --fabric      Launch the game with the Fabric mod loader
   --quilt       Launch the game with the Quilt mod loader
   -s, --server      Join the specified server on launch
-
-  --update          Update the launcher
   -h, --help        Show this help and exit`);
 }
 
@@ -47,7 +27,7 @@ async function main(args: string[]) {
   });
   const flags = parseArgs(args, {
     string: ["launch", "server", "username"],
-    boolean: ["help", "update", "fabric", "quilt"],
+    boolean: ["help", "fabric", "quilt"],
     alias: { help: "help", launch: "l", server: "s", username: "u" },
     unknown: (arg) => {
       console.log(`Unknown argument: ${arg}`);
@@ -60,9 +40,6 @@ async function main(args: string[]) {
   if (flags.help) {
     printHelp();
     Deno.exit();
-  }
-  if (flags.update) {
-    await update();
   }
 
   const data = await api.getVersionData(version).catch((err) => {
