@@ -2,8 +2,11 @@ import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
 import { parseArgs } from "https://deno.land/std@0.220.1/cli/mod.ts";
 import * as api from "./api/game.ts";
 import { getAuthData } from "./api/auth.ts";
-import { fetchFabricLibraries, getFabricMeta } from "./api/fabric.ts";
-import { getQuiltMeta } from "./api/fabric.ts";
+import {
+  fetchFabricLibraries,
+  getFabricMeta,
+  getQuiltMeta,
+} from "./api/fabric.ts";
 
 async function update() {
   if (Deno.execPath().includes("deno")) {
