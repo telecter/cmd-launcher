@@ -99,7 +99,6 @@ async function main(args: string[]) {
       ? await getQuiltMeta(version)
       : await getFabricMeta(version);
     const paths = await fetchFabricLibraries(fabricData.libraries, rootDir);
-    console.log(paths);
     libraryPaths = [...libraryPaths, ...paths];
     mainClass = fabricData.mainClass;
   }
