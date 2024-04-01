@@ -8,17 +8,13 @@ Starting Minecraft 1.20.4...
 
 ```
 ## Installation
-You can find releases of this launcher in the Releases section.
+You need the [Deno](https://deno.com) JavaScript runtime to use this launcher.
 
-### Running From Source
-Since this launcher uses TypeScript, its pretty simple to run from source.  
-
-1. Make sure you have the [Deno](https://deno.com) JS runtime installed
-2. Download the source code from this repository
-3. Run `main.ts` with `deno run -A main.ts`
-
-> [!NOTE]
-> Since the binaries effectively contain the Deno runtime, they are usually around 60 MB. The code itself is only a few kilobytes.
+To download and install the launcher, use this command.
+```
+deno install -A -n cmd-launcher https://raw.githubusercontent.com/telectr/cmd-launcher/VERSION/cli.ts
+```
+Replace `VERSION` with the version of the launcher you wan to install.
 
 ## Usage
 To start the latest version of Minecraft, just run the binary without any flags.
