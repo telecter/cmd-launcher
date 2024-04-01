@@ -44,7 +44,7 @@ async function main(args: string[]) {
   }
 
   const data = await api.getVersionData(version).catch((err) => {
-    console.log(`Failed to get version data: ${err.message}`, "ERROR");
+    console.log(`Failed to get version data: ${err.message}`);
     Deno.exit(1);
   });
 
