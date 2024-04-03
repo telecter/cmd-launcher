@@ -19,9 +19,9 @@ Replace `VERSION` with the version of the launcher you wan to install.
 To start the latest version of Minecraft, just run the binary without any flags.
 
 ### Selecting Versions
-To choose the version of the game to run, pass the `-l, --launch <version>` flag.  
+To choose the version of the game to run, use the `launch <version>` subcommand.  
 ```sh
-cmd-launcher --launch 1.20.4
+cmd-launcher launch 1.20.4
 ```
 
 > [!IMPORTANT]
