@@ -71,15 +71,15 @@ if (import.meta.main) {
     .description("A minimal command line Minecraft launcher.")
     .command("launch", "Launch the game with the specified options.")
     .arguments("<version:string>")
-    .option("--fabric, -f [fabric:boolean]", "Use the Fabric mod loader")
-    .option("--quilt, -q [quilt:boolean]", "Use the Quilt mod loader")
-    .option("--java, -j <java:string>", "Use the specified Java executable.")
+    .option("-f, --fabric", "Run game with Fabric.")
+    .option("-q, --quilt", "Run game with Quilt.")
+    .option("-j, --java <path:string>", "Use the specified Java executable.")
     .option(
-      "--username, -u <username:string>",
+      "-u, --username <username:string>",
       "Use the specified offline mode username.",
     )
     .option(
-      "--server, -s <server:string>",
+      "-s, --server <server:string>",
       "Join the specified server on launch",
     )
     .action(async (options, ...args) => {
