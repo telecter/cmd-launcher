@@ -1,10 +1,5 @@
 export type Library = {
   downloads: {
-    classifiers?: {
-      "natives-linux": Artifact;
-      "natives-osx": Artifact;
-      "natives-windows": Artifact;
-    };
     artifact: Artifact;
   };
   name: string;
@@ -68,11 +63,24 @@ export type AssetIndex = {
 };
 
 export type VersionOptions = {
-  accessToken: string;
-  uuid: string;
-  username: string;
+  auth?: AuthData;
+  offlineUsername?: string;
   rootDir: string;
   instanceDir: string;
   fabric?: boolean;
   quilt?: boolean;
+};
+
+export type LaunchData = {
+  mainClass: string;
+  assetId: string;
+  client: string;
+  libraries: string[];
+};
+
+export type AuthData = {
+  username: string;
+  uuid: string;
+  token: string;
+  refresh: string;
 };

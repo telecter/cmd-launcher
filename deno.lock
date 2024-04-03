@@ -197,6 +197,8 @@
     "https://deno.land/std@0.221.0/assert/assert.ts": "bec068b2fccdd434c138a555b19a2c2393b71dfaada02b7d568a01541e67cdc5",
     "https://deno.land/std@0.221.0/assert/assertion_error.ts": "9f689a101ee586c4ce92f52fa7ddd362e86434ffdf1f848e45987dc7689976b8",
     "https://deno.land/std@0.221.0/fmt/colors.ts": "d239d84620b921ea520125d778947881f62c50e78deef2657073840b8af9559a",
+    "https://deno.land/std@0.221.0/fs/_get_file_info_type.ts": "da7bec18a7661dba360a1db475b826b18977582ce6fc9b25f3d4ee0403fe8cbd",
+    "https://deno.land/std@0.221.0/fs/ensure_dir.ts": "313e8a62b8bb20d900138ff794bde6a6ac0a6bebc91220fba6dfc3303bde56c6",
     "https://deno.land/std@0.221.0/fs/exists.ts": "3d38cb7dcbca3cf313be343a7b8af18a87bddb4b5ca1bd2314be12d06533b50f",
     "https://deno.land/std@0.221.0/io/write_all.ts": "24aac2312bb21096ae3ae0b102b22c26164d3249dff96dbac130958aa736f038",
     "https://deno.land/std@0.221.0/log/_config.ts": "489e11b6d3c917bf5fc954c5e914c095d3480efd924d1e85f2fc576468581c54",

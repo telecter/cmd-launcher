@@ -1,4 +1,5 @@
 import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
+import { AuthData } from "../types.ts";
 
 const client_id = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7";
 const scope = "XboxLive.SignIn,offline_access";
@@ -135,31 +136,24 @@ async function getProfileData(jwtToken: string) {
 }
 
 /** Returns authentication data to launch the game. This opens the default web browser to complete the authentication. */
-export async function getAuthData(accountDataFile: string): Promise<string[]> {
+export async function getAuthData(refreshToken?: string) {
   let msaAuthToken;
-  let refreshToken;
-  if (await exists(accountDataFile)) {
-    const refreshTokenData = JSON.parse(
-      await Deno.readTextFile(accountDataFile),
-    ).refresh_token;
-    [msaAuthToken, refreshToken] = await getMsaAuthToken(
-      refreshTokenData,
-      true,
-    );
+  let newRefreshToken;
+  if (refreshToken) {
+    [msaAuthToken, newRefreshToken] = await getMsaAuthToken(refreshToken, true);
   } else {
     const authCode = await getMsaAuthCode();
-    [msaAuthToken, refreshToken] = await getMsaAuthToken(authCode, false);
+    [msaAuthToken, newRefreshToken] = await getMsaAuthToken(authCode, false);
   }
 
   const [xblToken, userhash] = await getXboxAuthData(msaAuthToken);
   const xstsToken = await getXstsToken(xblToken);
   const jwtToken = await getMinecraftAuthToken(xstsToken, userhash);
   const [username, uuid] = await getProfileData(jwtToken);
-  await Deno.writeTextFile(
-    accountDataFile,
-    JSON.stringify({
-      refresh_token: refreshToken,
-    }),
-  );
-  return [jwtToken, username, uuid];
+  return <AuthData>{
+    token: jwtToken,
+    username: username,
+    uuid: uuid,
+    refresh: newRefreshToken,
+  };
 }

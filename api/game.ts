@@ -23,7 +23,7 @@ export async function getVersionData(version: string) {
   return <VersionData>await (await fetch(release.url)).json();
 }
 
-/** Get the game asset data. */
+/** Using the version metadata, get the game asset data. */
 export async function getAssetData(versionData: VersionData) {
   const url = versionData.assetIndex.url;
   const data = await (await fetch(url)).json();
