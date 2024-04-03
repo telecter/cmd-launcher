@@ -85,7 +85,6 @@ export function run(meta: LaunchData, options: VersionOptions) {
   if (Deno.build.os === "darwin") {
     jvmArgs.push("-XstartOnFirstThread");
   }
-
   const gameArgs = [
     "--version",
     "",
@@ -101,7 +100,7 @@ export function run(meta: LaunchData, options: VersionOptions) {
     meta.assetId,
   ];
   Deno.chdir(options.instanceDir);
-  new Deno.Command("java", {
+  new Deno.Command(options.jvmPath, {
     args: [...jvmArgs, meta.mainClass, ...gameArgs],
   }).spawn();
 }

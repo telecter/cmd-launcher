@@ -28,6 +28,7 @@ async function launchGame(flags: LaunchCmdOptions, ...args: string[]) {
     rootDir: rootDir,
     instanceDir: instanceDir,
     fabric: flags.fabric,
+    jvmPath: flags.java ?? "java",
   };
 
   if (!flags.username) {

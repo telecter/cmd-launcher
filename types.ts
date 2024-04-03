@@ -69,6 +69,7 @@ export type VersionOptions = {
   instanceDir: string;
   fabric?: boolean;
   quilt?: boolean;
+  jvmPath: string;
 };
 
 export type LaunchData = {
