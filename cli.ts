@@ -68,7 +68,7 @@ async function launchGame(flags: LaunchCmdOptions, ...args: string[]) {
 }
 
 if (import.meta.main) {
-  const VERSION = "0.6.0";
+  const VERSION = "0.6.1";
   await new Command()
     .name("cmd-launcher")
     .version(VERSION)
