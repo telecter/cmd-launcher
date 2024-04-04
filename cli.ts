@@ -4,6 +4,10 @@ import { ensureDir } from "https://deno.land/std@0.221.0/fs/ensure_dir.ts";
 import { installVersion, run, registerDownloadListener } from "./launcher.ts";
 import { getAuthData } from "./api/auth.ts";
 import { VersionOptions } from "./types.ts";
+import {
+  GithubProvider,
+  UpgradeCommand,
+} from "https://deno.land/x/cliffy@v1.0.0-rc.3/command/upgrade/mod.ts";
 
 type LaunchCmdOptions = {
   fabric?: boolean;
@@ -85,5 +89,15 @@ if (import.meta.main) {
     .action(async (options, ...args) => {
       await launchGame(options, ...args);
     })
+
+    .command(
+      "upgrade",
+      new UpgradeCommand({
+        provider: new GithubProvider({ repository: "telectr/cmd-launcher" }),
+        main: "cli.ts",
+        args: ["-A"],
+      }),
+    )
+
     .parse(Deno.args);
 }
