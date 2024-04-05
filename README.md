@@ -33,4 +33,8 @@ This launcher supports online mode. Without any options, it will automatically a
 If you want to use offline mode, just pass the `-u, --username <username>` flag to set your offline mode username. This will automatically launch the game in offline mode.
 
 ### Mod Loaders
-This launcher currently supports Fabric and Quilt. Use the `-f, --fabric` and `-q, --quilt` flags to run them respectively.
+This launcher currently supports Fabric and Quilt. Use the `fabric` and `quilt` specifiers to use them.
+
+```sh
+cmd-launcher launch 1.20.4:fabric
+```
