@@ -15,7 +15,7 @@ export type Asset = {
   hash: string;
   size: number;
 };
-export type VersionIdentifier = {
+export type Version = {
   id: string;
   type: "release" | "snapshot";
   url: string;
@@ -28,11 +28,11 @@ export type VersionManifest = {
     snapshot: string;
     release: string;
   };
-  versions: VersionIdentifier[];
+  versions: Version[];
 };
 
-export type VersionData = {
-  assetIndex: AssetIndexData;
+export type VersionMeta = {
+  assetIndex: AssetIndexMeta;
   assets: string;
   downloads: {
     client: {
@@ -50,7 +50,7 @@ export type VersionData = {
   mainClass: string;
 };
 
-export type AssetIndexData = {
+export type AssetIndexMeta = {
   id: string;
   sha1: string;
   size: number;
@@ -67,12 +67,12 @@ export type VersionOptions = {
   offlineUsername?: string;
   rootDir: string;
   instanceDir: string;
-  fabric?: boolean;
-  quilt?: boolean;
+  loader?: string;
   jvmPath: string;
+  cache: boolean;
 };
 
-export type LaunchData = {
+export type LaunchArgs = {
   mainClass: string;
   assetId: string;
   client: string;

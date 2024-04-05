@@ -1,14 +1,18 @@
-import { VersionOptions } from "./types.ts";
-import * as api from "./api/game.ts";
-import { exists } from "https://deno.land/std@0.219.1/fs/mod.ts";
-import { saveFile, getPathFromMaven } from "./util.ts";
+import {
+  VersionOptions,
+  LaunchArgs,
+  VersionMeta,
+  AssetIndex,
+} from "./types.ts";
+import { getVersionMeta, getAssetData } from "./api/game.ts";
+import { saveTextFile, getPathFromMaven, readJSONIfExists } from "./util.ts";
 import { getFabricMeta, getQuiltMeta } from "./api/fabric.ts";
-import { LaunchData } from "./types.ts";
-import { dirname } from "https://deno.land/std@0.219.1/path/windows/dirname.ts";
-import { ensureDir } from "https://deno.land/std@0.221.0/fs/ensure_dir.ts";
+import { dirname } from "https://deno.land/std@0.221.0/path/dirname.ts";
+import { ensureDir, exists } from "https://deno.land/std@0.221.0/fs/mod.ts";
+
+export const MOD_LOADERS = ["fabric", "quilt"];
 
 let downloadListener = (_url: string) => {};
-
 export function registerDownloadListener(listener: (url: string) => void) {
   downloadListener = listener;
 }
@@ -23,8 +27,17 @@ async function download(url: string, dest: string) {
 
 export async function installVersion(version: string, options: VersionOptions) {
   const libraries = [];
-  const meta = await api.getVersionData(version);
 
+  const cachesDir = `${options.rootDir}/caches`;
+  const versionMetaCache = `${cachesDir}/versions/${version}.json`;
+
+  let meta: VersionMeta = await readJSONIfExists(versionMetaCache);
+  if (!meta || !options.cache) {
+    meta = await getVersionMeta(version);
+    await saveTextFile(versionMetaCache, JSON.stringify(meta));
+  }
+
+  await ensureDir(options.rootDir);
   await ensureDir(options.instanceDir);
 
   let mainClass = meta.mainClass;
@@ -37,12 +50,21 @@ export async function installVersion(version: string, options: VersionOptions) {
     }
     libraries.push(path);
   }
-  if (options.fabric || options.quilt) {
-    const fabricMeta = options.quilt
-      ? await getQuiltMeta(version)
-      : await getFabricMeta(version);
-    mainClass = fabricMeta.mainClass;
-    for (const library of fabricMeta.libraries) {
+  if (options.loader) {
+    const cachePath = `${cachesDir}/${options.loader === "quilt" ? "quilt" : "fabric"}/${version}.json`;
+    let loaderMeta = await readJSONIfExists(cachePath);
+
+    if (!loaderMeta || !options.cache) {
+      loaderMeta =
+        options.loader === "quilt"
+          ? await getQuiltMeta(version)
+          : await getFabricMeta(version);
+      await saveTextFile(cachePath, JSON.stringify(loaderMeta));
+    }
+
+    mainClass = loaderMeta.mainClass;
+
+    for (const library of loaderMeta.libraries) {
       const path = getPathFromMaven(library.name);
       const fsPath = `${options.rootDir}/libraries/${path}`;
       if (!(await exists(fsPath))) {
@@ -53,7 +75,13 @@ export async function installVersion(version: string, options: VersionOptions) {
     }
   }
 
-  const assets = await api.getAssetData(meta);
+  const assetMetaCache = `${cachesDir}/assets/${meta.assetIndex.id}`;
+  let assets: AssetIndex = await readJSONIfExists(assetMetaCache);
+  if (!assets) {
+    assets = await getAssetData(meta);
+    await saveTextFile(assetMetaCache, JSON.stringify(assets));
+  }
+
   for (const asset of Object.values(assets.objects)) {
     const objectPath = `${asset.hash.slice(0, 2)}/${asset.hash}`;
     const path = `${options.rootDir}/assets/objects/${objectPath}`;
@@ -64,14 +92,14 @@ export async function installVersion(version: string, options: VersionOptions) {
   }
   const assetIndexPath = `${options.rootDir}/assets/indexes/${meta.assetIndex.id}.json`;
   if (!(await exists(assetIndexPath))) {
-    await saveFile(JSON.stringify(assets), assetIndexPath);
+    await saveTextFile(assetIndexPath, JSON.stringify(assets));
   }
   const clientUrl = meta.downloads.client.url;
-  const clientPath = `${options.instanceDir}/client.jar`;
+  const clientPath = `${options.instanceDir}/${version}.jar`;
   if (!(await exists(clientPath))) {
     await download(clientUrl, clientPath);
   }
-  return <LaunchData>{
+  return <LaunchArgs>{
     mainClass: mainClass,
     assetId: meta.assetIndex.id,
     client: clientPath,
@@ -79,8 +107,9 @@ export async function installVersion(version: string, options: VersionOptions) {
   };
 }
 
-export function run(meta: LaunchData, options: VersionOptions) {
+export function run(meta: LaunchArgs, options: VersionOptions) {
   const classPath = [meta.client, ...meta.libraries];
+
   const jvmArgs = ["-cp", classPath.join(":")];
   if (Deno.build.os === "darwin") {
     jvmArgs.push("-XstartOnFirstThread");
@@ -93,7 +122,9 @@ export function run(meta: LaunchData, options: VersionOptions) {
     "--uuid",
     options.auth?.uuid ?? crypto.randomUUID(),
     "--username",
-    options.auth?.username ?? options.offlineUsername ?? "",
+    options.auth?.username ??
+      options.offlineUsername ??
+      `Player${Math.floor(Math.random() * 100)}`,
     "--assetsDir",
     `${options.rootDir}/assets`,
     "--assetIndex",
