@@ -31,41 +31,39 @@ async function download(url: string, dest: string, overwrite: boolean = false) {
 
 /** Ensure, and if needed install, assets from the given version metadata. */
 export async function installAssets(meta: VersionMeta, dir: string) {
-  const index: AssetIndex = await (await fetch(meta.assetIndex.url)).json();
-
+  const cache = `${dir}/assets/indexes/${meta.assetIndex.id}.json`;
+  let index: AssetIndex = await readJSONIfExists(cache);
+  if (!index) {
+    index = await getAssetData(meta);
+    await saveTextFile(cache, JSON.stringify(index));
+  }
   for (const asset of Object.values(index.objects)) {
     const objectPath = `${asset.hash.slice(0, 2)}/${asset.hash}`;
     const path = `${dir}/assets/objects/${objectPath}`;
-    if (!(await exists(path))) {
-      const url = `https://resources.download.minecraft.net/${objectPath}`;
-      await download(url, path);
-    }
-    const cache = `${dir}/assets/indexes/${meta.assetIndex.id}.json`;
-    let assets: AssetIndex = await readJSONIfExists(cache);
-    if (!assets) {
-      assets = await getAssetData(meta);
-      await saveTextFile(cache, JSON.stringify(assets));
-    }
+    await download(
+      `https://resources.download.minecraft.net/${objectPath}`,
+      path,
+    );
   }
 }
 
 /** Ensure, and if needed install, game libraries from a given list. Returns the paths of the installed libraries. */
 export async function installLibraries(libraries: Library[], dir: string) {
-  const paths = [];
+  const paths: string[] = [];
   for (const library of libraries) {
+    let url: string, destPath: string;
     if (Object.hasOwn(library, "downloads")) {
       const artifact = library.downloads.artifact;
-      const path = `${dir}/libraries/${artifact.path}`;
-
-      await download(artifact.url, path);
-      paths.push(path);
+      url = library.downloads.artifact.url;
+      destPath = `${dir}/libraries/${artifact.path}`;
     } else {
       const path = getPathFromMaven(library.name);
       const fsPath = `${dir}/libraries/${path}`;
-
-      await download(library.url + path, fsPath);
-      paths.push(fsPath);
+      url = library.url + path;
+      destPath = fsPath;
     }
+    await download(url, destPath);
+    paths.push(destPath);
   }
   return paths;
 }
@@ -87,7 +85,7 @@ export async function install(version: string, options: VersionOptions) {
   let mainClass = meta.mainClass;
 
   let libraries = await installLibraries(meta.libraries, options.rootDir);
-
+  console.log(libraries);
   if (options.loader) {
     const cachePath = `${cachesDir}/${options.loader === "quilt" ? "quilt" : "fabric"}/${version}.json`;
     let loaderMeta = await readJSONIfExists(cachePath);
@@ -110,9 +108,8 @@ export async function install(version: string, options: VersionOptions) {
 
   await installAssets(meta, options.rootDir);
 
-  const clientUrl = meta.downloads.client.url;
   const clientPath = `${options.instanceDir}/${version}.jar`;
-  await download(clientUrl, clientPath);
+  await download(meta.downloads.client.url, clientPath);
 
   return {
     mainClass: mainClass,
@@ -133,19 +130,17 @@ export function run(meta: LaunchArgs, options: VersionOptions) {
     "--version",
     "",
     "--accessToken",
-    options.auth?.token ?? "a",
+    options.auth?.token ?? "Haha this is not a valid access token.",
     "--uuid",
     options.auth?.uuid ?? crypto.randomUUID(),
-    "--username",
-    options.auth?.username ??
-      options.offlineUsername ??
-      `Player${Math.floor(Math.random() * 100)}`,
     "--assetsDir",
     `${options.rootDir}/assets`,
     "--assetIndex",
     meta.assetId,
   ];
-  console.log(gameArgs);
+  if (options.auth?.username || options.username) {
+    gameArgs.push("--username", options.auth?.username ?? options.username!);
+  }
   Deno.chdir(options.instanceDir);
   new Deno.Command(options.jvmPath, {
     args: [...jvmArgs, meta.mainClass, ...gameArgs],

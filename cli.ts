@@ -27,10 +27,10 @@ async function launch(
   const rootDir = isAbsolute(rootDirString)
     ? rootDirString
     : `${Deno.cwd()}/${rootDirString}`;
+  const instanceDir = `${rootDir}/instances/${version}`;
 
   await ensureDir(rootDir);
 
-  const instanceDir = `${rootDir}/instances/${version}`;
   const accountDataFile = `${rootDir}/accounts.json`;
 
   const options: VersionOptions = {
@@ -65,11 +65,11 @@ async function launch(
       );
     }
   } else {
-    options.offlineUsername = flags.username;
+    options.username = flags.username;
   }
 
   const instance = await launcher.install(version, options).catch((err) => {
-    console.error(`An error occurred while installing: ${err.stack}`);
+    console.error(`An error occurred while installing: ${err.message}`);
     Deno.exit(1);
   });
   console.log(`Starting Minecraft ${version}...`);
@@ -95,8 +95,6 @@ if (import.meta.main) {
     .option("-d, --dir <path:string>", "Set the root directory for the game.")
     .action(launch)
 
-    .command("search", "Search for versions.")
-    .arguments("[version:string]")
     .command(
       "upgrade",
       new UpgradeCommand({

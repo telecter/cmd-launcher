@@ -1,4 +1,3 @@
-import { exists } from "https://deno.land/std@0.219.1/fs/exists.ts";
 import { AuthData } from "../types.ts";
 
 const client_id = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7";
@@ -137,8 +136,7 @@ async function getProfileData(jwtToken: string) {
 
 /** Returns authentication data to launch the game. This opens the default web browser to complete the authentication. */
 export async function getAuthData(refreshToken?: string) {
-  let msaAuthToken;
-  let newRefreshToken;
+  let msaAuthToken: string, newRefreshToken: string;
   if (refreshToken) {
     [msaAuthToken, newRefreshToken] = await getMsaAuthToken(refreshToken, true);
   } else {
@@ -150,10 +148,10 @@ export async function getAuthData(refreshToken?: string) {
   const xstsToken = await getXstsToken(xblToken);
   const jwtToken = await getMinecraftAuthToken(xstsToken, userhash);
   const [username, uuid] = await getProfileData(jwtToken);
-  return <AuthData>{
+  return {
     token: jwtToken,
     username: username,
     uuid: uuid,
     refresh: newRefreshToken,
-  };
+  } as AuthData;
 }

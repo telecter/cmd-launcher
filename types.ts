@@ -1,15 +1,14 @@
 export type Library = {
   downloads: {
-    artifact: Artifact;
+    artifact: {
+      path: string;
+      sha1: string;
+      size: number;
+      url: string;
+    };
   };
   url?: string;
   name: string;
-};
-export type Artifact = {
-  path: string;
-  sha1: string;
-  size: number;
-  url: string;
 };
 
 export type Asset = {
@@ -65,7 +64,7 @@ export type AssetIndex = {
 
 export type VersionOptions = {
   auth?: AuthData;
-  offlineUsername?: string;
+  username?: string;
   rootDir: string;
   instanceDir: string;
   loader?: string;
