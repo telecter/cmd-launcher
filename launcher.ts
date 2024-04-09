@@ -1,14 +1,15 @@
-import {
-  VersionOptions,
-  LaunchArgs,
-  VersionMeta,
-  AssetIndex,
-} from "./types.ts";
 import { getVersionMeta, getAssetData } from "./api/game.ts";
 import { saveTextFile, getPathFromMaven, readJSONIfExists } from "./util.ts";
 import { getFabricMeta, getQuiltMeta } from "./api/fabric.ts";
 import { dirname } from "https://deno.land/std@0.221.0/path/dirname.ts";
 import { ensureDir, exists } from "https://deno.land/std@0.221.0/fs/mod.ts";
+import {
+  VersionOptions,
+  LaunchArgs,
+  VersionMeta,
+  AssetIndex,
+  Library,
+} from "./types.ts";
 
 export const MOD_LOADERS = ["fabric", "quilt"];
 
@@ -17,7 +18,10 @@ export function registerDownloadListener(listener: (url: string) => void) {
   downloadListener = listener;
 }
 
-async function download(url: string, dest: string) {
+async function download(url: string, dest: string, overwrite: boolean = false) {
+  if (!overwrite && (await exists(dest))) {
+    return dest;
+  }
   const data = await (await fetch(url)).arrayBuffer();
   downloadListener(url);
   await ensureDir(dirname(dest));
@@ -25,9 +29,49 @@ async function download(url: string, dest: string) {
   return dest;
 }
 
-export async function installVersion(version: string, options: VersionOptions) {
-  const libraries = [];
+/** Ensure, and if needed install, assets from the given version metadata. */
+export async function installAssets(meta: VersionMeta, dir: string) {
+  const index: AssetIndex = await (await fetch(meta.assetIndex.url)).json();
 
+  for (const asset of Object.values(index.objects)) {
+    const objectPath = `${asset.hash.slice(0, 2)}/${asset.hash}`;
+    const path = `${dir}/assets/objects/${objectPath}`;
+    if (!(await exists(path))) {
+      const url = `https://resources.download.minecraft.net/${objectPath}`;
+      await download(url, path);
+    }
+    const cache = `${dir}/assets/indexes/${meta.assetIndex.id}.json`;
+    let assets: AssetIndex = await readJSONIfExists(cache);
+    if (!assets) {
+      assets = await getAssetData(meta);
+      await saveTextFile(cache, JSON.stringify(assets));
+    }
+  }
+}
+
+/** Ensure, and if needed install, game libraries from a given list. Returns the paths of the installed libraries. */
+export async function installLibraries(libraries: Library[], dir: string) {
+  const paths = [];
+  for (const library of libraries) {
+    if (Object.hasOwn(library, "downloads")) {
+      const artifact = library.downloads.artifact;
+      const path = `${dir}/libraries/${artifact.path}`;
+
+      await download(artifact.url, path);
+      paths.push(path);
+    } else {
+      const path = getPathFromMaven(library.name);
+      const fsPath = `${dir}/libraries/${path}`;
+
+      await download(library.url + path, fsPath);
+      paths.push(fsPath);
+    }
+  }
+  return paths;
+}
+
+/** High level function for installing a version (libraries, assets, client). */
+export async function install(version: string, options: VersionOptions) {
   const cachesDir = `${options.rootDir}/caches`;
   const versionMetaCache = `${cachesDir}/versions/${version}.json`;
 
@@ -42,14 +86,8 @@ export async function installVersion(version: string, options: VersionOptions) {
 
   let mainClass = meta.mainClass;
 
-  for (const library of meta.libraries) {
-    const artifact = library.downloads.artifact;
-    const path = `${options.rootDir}/libraries/${artifact.path}`;
-    if (!(await exists(path))) {
-      await download(artifact.url, path);
-    }
-    libraries.push(path);
-  }
+  let libraries = await installLibraries(meta.libraries, options.rootDir);
+
   if (options.loader) {
     const cachePath = `${cachesDir}/${options.loader === "quilt" ? "quilt" : "fabric"}/${version}.json`;
     let loaderMeta = await readJSONIfExists(cachePath);
@@ -64,47 +102,24 @@ export async function installVersion(version: string, options: VersionOptions) {
 
     mainClass = loaderMeta.mainClass;
 
-    for (const library of loaderMeta.libraries) {
-      const path = getPathFromMaven(library.name);
-      const fsPath = `${options.rootDir}/libraries/${path}`;
-      if (!(await exists(fsPath))) {
-        const url = `${library.url}/${path}`;
-        await download(url, fsPath);
-      }
-      libraries.push(fsPath);
-    }
+    libraries = [
+      ...libraries,
+      ...(await installLibraries(loaderMeta.libraries, options.rootDir)),
+    ];
   }
 
-  const assetMetaCache = `${cachesDir}/assets/${meta.assetIndex.id}`;
-  let assets: AssetIndex = await readJSONIfExists(assetMetaCache);
-  if (!assets) {
-    assets = await getAssetData(meta);
-    await saveTextFile(assetMetaCache, JSON.stringify(assets));
-  }
+  await installAssets(meta, options.rootDir);
 
-  for (const asset of Object.values(assets.objects)) {
-    const objectPath = `${asset.hash.slice(0, 2)}/${asset.hash}`;
-    const path = `${options.rootDir}/assets/objects/${objectPath}`;
-    if (!(await exists(path))) {
-      const url = `https://resources.download.minecraft.net/${objectPath}`;
-      await download(url, path);
-    }
-  }
-  const assetIndexPath = `${options.rootDir}/assets/indexes/${meta.assetIndex.id}.json`;
-  if (!(await exists(assetIndexPath))) {
-    await saveTextFile(assetIndexPath, JSON.stringify(assets));
-  }
   const clientUrl = meta.downloads.client.url;
   const clientPath = `${options.instanceDir}/${version}.jar`;
-  if (!(await exists(clientPath))) {
-    await download(clientUrl, clientPath);
-  }
-  return <LaunchArgs>{
+  await download(clientUrl, clientPath);
+
+  return {
     mainClass: mainClass,
     assetId: meta.assetIndex.id,
     client: clientPath,
     libraries: libraries,
-  };
+  } as LaunchArgs;
 }
 
 export function run(meta: LaunchArgs, options: VersionOptions) {
@@ -130,6 +145,7 @@ export function run(meta: LaunchArgs, options: VersionOptions) {
     "--assetIndex",
     meta.assetId,
   ];
+  console.log(gameArgs);
   Deno.chdir(options.instanceDir);
   new Deno.Command(options.jvmPath, {
     args: [...jvmArgs, meta.mainClass, ...gameArgs],

@@ -2,6 +2,7 @@ export type Library = {
   downloads: {
     artifact: Artifact;
   };
+  url?: string;
   name: string;
 };
 export type Artifact = {

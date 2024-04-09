@@ -5,34 +5,25 @@ import {
   GithubProvider,
   UpgradeCommand,
 } from "https://deno.land/x/cliffy@v1.0.0-rc.3/command/mod.ts";
-import {
-  installVersion,
-  run,
-  registerDownloadListener,
-  MOD_LOADERS,
-} from "./launcher.ts";
+import * as launcher from "./launcher.ts";
 import { getAuthData } from "./api/auth.ts";
 import { VersionOptions } from "./types.ts";
 import { saveTextFile } from "./util.ts";
 
-type LaunchCmdOptions = {
-  java?: string;
-  server?: string;
-  username?: string;
-  dir?: string;
-};
+launcher.registerDownloadListener((url) => console.log(`Downloading ${url}`));
 
-registerDownloadListener((url) => console.log(`Downloading ${url}`));
-
-async function launch(flags: LaunchCmdOptions, ...args: string[]) {
+async function launch(
+  flags: { java?: string; server?: string; username?: string; dir?: string },
+  ...args: string[]
+) {
   const [version, loader] = args[0].split(":");
 
-  if (loader && !MOD_LOADERS.includes(loader)) {
+  if (loader && !launcher.MOD_LOADERS.includes(loader)) {
     console.error("Invalid mod loader");
     Deno.exit(1);
   }
 
-  const rootDirString = flags.dir ?? "minecraft";
+  const rootDirString = flags.dir ?? `${Deno.env.get("HOME")}/.minecraft`;
   const rootDir = isAbsolute(rootDirString)
     ? rootDirString
     : `${Deno.cwd()}/${rootDirString}`;
@@ -77,13 +68,13 @@ async function launch(flags: LaunchCmdOptions, ...args: string[]) {
     options.offlineUsername = flags.username;
   }
 
-  const instance = await installVersion(version, options).catch((err) => {
-    console.error(`An error occurred while installing: ${err.message}`);
+  const instance = await launcher.install(version, options).catch((err) => {
+    console.error(`An error occurred while installing: ${err.stack}`);
     Deno.exit(1);
   });
   console.log(`Starting Minecraft ${version}...`);
   try {
-    run(instance, options);
+    launcher.run(instance, options);
   } catch (err) {
     console.error(`An error occurred while running: ${err.message}`);
     Deno.exit(1);
@@ -102,10 +93,10 @@ if (import.meta.main) {
     .option("-u, --username <username:string>", "Set offline username")
     .option("-s, --server <server:string>", "Join specified server on launch")
     .option("-d, --dir <path:string>", "Set the root directory for the game.")
-    .action(async (options, ...args) => {
-      await launch(options, ...args);
-    })
+    .action(launch)
 
+    .command("search", "Search for versions.")
+    .arguments("[version:string]")
     .command(
       "upgrade",
       new UpgradeCommand({
