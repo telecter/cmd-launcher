@@ -85,7 +85,7 @@ export async function install(version: string, options: VersionOptions) {
   let mainClass = meta.mainClass;
 
   let libraries = await installLibraries(meta.libraries, options.rootDir);
-  console.log(libraries);
+
   if (options.loader) {
     const cachePath = `${cachesDir}/${options.loader === "quilt" ? "quilt" : "fabric"}/${version}.json`;
     let loaderMeta = await readJSONIfExists(cachePath);
