@@ -13,7 +13,7 @@ To download and install the launcher, use this command.
 ```sh
 deno install -A -n cmd-launcher https://raw.githubusercontent.com/telectr/cmd-launcher/VERSION/cli.ts
 ```
-Replace `VERSION` with the version of the launcher you wan to install.
+Replace `VERSION` with the version of the launcher you want to install.
 
 ## Usage
 To start the latest version of Minecraft, just run the binary without any flags.
