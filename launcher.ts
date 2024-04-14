@@ -1,15 +1,27 @@
 import { getVersionMeta, getAssetData } from "./api/game.ts";
+import { AssetIndex, Library, VersionMeta } from "./api/game.ts";
 import { saveTextFile, getPathFromMaven, readJSONIfExists } from "./util.ts";
 import { getFabricMeta, getQuiltMeta } from "./api/fabric.ts";
 import { dirname } from "https://deno.land/std@0.221.0/path/dirname.ts";
 import { ensureDir, exists } from "https://deno.land/std@0.221.0/fs/mod.ts";
-import {
-  VersionOptions,
-  LaunchArgs,
-  VersionMeta,
-  AssetIndex,
-  Library,
-} from "./types.ts";
+import { AuthData } from "./api/auth.ts";
+
+export type VersionOptions = {
+  auth?: AuthData;
+  username?: string;
+  rootDir: string;
+  instanceDir: string;
+  loader?: string;
+  jvmPath: string;
+  cache: boolean;
+};
+export type LaunchArgs = {
+  mainClass: string;
+  assetId: string;
+  client: string;
+  libraries: string[];
+  options: VersionOptions;
+};
 
 export const MOD_LOADERS = ["fabric", "quilt"];
 
@@ -116,10 +128,11 @@ export async function install(version: string, options: VersionOptions) {
     assetId: meta.assetIndex.id,
     client: clientPath,
     libraries: libraries,
+    options: options,
   } as LaunchArgs;
 }
 
-export function run(meta: LaunchArgs, options: VersionOptions) {
+export function run(meta: LaunchArgs) {
   const classPath = [meta.client, ...meta.libraries];
 
   const jvmArgs = ["-cp", classPath.join(":")];
@@ -130,19 +143,22 @@ export function run(meta: LaunchArgs, options: VersionOptions) {
     "--version",
     "",
     "--accessToken",
-    options.auth?.token ?? "Haha this is not a valid access token.",
+    meta.options.auth?.token ?? "Haha this is not a valid access token.",
     "--uuid",
-    options.auth?.uuid ?? crypto.randomUUID(),
+    meta.options.auth?.uuid ?? crypto.randomUUID(),
     "--assetsDir",
-    `${options.rootDir}/assets`,
+    `${meta.options.rootDir}/assets`,
     "--assetIndex",
     meta.assetId,
   ];
-  if (options.auth?.username || options.username) {
-    gameArgs.push("--username", options.auth?.username ?? options.username!);
+  if (meta.options.auth?.username || meta.options.username) {
+    gameArgs.push(
+      "--username",
+      meta.options.auth?.username ?? meta.options.username!,
+    );
   }
-  Deno.chdir(options.instanceDir);
-  new Deno.Command(options.jvmPath, {
+  Deno.chdir(meta.options.instanceDir);
+  new Deno.Command(meta.options.jvmPath, {
     args: [...jvmArgs, meta.mainClass, ...gameArgs],
   }).spawn();
 }

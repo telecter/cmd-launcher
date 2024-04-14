@@ -1,4 +1,9 @@
-import { AuthData } from "../types.ts";
+export type AuthData = {
+  username: string;
+  uuid: string;
+  token: string;
+  refresh: string;
+};
 
 const client_id = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7";
 const scope = "XboxLive.SignIn,offline_access";

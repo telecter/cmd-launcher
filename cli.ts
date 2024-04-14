@@ -7,7 +7,7 @@ import {
 } from "https://deno.land/x/cliffy@v1.0.0-rc.3/command/mod.ts";
 import * as launcher from "./launcher.ts";
 import { getAuthData } from "./api/auth.ts";
-import { VersionOptions } from "./types.ts";
+import { VersionOptions } from "./launcher.ts";
 import { saveTextFile } from "./util.ts";
 
 launcher.registerDownloadListener((url) => console.log(`Downloading ${url}`));
@@ -74,7 +74,7 @@ async function launch(
   });
   console.log(`Starting Minecraft ${version}...`);
   try {
-    launcher.run(instance, options);
+    launcher.run(instance);
   } catch (err) {
     console.error(`An error occurred while running: ${err.message}`);
     Deno.exit(1);

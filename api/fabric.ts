@@ -1,19 +1,25 @@
-export async function getFabricMeta(gameVersion: string) {
-  const versionList = await (
-    await fetch(`https://meta.fabricmc.net/v2/versions/loader/${gameVersion}`)
-  ).json();
+import { fetchJSONData } from "../util.ts";
 
-  return (
-    await fetch(
-      `https://meta.fabricmc.net/v2/versions/loader/${gameVersion}/${versionList[0].loader.version}/profile/json`,
-    )
-  ).json();
+async function getLoaderMeta(urlPrefix: string, gameVersion: string) {
+  const loaderVersions = await fetchJSONData(`${urlPrefix}/${gameVersion}`);
+  const meta = await fetchJSONData(
+    `${urlPrefix}/${gameVersion}/${loaderVersions[0].loader.version}/profile/json`,
+  );
+  return meta;
+}
+
+export async function getFabricMeta(gameVersion: string) {
+  const meta = await getLoaderMeta(
+    "https://meta.fabricmc.net/v2/versions/loader",
+    gameVersion,
+  );
+  return meta;
 }
 
 export async function getQuiltMeta(gameVersion: string) {
-  return (
-    await fetch(
-      `https://meta.quiltmc.org/v3/versions/loader/${gameVersion}/0.24.0/profile/json`,
-    )
-  ).json();
+  const meta = await getLoaderMeta(
+    "https://meta.quiltmc.org/v3/versions/loader",
+    gameVersion,
+  );
+  return meta;
 }
