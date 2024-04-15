@@ -1,6 +1,6 @@
 import { fetchJSONData } from "../util.ts";
 
-export type VersionManifest = {
+export interface VersionManifest {
   latest: {
     snapshot: string;
     release: string;
@@ -12,8 +12,8 @@ export type VersionManifest = {
     time: string;
     releaseTime: string;
   }[];
-};
-export type VersionMeta = {
+}
+export interface VersionMeta {
   assetIndex: {
     id: string;
     sha1: string;
@@ -36,9 +36,9 @@ export type VersionMeta = {
   };
   libraries: Library[];
   mainClass: string;
-};
+}
 
-export type Library = {
+export interface Library {
   downloads: {
     artifact: {
       path: string;
@@ -49,14 +49,14 @@ export type Library = {
   };
   url?: string;
   name: string;
-};
-export type Asset = {
+}
+export interface Asset {
   hash: string;
   size: number;
-};
-export type AssetIndex = {
+}
+export interface AssetIndex {
   objects: { [name: string]: Asset };
-};
+}
 
 /** Downloads the Minecraft version manifest, containing the URL and ID for each version. */
 export async function getVersionManifest() {

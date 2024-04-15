@@ -1,12 +1,16 @@
 import { getVersionMeta, getAssetData } from "./api/game.ts";
 import { AssetIndex, Library, VersionMeta } from "./api/game.ts";
-import { saveTextFile, getPathFromMaven, readJSONIfExists } from "./util.ts";
+import {
+  saveTextFile,
+  getPathFromMaven,
+  readJSONIfExists,
+  download,
+} from "./util.ts";
 import { getFabricMeta, getQuiltMeta } from "./api/fabric.ts";
-import { dirname } from "https://deno.land/std@0.221.0/path/dirname.ts";
-import { ensureDir, exists } from "https://deno.land/std@0.221.0/fs/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.221.0/fs/mod.ts";
 import { AuthData } from "./api/auth.ts";
 
-export type VersionOptions = {
+export interface VersionOptions {
   auth?: AuthData;
   username?: string;
   rootDir: string;
@@ -14,32 +18,16 @@ export type VersionOptions = {
   loader?: string;
   jvmPath: string;
   cache: boolean;
-};
-export type LaunchArgs = {
+}
+export interface LaunchArgs {
   mainClass: string;
   assetId: string;
   client: string;
   libraries: string[];
   options: VersionOptions;
-};
+}
 
 export const MOD_LOADERS = ["fabric", "quilt"];
-
-let downloadListener = (_url: string) => {};
-export function registerDownloadListener(listener: (url: string) => void) {
-  downloadListener = listener;
-}
-
-async function download(url: string, dest: string, overwrite: boolean = false) {
-  if (!overwrite && (await exists(dest))) {
-    return dest;
-  }
-  const data = await (await fetch(url)).arrayBuffer();
-  downloadListener(url);
-  await ensureDir(dirname(dest));
-  await Deno.writeFile(dest, new Uint8Array(data));
-  return dest;
-}
 
 /** Ensure, and if needed install, assets from the given version metadata. */
 export async function installAssets(meta: VersionMeta, dir: string) {
