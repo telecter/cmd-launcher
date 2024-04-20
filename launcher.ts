@@ -1,11 +1,6 @@
 import { getVersionMeta, getAssetData } from "./api/game.ts";
 import { AssetIndex, Library, VersionMeta } from "./api/game.ts";
-import {
-  saveTextFile,
-  getPathFromMaven,
-  readJSONIfExists,
-  download,
-} from "./util.ts";
+import { saveTextFile, readJSONIfExists, download } from "./util.ts";
 import { getFabricMeta, getQuiltMeta } from "./api/fabric.ts";
 import { ensureDir } from "https://deno.land/std@0.221.0/fs/mod.ts";
 import { AuthData } from "./api/auth.ts";
@@ -28,6 +23,13 @@ export interface LaunchArgs {
 }
 
 export const MOD_LOADERS = ["fabric", "quilt"];
+
+function getPathFromMaven(mavenPath: string) {
+  const dir = mavenPath.replace(".", "/").split(":");
+  const basename = `${dir[1]}-${dir[2]}.jar`;
+  const path = `${dir.join("/")}/${basename}`.replace("ow2.asm", "ow2/asm");
+  return path;
+}
 
 /** Ensure, and if needed install, assets from the given version metadata. */
 export async function installAssets(meta: VersionMeta, dir: string) {

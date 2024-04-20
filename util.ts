@@ -38,13 +38,6 @@ export async function fetchJSONData(url: string) {
   return data;
 }
 
-export function getPathFromMaven(mavenPath: string) {
-  const dir = mavenPath.replace(".", "/").split(":");
-  const basename = `${dir[1]}-${dir[2]}.jar`;
-  const path = `${dir.join("/")}/${basename}`.replace("ow2.asm", "ow2/asm");
-  return path;
-}
-
 export async function readJSONIfExists(path: string) {
   if (await exists(path)) {
     return JSON.parse(await Deno.readTextFile(path));

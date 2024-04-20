@@ -60,10 +60,10 @@ export interface AssetIndex {
 
 /** Downloads the Minecraft version manifest, containing the URL and ID for each version. */
 export async function getVersionManifest() {
-  const data = await fetchJSONData(
+  const data: VersionManifest = await fetchJSONData(
     "https://launchermeta.mojang.com/mc/game/version_manifest.json",
   );
-  return data as VersionManifest;
+  return data;
 }
 
 /**
@@ -75,13 +75,13 @@ export async function getVersionMeta(version: string) {
   if (!release) {
     throw Error("Invalid version");
   }
-  const meta = await fetchJSONData(release.url);
-  return meta as VersionMeta;
+  const meta: VersionMeta = await fetchJSONData(release.url);
+  return meta;
 }
 
 /** Using the version metadata, get the game asset data. */
 export async function getAssetData(meta: VersionMeta) {
   const url = meta.assetIndex.url;
-  const data = await fetchJSONData(url);
-  return data as AssetIndex;
+  const data: AssetIndex = await fetchJSONData(url);
+  return data;
 }

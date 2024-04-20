@@ -42,7 +42,6 @@ export interface Project {
   thread_id: string;
   monetization_status: string;
 }
-export type ProjectVersions = ProjectVersion[];
 
 export interface ProjectVersion {
   game_versions: string[];
@@ -74,6 +73,13 @@ export interface ProjectVersion {
   dependencies: any[];
 }
 
+export async function search(q: string) {
+  const results: { hits: ProjectVersion[] } = await fetchJSONData(
+    `https://api.modrinth.com/v2/search?query=${q}`,
+  );
+  return results;
+}
+
 export async function getProject(id: string) {
   const project: Project = await fetchJSONData(
     `https://api.modrinth.com/v2/project/${id}`,
@@ -81,7 +87,7 @@ export async function getProject(id: string) {
   return project;
 }
 export async function getProjectVersion(id: string, gameVersion: string) {
-  const versions: ProjectVersions = await fetchJSONData(
+  const versions: ProjectVersion[] = await fetchJSONData(
     `https://api.modrinth.com/v2/project/${id}/version`,
   );
   const version = versions.find((element) =>
