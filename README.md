@@ -31,7 +31,8 @@ To choose the version of the game to run, use the `launch <version>` subcommand.
 cmd-launcher launch 1.20.4
 ```
 
-> [!IMPORTANT] This launcher is not tested for versions < 1.19. It may not work,
+> [!IMPORTANT]
+> This launcher is not tested for versions < 1.19. It may not work,
 > mainly because this launcher does not yet support installing native libraries.
 
 ### Online Mode
