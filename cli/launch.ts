@@ -16,7 +16,6 @@ async function launch(
   if (loader && !launcher.MOD_LOADERS.includes(loader)) {
     throw Error("Invalid mod loader.");
   }
-
   const [rootDir, instanceDir] = getDirs(version, flags.dir);
 
   await ensureDir(rootDir);
@@ -50,9 +49,8 @@ async function launch(
         }),
       );
     } catch (err) {
-      console.error(
-        `Authentication failed: ${err.message}. Using offline mode.`,
-      );
+      console.error(`
+        Authentication failed: ${err.message}. Using offline mode.`);
     }
   } else {
     options.username = flags.username;

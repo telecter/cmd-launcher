@@ -91,7 +91,7 @@ export async function getProjectVersion(id: string, gameVersion: string) {
     `https://api.modrinth.com/v2/project/${id}/version`,
   );
   const version = versions.find((element) =>
-    element.game_versions.includes(gameVersion),
+    element.game_versions.includes(gameVersion)
   );
   if (!version) {
     throw Error(

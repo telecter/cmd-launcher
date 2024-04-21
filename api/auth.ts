@@ -28,7 +28,7 @@ async function getMsaAuthCode() {
   const server = Deno.serve((req) => {
     const url = new URL(req.url);
     if (url.pathname == "/signin") {
-      authCode = <string>url.searchParams.get("code");
+      authCode = <string> url.searchParams.get("code");
       queueMicrotask(server.shutdown);
       return new Response("Response recorded", { status: 200 });
     }

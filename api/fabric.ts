@@ -3,7 +3,9 @@ import { fetchJSONData } from "../util.ts";
 async function getLoaderMeta(urlPrefix: string, gameVersion: string) {
   const loaderVersions = await fetchJSONData(`${urlPrefix}/${gameVersion}`);
   const meta = await fetchJSONData(
-    `${urlPrefix}/${gameVersion}/${loaderVersions[0].loader.version}/profile/json`,
+    `${urlPrefix}/${gameVersion}/${
+      loaderVersions[0].loader.version
+    }/profile/json`,
   );
   return meta;
 }

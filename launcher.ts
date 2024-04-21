@@ -1,6 +1,6 @@
-import { getVersionMeta, getAssetData } from "./api/game.ts";
+import { getAssetData, getVersionMeta } from "./api/game.ts";
 import { AssetIndex, Library, VersionMeta } from "./api/game.ts";
-import { saveTextFile, readJSONIfExists, download } from "./util.ts";
+import { download, readJSONIfExists, saveTextFile } from "./util.ts";
 import { getFabricMeta, getQuiltMeta } from "./api/fabric.ts";
 import { ensureDir } from "https://deno.land/std@0.221.0/fs/mod.ts";
 import { AuthData } from "./api/auth.ts";
@@ -89,14 +89,15 @@ export async function install(version: string, options: VersionOptions) {
   let libraries = await installLibraries(meta.libraries, options.rootDir);
 
   if (options.loader) {
-    const cachePath = `${cachesDir}/${options.loader === "quilt" ? "quilt" : "fabric"}/${version}.json`;
+    const cachePath = `${cachesDir}/${
+      options.loader === "quilt" ? "quilt" : "fabric"
+    }/${version}.json`;
     let loaderMeta = await readJSONIfExists(cachePath);
 
     if (!loaderMeta || !options.cache) {
-      loaderMeta =
-        options.loader === "quilt"
-          ? await getQuiltMeta(version)
-          : await getFabricMeta(version);
+      loaderMeta = options.loader === "quilt"
+        ? await getQuiltMeta(version)
+        : await getFabricMeta(version);
       await saveTextFile(cachePath, JSON.stringify(loaderMeta));
     }
 
