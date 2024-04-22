@@ -27,6 +27,7 @@ async function launch(
     instanceDir: instanceDir,
     jvmPath: flags.java ?? "java",
     cache: true,
+    server: flags.server,
   };
   if (loader) {
     options.loader = loader;

@@ -13,6 +13,7 @@ export interface VersionOptions {
   loader?: string;
   jvmPath: string;
   cache: boolean;
+  server?: string;
 }
 export interface LaunchArgs {
   mainClass: string;
@@ -95,9 +96,10 @@ export async function install(version: string, options: VersionOptions) {
     let loaderMeta = await readJSONIfExists(cachePath);
 
     if (!loaderMeta || !options.cache) {
-      loaderMeta = options.loader === "quilt"
-        ? await getQuiltMeta(version)
-        : await getFabricMeta(version);
+      loaderMeta =
+        options.loader === "quilt"
+          ? await getQuiltMeta(version)
+          : await getFabricMeta(version);
       await saveTextFile(cachePath, JSON.stringify(loaderMeta));
     }
 
@@ -114,13 +116,15 @@ export async function install(version: string, options: VersionOptions) {
   const clientPath = `${options.instanceDir}/${version}.jar`;
   await download(meta.downloads.client.url, clientPath);
 
-  return {
+  const launchArgs: LaunchArgs = {
     mainClass: mainClass,
     assetId: meta.assetIndex.id,
     client: clientPath,
     libraries: libraries,
     options: options,
-  } as LaunchArgs;
+  };
+
+  return launchArgs;
 }
 
 export function run(meta: LaunchArgs) {
@@ -148,6 +152,10 @@ export function run(meta: LaunchArgs) {
       meta.options.auth?.username ?? meta.options.username!,
     );
   }
+  if (meta.options.server) {
+    gameArgs.push("--quickPlayMultiplayer", meta.options.server);
+  }
+
   Deno.chdir(meta.options.instanceDir);
   new Deno.Command(meta.options.jvmPath, {
     args: [...jvmArgs, meta.mainClass, ...gameArgs],
