@@ -16,7 +16,7 @@ this program.
 Shell (Mac, Linux):
 
 ```sh
-deno install -A -n cmd-launcher https://raw.githubusercontent.com/telectr/cmd-launcher/VERSION/cli.ts
+deno install -A -n cmd-launcher https://raw.githubusercontent.com/telectr/cmd-launcher/VERSION/cli/main.ts
 ```
 
 Replace `VERSION` with the version you want to install.
