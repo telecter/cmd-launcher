@@ -1,4 +1,4 @@
-import { registerDownloadListener, saveTextFile } from "../util.ts";
+import { saveTextFile } from "../util.ts";
 import * as launcher from "../launcher.ts";
 import { VersionOptions } from "../launcher.ts";
 import { ensureDir, exists } from "https://deno.land/std@0.221.0/fs/mod.ts";
@@ -10,7 +10,7 @@ async function launch(
   flags: { java?: string; server?: string; username?: string; dir?: string },
   ...args: string[]
 ) {
-  registerDownloadListener((url) => console.log(`Downloading ${url}`));
+  launcher.registerDownloadListener((url) => console.log(`Downloading ${url}`));
   const [version, loader] = args[0].split(":");
 
   if (loader && !launcher.MOD_LOADERS.includes(loader)) {
