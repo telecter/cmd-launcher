@@ -18,7 +18,6 @@ async function installMods(flags: { dir?: string }, ...args: string[]) {
   await download(file.url, `${modsDir}/${file.filename}`);
   console.log(`Successfully downloaded jar file: ${file.filename}`);
 }
-
 export const installModsCommand = new Command()
   .description("Install and manage mods.")
   .command("install")

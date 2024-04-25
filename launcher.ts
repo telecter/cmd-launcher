@@ -32,6 +32,11 @@ function getPathFromMaven(mavenPath: string) {
   return path;
 }
 
+let downloadListener = (_url: string) => {};
+export function registerDownloadListener(listener: (url: string) => void) {
+  downloadListener = listener;
+}
+
 /** Ensure, and if needed install, assets from the given version metadata. */
 export async function installAssets(meta: VersionMeta, dir: string) {
   const cache = `${dir}/assets/indexes/${meta.assetIndex.id}.json`;
@@ -65,7 +70,7 @@ export async function installLibraries(libraries: Library[], dir: string) {
       url = library.url + path;
       destPath = fsPath;
     }
-    await download(url, destPath);
+    await download(url, destPath, downloadListener);
     paths.push(destPath);
   }
   return paths;
@@ -114,7 +119,7 @@ export async function install(version: string, options: VersionOptions) {
   await installAssets(meta, options.rootDir);
 
   const clientPath = `${options.instanceDir}/${version}.jar`;
-  await download(meta.downloads.client.url, clientPath);
+  await download(meta.downloads.client.url, clientPath, downloadListener);
 
   const launchArgs: LaunchArgs = {
     mainClass: mainClass,

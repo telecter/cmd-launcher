@@ -7,7 +7,7 @@ import {
 import { launchCommand } from "./launch.ts";
 import { installModsCommand } from "./install_mod.ts";
 
-const VERSION = "0.6.1";
+const VERSION = "dev";
 
 export function getDirs(version: string, dir?: string) {
   const rawRootDir = dir ?? `${Deno.env.get("HOME")}/.minecraft`;
@@ -39,7 +39,6 @@ if (import.meta.main) {
   try {
     await cmd.parse();
   } catch (err) {
-    console.error(err);
     console.error(
       `%cerror%c: ${err.message}`,
       "color: red; font-weight: bold;",

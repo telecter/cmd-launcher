@@ -7,14 +7,10 @@ export async function saveTextFile(path: string, data: string) {
   await Deno.writeTextFile(path, data);
 }
 
-let downloadListener = (_url: string) => {};
-export function registerDownloadListener(listener: (url: string) => void) {
-  downloadListener = listener;
-}
-
 export async function download(
   url: string,
   dest: string,
+  listener?: (url: string) => void,
   overwrite: boolean = false,
 ) {
   if (!overwrite && (await exists(dest))) {
@@ -23,7 +19,9 @@ export async function download(
   const data = await (await fetch(url)).arrayBuffer();
   await ensureDir(dirname(dest));
   await Deno.writeFile(dest, new Uint8Array(data));
-  downloadListener(url);
+  if (listener) {
+    listener(url);
+  }
   return dest;
 }
 
