@@ -33,7 +33,7 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 	util.DownloadFile(meta.AssetIndex.URL, fmt.Sprintf("%v/assets/indexes/%v.json", rootDir, meta.AssetIndex.ID))
 }
 
-func Launch(version string) error {
+func Launch(version string, accessToken string, username string, uuid string) error {
 	cwd, _ := os.Getwd()
 	rootDir := cwd + "/minecraft"
 	instanceDir := rootDir + "/instances/" + version
@@ -67,7 +67,7 @@ func Launch(version string) error {
 	classPath := strings.Join(paths, ":")
 
 	os.Chdir(instanceDir)
-	cmd := exec.Command("java", "-XstartOnFirstThread", "-cp", classPath, meta.MainClass, "--accessToken", "abc", "--version", "", "--assetsDir", rootDir+"/assets", "--assetIndex", meta.AssetIndex.ID)
+	cmd := exec.Command("java", "-XstartOnFirstThread", "-cp", classPath, meta.MainClass, "--accessToken", accessToken, "--version", "", "--assetsDir", rootDir+"/assets", "--assetIndex", meta.AssetIndex.ID, "--username", username, "--uuid", uuid)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 
@@ -81,8 +81,7 @@ func Launch(version string) error {
 	}()
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Errorf("Error waiting for command: %v", err)
-		return err
+		return fmt.Errorf("Error waiting for command: %v", err)
 	}
 	return nil
 }

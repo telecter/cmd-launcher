@@ -9,17 +9,6 @@ import (
 	"path"
 )
 
-func Get(url string) (*http.Response, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return resp, fmt.Errorf("Could not create request to %v: %v", url, err)
-	}
-	if resp.StatusCode > 299 || resp.StatusCode < 200 {
-		return resp, fmt.Errorf("Request to %v failed with status %v", url, resp.Status)
-	}
-	return resp, nil
-}
-
 func CheckResponse(resp *http.Response, err error) error {
 	if err != nil {
 		return fmt.Errorf("Request could not be created: %v", err)
@@ -31,8 +20,8 @@ func CheckResponse(resp *http.Response, err error) error {
 }
 
 func GetJSON(url string, v any) error {
-	resp, err := Get(url)
-	if err != nil {
+	resp, err := http.Get(url)
+	if err := CheckResponse(resp, err); err != nil {
 		return err
 	}
 	body, _ := io.ReadAll(resp.Body)
