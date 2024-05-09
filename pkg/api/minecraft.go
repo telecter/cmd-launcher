@@ -120,10 +120,11 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	for _, v := range manifest.Versions {
 		if v.ID == id {
 			resp, err := http.Get(v.URL)
-			defer resp.Body.Close()
+
 			if err := util.CheckResponse(resp, err); err != nil {
 				return meta, errors.New("Failed to retrieve version metadata")
 			}
+			defer resp.Body.Close()
 			body, _ := io.ReadAll(resp.Body)
 			json.Unmarshal(body, &meta)
 
