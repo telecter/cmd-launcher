@@ -33,9 +33,7 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 	util.DownloadFile(meta.AssetIndex.URL, fmt.Sprintf("%v/assets/indexes/%v.json", rootDir, meta.AssetIndex.ID))
 }
 
-func Launch(version string, accessToken string, username string, uuid string) error {
-	cwd, _ := os.Getwd()
-	rootDir := cwd + "/minecraft"
+func Launch(version string, rootDir string, authData api.AuthData) error {
 	instanceDir := rootDir + "/instances/" + version
 
 	err := os.MkdirAll(instanceDir, os.ModePerm)
@@ -67,7 +65,7 @@ func Launch(version string, accessToken string, username string, uuid string) er
 	classPath := strings.Join(paths, ":")
 
 	os.Chdir(instanceDir)
-	cmd := exec.Command("java", "-XstartOnFirstThread", "-cp", classPath, meta.MainClass, "--accessToken", accessToken, "--version", "", "--assetsDir", rootDir+"/assets", "--assetIndex", meta.AssetIndex.ID, "--username", username, "--uuid", uuid)
+	cmd := exec.Command("java", "-XstartOnFirstThread", "-cp", classPath, meta.MainClass, "--accessToken", authData.Token, "--version", "", "--assetsDir", rootDir+"/assets", "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username, "--uuid", authData.UUID)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 
