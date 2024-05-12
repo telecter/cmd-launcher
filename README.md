@@ -11,7 +11,7 @@ A minimal command line Minecraft launcher.
 
 ## Installation
 
-To run the launcher, download the binary from the Release section.
+To run the launcher, download the binary from the [Releases](https://github.com/telecter/cmd-launcher/releases) section.
 
 ### Compiling from Source
 Make sure you have [Go](https://go.dev) installed.
