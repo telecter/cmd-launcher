@@ -3,6 +3,7 @@
 A minimal command line Minecraft launcher.
 
 - [Installation](#installation)
+  - [Compiling from Source](#compiling-from-source)
 - [Usage](#usage)
   - [Selecting Versions](#selecting-versions)
   - [Online Mode](#online-mode)
@@ -10,16 +11,14 @@ A minimal command line Minecraft launcher.
 
 ## Installation
 
-You need the [Deno](https://deno.com) JavaScript runtime to download and run
-this program.
+To run the launcher, download the binary from the Release section.
 
-Shell (Mac, Linux):
+### Compiling from Source
+Make sure you have [Go](https://go.dev) installed.
+1. Clone this repository with `git`
+2. `cd` into the directory and run `go build`
+3. Run the binary that is created
 
-```sh
-deno install -A -n cmd-launcher https://raw.githubusercontent.com/telectr/cmd-launcher/VERSION/cli/main.ts
-```
-
-Replace `VERSION` with the version you want to install.
 
 ## Usage
 
@@ -28,7 +27,7 @@ Replace `VERSION` with the version you want to install.
 To choose the version of the game to run, use the `launch <version>` subcommand.
 
 ```sh
-cmd-launcher launch 1.20.4
+cmd-launcher 1.20.4
 ```
 
 > [!IMPORTANT]
@@ -50,5 +49,5 @@ Currently, only Fabric and Quilt are supported. Use the `fabric` and `quilt`
 specifiers to use them.
 
 ```sh
-cmd-launcher launch 1.20.4:fabric
+cmd-launcher 1.20.4 fabric
 ```
