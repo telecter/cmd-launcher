@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+type LaunchOptions struct {
+	ModLoader string
+}
+
 func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 	var paths []string
 	for _, library := range libraries {
@@ -23,6 +27,19 @@ func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 	}
 	return paths, nil
 }
+func fetchFabricLibraries(libraries []api.FabricLibrary, rootDir string) ([]string, error) {
+	var paths []string
+	for _, library := range libraries {
+		libraryPath := rootDir + "/libraries/" + util.GetPathFromMaven(library.Name)
+		err := util.DownloadFile(library.URL+util.GetPathFromMaven(library.Name), libraryPath)
+		if err != nil {
+			return paths, fmt.Errorf("Error while downloading Fabric/Quilt library %v: %v", library.Name, err)
+		}
+		paths = append(paths, libraryPath)
+	}
+	return paths, nil
+}
+
 func fetchAssets(meta api.VersionMeta, rootDir string) {
 	index := api.AssetIndex{}
 	util.GetJSON(meta.AssetIndex.URL, &index)
@@ -33,7 +50,8 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 	util.DownloadFile(meta.AssetIndex.URL, fmt.Sprintf("%v/assets/indexes/%v.json", rootDir, meta.AssetIndex.ID))
 }
 
-func Launch(version string, rootDir string, authData api.AuthData) error {
+func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
+
 	instanceDir := rootDir + "/instances/" + version
 
 	err := os.MkdirAll(instanceDir, os.ModePerm)
@@ -53,6 +71,25 @@ func Launch(version string, rootDir string, authData api.AuthData) error {
 		return err
 	}
 
+	var loaderMeta api.FabricMeta
+	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
+		var url string
+		if options.ModLoader == "fabric" {
+			url = api.FabricURLPrefix
+		} else if options.ModLoader == "quilt" {
+			url = api.QuiltURLPrefix
+		}
+		loaderMeta, err = api.GetLoaderMeta(url, version)
+		if err != nil {
+			return err
+		}
+		fabricPaths, err := fetchFabricLibraries(loaderMeta.Libraries, rootDir)
+		paths = append(paths, fabricPaths...)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = util.DownloadFile(meta.Downloads.Client.URL, instanceDir+"/client.jar")
 	if err != nil {
 		return fmt.Errorf("Error while downloading game client: %v", err)
@@ -65,7 +102,22 @@ func Launch(version string, rootDir string, authData api.AuthData) error {
 	classPath := strings.Join(paths, ":")
 
 	os.Chdir(instanceDir)
-	cmd := exec.Command("java", "-XstartOnFirstThread", "-cp", classPath, meta.MainClass, "--accessToken", authData.Token, "--version", "", "--assetsDir", rootDir+"/assets", "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username, "--uuid", authData.UUID)
+
+	jvmArgs := []string{"-XstartOnFirstThread", "-cp", classPath}
+	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
+		jvmArgs = append(jvmArgs, "-DFabricMcEmu= net.minecraft.client.main.Main")
+	}
+	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
+		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
+	} else {
+		jvmArgs = append(jvmArgs, meta.MainClass)
+	}
+
+	gameArgs := []string{"--accessToken", authData.Token, "--version", "", "--assetsDir", rootDir + "/assets", "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username, "--uuid", authData.UUID}
+
+	args := append(jvmArgs, gameArgs...)
+
+	cmd := exec.Command("java", args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 

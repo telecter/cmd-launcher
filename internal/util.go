@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 func CheckResponse(resp *http.Response, err error) error {
@@ -50,4 +51,11 @@ func DownloadFile(url string, dest string) error {
 	defer resp.Body.Close()
 	io.Copy(out, resp.Body)
 	return nil
+}
+
+func GetPathFromMaven(mavenPath string) string {
+	identifier := strings.Split(mavenPath, ":")
+	groupID := strings.Replace(identifier[0], ".", "/", -1)
+	basename := fmt.Sprintf("%s-%s.jar", identifier[1], identifier[2])
+	return fmt.Sprintf("%s/%s/%s/%s", groupID, identifier[1], identifier[2], basename)
 }

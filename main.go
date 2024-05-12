@@ -10,6 +10,15 @@ import (
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("usage: cmd-launcher <version>")
+		os.Exit(1)
+	}
+	var modLoader string
+	if len(os.Args) > 2 {
+		modLoader = os.Args[2]
+	}
+
 	homeDir, _ := os.UserHomeDir()
 	rootDir := homeDir + "/.minecraft"
 	accountFile, err := os.ReadFile(rootDir + "/account.txt")
@@ -24,7 +33,6 @@ func main() {
 	authData, err := api.GetAuthData(refresh)
 	refresh = authData.Refresh
 
-	fmt.Println("Saving auth file...")
 	err = os.WriteFile(rootDir+"/account.txt", []byte(refresh), os.ModePerm)
 	if err != nil {
 		fmt.Println("Couldn't save auth data file. Authentication may not work.")
@@ -34,11 +42,9 @@ func main() {
 		fmt.Println("Authentication could not be completed. Using offline mode.", err)
 	}
 
-	if len(os.Args) < 2 {
-		fmt.Println("usage: cmd-launcher <version>")
-		os.Exit(1)
-	}
-	if err := launcher.Launch(os.Args[1], rootDir, authData); err != nil {
+	if err := launcher.Launch(os.Args[1], rootDir, launcher.LaunchOptions{
+		ModLoader: modLoader,
+	}, authData); err != nil {
 		fmt.Println(err)
 	}
 }

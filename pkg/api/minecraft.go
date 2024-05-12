@@ -3,7 +3,7 @@ package api
 import (
 	util "cmd-launcher/internal"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -114,7 +114,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	err := util.GetJSON("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest)
 
 	if err != nil {
-		return meta, errors.New("Failed to retrieve version manifest")
+		return meta, fmt.Errorf("Failed to retrieve version manifest (%v)", err)
 	}
 
 	for _, v := range manifest.Versions {
@@ -122,7 +122,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 			resp, err := http.Get(v.URL)
 
 			if err := util.CheckResponse(resp, err); err != nil {
-				return meta, errors.New("Failed to retrieve version metadata")
+				return meta, fmt.Errorf("Failed to retrieve version metadata (%v)", err)
 			}
 			defer resp.Body.Close()
 			body, _ := io.ReadAll(resp.Body)
@@ -131,5 +131,5 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 			return meta, nil
 		}
 	}
-	return meta, errors.New("Invalid version")
+	return meta, fmt.Errorf("Invalid version")
 }

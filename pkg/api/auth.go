@@ -212,7 +212,6 @@ func GetAuthData(refreshToken string) (AuthData, error) {
 		return authData, fmt.Errorf("Failed to retrieve Microsoft authentication token (%v)", err)
 	}
 	authData.Refresh = refreshToken
-	fmt.Println(authData.Refresh)
 	token, userhash, err := getXboxAuthData(msaToken)
 	if err != nil {
 		return authData, fmt.Errorf("Failed to authenticate with Xbox (%v)", err)
