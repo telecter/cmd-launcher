@@ -1,12 +1,13 @@
 package api
 
 import (
-	util "cmd-launcher/internal"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
+
+	util "github.com/telecter/cmd-launcher/internal"
 )
 
 type VersionManifest struct {

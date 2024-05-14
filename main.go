@@ -1,12 +1,13 @@
 package main
 
 import (
-	"cmd-launcher/pkg/api"
-	"cmd-launcher/pkg/launcher"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+
+	"github.com/telecter/cmd-launcher/pkg/api"
+	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
 func main() {

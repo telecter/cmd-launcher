@@ -1,7 +1,6 @@
 package api
 
 import (
-	util "cmd-launcher/internal"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	util "github.com/telecter/cmd-launcher/internal"
 )
 
 type MSATokenResponse struct {

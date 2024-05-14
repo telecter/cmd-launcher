@@ -1,8 +1,9 @@
 package api
 
 import (
-	util "cmd-launcher/internal"
 	"fmt"
+
+	util "github.com/telecter/cmd-launcher/internal"
 )
 
 type FabricVersionList []struct {

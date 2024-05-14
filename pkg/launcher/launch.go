@@ -1,13 +1,14 @@
 package launcher
 
 import (
-	util "cmd-launcher/internal"
-	"cmd-launcher/pkg/api"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+
+	util "github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/pkg/api"
 )
 
 type LaunchOptions struct {
