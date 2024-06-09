@@ -9,6 +9,9 @@ A minimal command line Minecraft launcher.
   - [Online Mode](#online-mode)
   - [Mod Loaders](#mod-loaders)
 
+> [!CAUTION]
+> This README will probably not be correct right now. I'm making a lot of changes to the launcher.
+
 ## Installation
 
 To run the launcher, download the binary from the [Releases](https://github.com/telecter/cmd-launcher/releases) section.
