@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -90,8 +91,8 @@ func getMsaAuthCode() string {
 		code = params.Get("code")
 		fmt.Fprintf(w, "Response recorded. You can close this tab.")
 		go func() {
-			time.Sleep(1)
-			server.Shutdown(nil)
+			time.Sleep(10000)
+			server.Shutdown(context.TODO())
 		}()
 	})
 	server.ListenAndServe()
@@ -210,27 +211,27 @@ func GetAuthData(refreshToken string) (AuthData, error) {
 		msaToken, refreshToken, err = getMsaAuthToken(refreshToken, true)
 	}
 	if err != nil {
-		return authData, fmt.Errorf("Failed to retrieve Microsoft authentication token (%v)", err)
+		return authData, fmt.Errorf("failed to retrieve Microsoft authentication token (%v)", err)
 	}
 	authData.Refresh = refreshToken
 	token, userhash, err := getXboxAuthData(msaToken)
 	if err != nil {
-		return authData, fmt.Errorf("Failed to authenticate with Xbox (%v)", err)
+		return authData, fmt.Errorf("failed to authenticate with Xbox (%v)", err)
 	}
 	xstsToken, err := getXSTSToken(token)
 	if err != nil {
-		return authData, fmt.Errorf("Failed to authenticate with Xbox (%v)", err)
+		return authData, fmt.Errorf("failed to authenticate with Xbox (%v)", err)
 	}
 	authToken, err := getMinecraftAuthToken(xstsToken, userhash)
 	authData.Token = authToken
 	if err != nil {
-		return authData, fmt.Errorf("Couldn't get Minecraft authentication token (%v)", err)
+		return authData, fmt.Errorf("couldn't get Minecraft authentication token (%v)", err)
 	}
 	username, uuid, err := getMinecraftProfile(authToken)
 	authData.Username = username
 	authData.UUID = uuid
 	if err != nil {
-		return authData, fmt.Errorf("Couldn't get Minecraft profile (%v)", err)
+		return authData, fmt.Errorf("couldn't get Minecraft profile (%v)", err)
 	}
 	return authData, nil
 }
