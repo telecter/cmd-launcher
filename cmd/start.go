@@ -48,9 +48,11 @@ func start(ctx *cli.Context) error {
 }
 
 var Start = &cli.Command{
-	Name:   "start",
-	Usage:  "Start the game",
-	Action: start,
+	Name:      "start",
+	Usage:     "Start the game",
+	Args:      true,
+	ArgsUsage: " <version>",
+	Action:    start,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",

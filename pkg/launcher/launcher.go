@@ -22,7 +22,7 @@ func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 
 		err := util.DownloadFile(library.Downloads.Artifact.URL, libraryPath)
 		if err != nil {
-			return paths, fmt.Errorf("error while downloading library %v: %v", library.Name, err)
+			return paths, fmt.Errorf("error while downloading library %s: %s", library.Name, err)
 		}
 		paths = append(paths, libraryPath)
 	}
@@ -35,7 +35,7 @@ func fetchFabricLibraries(libraries []api.FabricLibrary, rootDir string) ([]stri
 		libraryPath := rootDir + "/libraries/" + util.GetPathFromMaven(library.Name)
 		err := util.DownloadFile(library.URL+util.GetPathFromMaven(library.Name), libraryPath)
 		if err != nil {
-			return paths, fmt.Errorf("error while downloading Fabric/Quilt library %v: %v", library.Name, err)
+			return paths, fmt.Errorf("error while downloading Fabric/Quilt library %s: %s", library.Name, err)
 		}
 		paths = append(paths, libraryPath)
 	}
@@ -47,7 +47,7 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 	util.GetJSON(meta.AssetIndex.URL, &index)
 	for _, asset := range index.Objects {
 		beginOfHash := asset.Hash[:2]
-		util.DownloadFile(fmt.Sprintf("https://resources.download.minecraft.net/%v/%v", beginOfHash, asset.Hash), fmt.Sprintf("%v/assets/objects/%v/%v", rootDir, beginOfHash, asset.Hash))
+		util.DownloadFile(fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", beginOfHash, asset.Hash), fmt.Sprintf("%v/assets/objects/%v/%v", rootDir, beginOfHash, asset.Hash))
 	}
 	util.DownloadFile(meta.AssetIndex.URL, fmt.Sprintf("%v/assets/indexes/%v.json", rootDir, meta.AssetIndex.ID))
 }
@@ -58,7 +58,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 	err := os.MkdirAll(instanceDir, os.ModePerm)
 	if err != nil {
 		if !os.IsExist(err) {
-			return fmt.Errorf("could not create game directory: %v", err)
+			return fmt.Errorf("could not create game directory: %s", err)
 		}
 	}
 
@@ -95,7 +95,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 
 	err = util.DownloadFile(meta.Downloads.Client.URL, instanceDir+"/client.jar")
 	if err != nil {
-		return fmt.Errorf("error while downloading game client: %v", err)
+		return fmt.Errorf("error while downloading game client: %s", err)
 	}
 
 	paths = append(paths, instanceDir+"/client.jar")

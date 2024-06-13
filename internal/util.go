@@ -12,10 +12,10 @@ import (
 
 func CheckResponse(resp *http.Response, err error) error {
 	if err != nil {
-		return fmt.Errorf("Request could not be created: %v", err)
+		return err
 	}
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
-		return fmt.Errorf("Request to %v failed with status %v", resp.Request.URL, resp.Status)
+		return fmt.Errorf("%s %s (%s)", resp.Request.Method, resp.Request.URL, resp.Status)
 	}
 	return nil
 }
@@ -37,11 +37,11 @@ func DownloadFile(url string, dest string) error {
 	fmt.Println("Downloading file: " + url)
 	err := os.MkdirAll(path.Dir(dest), os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("Failed to create directory structure for file: %v", err)
+		return fmt.Errorf("failed to create directory structure for file: %s", err)
 	}
 	out, err := os.Create(dest)
 	if err != nil {
-		return fmt.Errorf("Failed to create file %v: %v", dest, err)
+		return fmt.Errorf("failed to create file %s: %s", dest, err)
 	}
 	defer out.Close()
 	resp, err := http.Get(url)

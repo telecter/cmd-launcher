@@ -91,7 +91,7 @@ func GetModrinthProject(id string) (Project, error) {
 	data := Project{}
 	err := util.GetJSON("https://api.modrinth.com/v2/project/"+id, &data)
 	if err != nil {
-		return data, fmt.Errorf("failed to get project: %v", err)
+		return data, fmt.Errorf("failed to get project: %s", err)
 	}
 	return data, nil
 }
@@ -105,7 +105,7 @@ func DownloadModrinthProject(path string, id string, gameVersion string, loader 
 		if slices.Contains(version.Loaders, loader) && slices.Contains(version.GameVersions, gameVersion) {
 			err := util.DownloadFile(version.Files[0].URL, path+"/"+version.Files[0].Filename)
 			if err != nil {
-				return fmt.Errorf("failed to download project file: %v", err)
+				return fmt.Errorf("failed to download project file: %s", err)
 			}
 			return nil
 		}

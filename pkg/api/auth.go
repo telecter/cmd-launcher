@@ -170,7 +170,7 @@ func getXSTSToken(xblToken string) (string, error) {
 func getMinecraftAuthToken(xstsToken string, userhash string) (string, error) {
 	var token string
 	data := MCAuthTokenRequest{
-		IdentityToken: fmt.Sprintf("XBL3.0 x=%v;%v", userhash, xstsToken),
+		IdentityToken: fmt.Sprintf("XBL3.0 x=%s;%s", userhash, xstsToken),
 	}
 	req, _ := json.Marshal(data)
 	resp, err := http.Post("https://api.minecraftservices.com/authentication/login_with_xbox", "application/json", strings.NewReader(string(req)))
@@ -211,27 +211,27 @@ func GetAuthData(refreshToken string) (AuthData, error) {
 		msaToken, refreshToken, err = getMsaAuthToken(refreshToken, true)
 	}
 	if err != nil {
-		return authData, fmt.Errorf("failed to retrieve Microsoft authentication token (%v)", err)
+		return authData, fmt.Errorf("failed to retrieve Microsoft authentication token (%s)", err)
 	}
 	authData.Refresh = refreshToken
 	token, userhash, err := getXboxAuthData(msaToken)
 	if err != nil {
-		return authData, fmt.Errorf("failed to authenticate with Xbox (%v)", err)
+		return authData, fmt.Errorf("failed to authenticate with Xbox (%s)", err)
 	}
 	xstsToken, err := getXSTSToken(token)
 	if err != nil {
-		return authData, fmt.Errorf("failed to authenticate with Xbox (%v)", err)
+		return authData, fmt.Errorf("failed to authenticate with Xbox (%s)", err)
 	}
 	authToken, err := getMinecraftAuthToken(xstsToken, userhash)
 	authData.Token = authToken
 	if err != nil {
-		return authData, fmt.Errorf("couldn't get Minecraft authentication token (%v)", err)
+		return authData, fmt.Errorf("couldn't get Minecraft authentication token (%s)", err)
 	}
 	username, uuid, err := getMinecraftProfile(authToken)
 	authData.Username = username
 	authData.UUID = uuid
 	if err != nil {
-		return authData, fmt.Errorf("couldn't get Minecraft profile (%v)", err)
+		return authData, fmt.Errorf("couldn't get Minecraft profile (%s)", err)
 	}
 	return authData, nil
 }

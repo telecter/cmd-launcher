@@ -115,7 +115,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	err := util.GetJSON("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest)
 
 	if err != nil {
-		return meta, fmt.Errorf("failed to retrieve version manifest (%v)", err)
+		return meta, fmt.Errorf("failed to retrieve version manifest (%s)", err)
 	}
 
 	for _, v := range manifest.Versions {
@@ -123,7 +123,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 			resp, err := http.Get(v.URL)
 
 			if err := util.CheckResponse(resp, err); err != nil {
-				return meta, fmt.Errorf("failed to retrieve version metadata (%v)", err)
+				return meta, fmt.Errorf("failed to retrieve version metadata (%s)", err)
 			}
 			defer resp.Body.Close()
 			body, _ := io.ReadAll(resp.Body)
