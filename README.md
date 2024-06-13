@@ -38,7 +38,7 @@ cmd-launcher launch 1.20.6
 > mainly because this launcher does not yet support installing native libraries.
 
 ### Online Mode
-**Online mode will not work right now** due to issues with Microsoft Azure.
+⚠️ **Online mode will not work right now** due to issues with Microsoft Azure.
 
 
 Without any options, the launcher will automatically attempt to use online mode.
@@ -50,7 +50,7 @@ to set your username and the game will automatically launch in offline mode.
 
 ### Mod Loaders
 
-Currently, only Fabric and Quilt are supported. Use the `-l, --loader` flags to use them.
+Currently, only Fabric and Quilt are supported. Use the `-l, --loader` flag to use them.
 
 ```sh
 cmd-launcher -l fabric 1.20.6
