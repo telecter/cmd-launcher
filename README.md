@@ -41,7 +41,7 @@ Without any options, the launcher will automatically attempt to use online mode.
 As part of Microsoft's OAuth2 flow, the default web browser will be opened to
 complete the authentication.
 
-If you want to use offline mode, just pass the `-u, --username <username>` flag beforet the version
+If you want to use offline mode, just pass the `-u, --username <username>` flag before the version
 to set your username and the game will automatically launch in offline mode.
 
 ### Mod Loaders
