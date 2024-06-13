@@ -31,8 +31,7 @@ func execute(ctx *cli.Context) error {
 		if err != nil {
 			return cli.Exit(err, 1)
 		}
-
-	} else {
+	} else { // offline mode (TODO: don't fill in auth data with fake info, maybe actually fix the problem?)
 		authData = api.AuthData{
 			Token:    "not a real token",
 			UUID:     "bbccc3e6-9f7f-4270-a3f0-4d126765523e",

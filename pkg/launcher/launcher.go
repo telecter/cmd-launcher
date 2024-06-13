@@ -22,19 +22,20 @@ func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 
 		err := util.DownloadFile(library.Downloads.Artifact.URL, libraryPath)
 		if err != nil {
-			return paths, fmt.Errorf("Error while downloading library %v: %v", library.Name, err)
+			return paths, fmt.Errorf("error while downloading library %v: %v", library.Name, err)
 		}
 		paths = append(paths, libraryPath)
 	}
 	return paths, nil
 }
+
 func fetchFabricLibraries(libraries []api.FabricLibrary, rootDir string) ([]string, error) {
 	var paths []string
 	for _, library := range libraries {
 		libraryPath := rootDir + "/libraries/" + util.GetPathFromMaven(library.Name)
 		err := util.DownloadFile(library.URL+util.GetPathFromMaven(library.Name), libraryPath)
 		if err != nil {
-			return paths, fmt.Errorf("Error while downloading Fabric/Quilt library %v: %v", library.Name, err)
+			return paths, fmt.Errorf("error while downloading Fabric/Quilt library %v: %v", library.Name, err)
 		}
 		paths = append(paths, libraryPath)
 	}
@@ -52,13 +53,12 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 }
 
 func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
-
 	instanceDir := rootDir + "/instances/" + version
 
 	err := os.MkdirAll(instanceDir, os.ModePerm)
 	if err != nil {
 		if !os.IsExist(err) {
-			return fmt.Errorf("Could not create game directory: %v", err)
+			return fmt.Errorf("could not create game directory: %v", err)
 		}
 	}
 
@@ -73,12 +73,14 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 	}
 
 	var loaderMeta api.FabricMeta
-	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
+	if options.ModLoader != "" {
 		var url string
 		if options.ModLoader == "fabric" {
 			url = api.FabricURLPrefix
 		} else if options.ModLoader == "quilt" {
 			url = api.QuiltURLPrefix
+		} else {
+			return fmt.Errorf("invalid mod loader")
 		}
 		loaderMeta, err = api.GetLoaderMeta(url, version)
 		if err != nil {
@@ -93,7 +95,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 
 	err = util.DownloadFile(meta.Downloads.Client.URL, instanceDir+"/client.jar")
 	if err != nil {
-		return fmt.Errorf("Error while downloading game client: %v", err)
+		return fmt.Errorf("error while downloading game client: %v", err)
 	}
 
 	paths = append(paths, instanceDir+"/client.jar")
@@ -107,8 +109,6 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 	jvmArgs := []string{"-XstartOnFirstThread", "-cp", classPath}
 	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
 		jvmArgs = append(jvmArgs, "-DFabricMcEmu= net.minecraft.client.main.Main")
-	}
-	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
 		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
 	} else {
 		jvmArgs = append(jvmArgs, meta.MainClass)
@@ -132,7 +132,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 	}()
 
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("Error waiting for command: %v", err)
+		return fmt.Errorf("error waiting for command: %v", err)
 	}
 	return nil
 }
