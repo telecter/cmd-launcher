@@ -16,6 +16,7 @@ func main() {
 		Usage: "A minimal command line Minecraft launcher.",
 		Commands: []*cli.Command{
 			cmd.Start,
+			cmd.Mod,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{

@@ -11,7 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func execute(ctx *cli.Context) error {
+func start(ctx *cli.Context) error {
 	if ctx.Args().Len() < 1 {
 		return cli.Exit("No version provided", 1)
 	}
@@ -50,7 +50,7 @@ func execute(ctx *cli.Context) error {
 var Start = &cli.Command{
 	Name:   "start",
 	Usage:  "Start the game",
-	Action: execute,
+	Action: start,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",
