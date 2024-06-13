@@ -38,7 +38,7 @@ cmd-launcher launch 1.20.6
 > mainly because this launcher does not yet support installing native libraries.
 
 ### Online Mode
-⚠️ **Online mode will not work right now** due to issues with Microsoft Azure.
+:warning: **Online mode will not work right now** due to issues with Microsoft Azure.
 
 
 Without any options, the launcher will automatically attempt to use online mode.
