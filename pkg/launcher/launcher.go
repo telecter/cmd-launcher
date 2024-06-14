@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	util "github.com/telecter/cmd-launcher/internal"
@@ -106,7 +107,10 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 
 	os.Chdir(instanceDir)
 
-	jvmArgs := []string{"-XstartOnFirstThread", "-cp", classPath}
+	jvmArgs := []string{"-cp", classPath}
+	if runtime.GOOS == "darwin" {
+		jvmArgs = append([]string{"-XstartOnFirstThread"}, jvmArgs...)
+	}
 	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
 		jvmArgs = append(jvmArgs, "-DFabricMcEmu= net.minecraft.client.main.Main")
 		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
