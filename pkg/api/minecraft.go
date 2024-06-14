@@ -118,6 +118,10 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 		return meta, fmt.Errorf("failed to retrieve version manifest (%s)", err)
 	}
 
+	if id == "" {
+		id = manifest.Latest.Release
+	}
+
 	for _, v := range manifest.Versions {
 		if v.ID == id {
 			resp, err := http.Get(v.URL)

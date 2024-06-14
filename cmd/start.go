@@ -12,17 +12,13 @@ import (
 )
 
 func start(ctx *cli.Context) error {
-	if ctx.Args().Len() < 1 {
-		return cli.Exit("No version provided", 1)
-	}
-
 	var authData api.AuthData
 	// online mode
 	if ctx.String("username") == "" {
 		var refresh string
 		data, err := os.ReadFile(ctx.String("dir") + "/account.txt")
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Println("No account data file found")
+			fmt.Println("no account data file found")
 			refresh = ""
 		} else {
 			refresh = string(data)
@@ -51,7 +47,7 @@ var Start = &cli.Command{
 	Name:      "start",
 	Usage:     "Start the game",
 	Args:      true,
-	ArgsUsage: " <version>",
+	ArgsUsage: " [version]",
 	Action:    start,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
