@@ -54,16 +54,16 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 }
 
 func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
-	instanceDir := rootDir + "/instances/" + version
-
-	err := os.MkdirAll(instanceDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("could not create game directory: %s", err)
-	}
-
 	meta, err := api.GetVersionMeta(version)
 	if err != nil {
 		return err
+	}
+	version = meta.ID // set version if not already specified by user
+	instanceDir := rootDir + "/instances/" + version
+
+	err = os.MkdirAll(instanceDir, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("could not create game directory: %s", err)
 	}
 
 	paths, err := fetchLibraries(meta.Libraries, rootDir)
@@ -102,7 +102,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 	fetchAssets(meta, rootDir)
 
 	classPath := strings.Join(paths, ":")
-
+	fmt.Println(instanceDir)
 	os.Chdir(instanceDir)
 
 	jvmArgs := []string{"-cp", classPath}
