@@ -27,10 +27,10 @@ Run the `help` subcommand to get the usage information.
 
 ### Selecting Versions
 
-To choose the version of the game to run, use the `launch <version>` subcommand.
+To choose the version of the game to run, use the `start <version>` subcommand.
 
 ```sh
-cmd-launcher launch 1.20.6
+cmd-launcher start 1.21
 ```
 
 > [!IMPORTANT]
@@ -53,5 +53,5 @@ to set your username and the game will automatically launch in offline mode.
 Currently, only Fabric and Quilt are supported. Use the `-l, --loader` flag to use them.
 
 ```sh
-cmd-launcher -l fabric 1.20.6
+cmd-launcher start -l fabric 1.21
 ```
