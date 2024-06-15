@@ -116,7 +116,11 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		jvmArgs = append(jvmArgs, meta.MainClass)
 	}
 
-	gameArgs := []string{"--accessToken", authData.Token, "--version", "", "--assetsDir", rootDir + "/assets", "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username, "--uuid", authData.UUID}
+	gameArgs := []string{"--accessToken", authData.Token, "--version", "", "--assetsDir", rootDir + "/assets", "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username}
+
+	if authData.UUID != "" {
+		gameArgs = append(gameArgs, "--uuid", authData.UUID)
+	}
 
 	args := append(jvmArgs, gameArgs...)
 
