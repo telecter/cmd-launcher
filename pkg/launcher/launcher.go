@@ -58,9 +58,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 
 	err := os.MkdirAll(instanceDir, os.ModePerm)
 	if err != nil {
-		if !os.IsExist(err) {
-			return fmt.Errorf("could not create game directory: %s", err)
-		}
+		return fmt.Errorf("could not create game directory: %s", err)
 	}
 
 	meta, err := api.GetVersionMeta(version)
