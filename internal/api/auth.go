@@ -7,10 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/pkg/browser"
 	util "github.com/telecter/cmd-launcher/internal"
 )
 
@@ -69,7 +69,7 @@ const clientID string = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
 const scope string = "XboxLive.SignIn,offline_access"
 const redirectURL string = "http://localhost:8000/signin"
 
-func getMsaAuthCode() string {
+func getMsaAuthCode() (string, error) {
 	params := url.Values{
 		"client_id":     {clientID},
 		"response_type": {"code"},
@@ -80,8 +80,10 @@ func getMsaAuthCode() string {
 	url, _ := url.Parse("https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize")
 	url.RawQuery = params.Encode()
 
-	cmd := exec.Command("open", url.String())
-	cmd.Start()
+	err := browser.OpenURL(url.String())
+	if err != nil {
+		return "", fmt.Errorf("couldn't open browser: %s", err)
+	}
 
 	var code string
 
@@ -96,7 +98,7 @@ func getMsaAuthCode() string {
 		}()
 	})
 	server.ListenAndServe()
-	return code
+	return code, nil
 }
 func getMsaAuthToken(code string, refresh bool) (string, string, error) {
 	data := MSATokenResponse{}
@@ -199,13 +201,15 @@ func getMinecraftProfile(jwtToken string) (string, string, error) {
 
 func GetAuthData(refreshToken string) (AuthData, error) {
 	var authData AuthData
-
 	var code string
 	var msaToken string
 	var err error
 
 	if refreshToken == "" {
-		code = getMsaAuthCode()
+		code, err = getMsaAuthCode()
+		if err != nil {
+			return authData, fmt.Errorf("failed to retrieve Microsoft authentication code (%s)", err)
+		}
 		msaToken, refreshToken, err = getMsaAuthToken(code, false)
 	} else {
 		msaToken, refreshToken, err = getMsaAuthToken(refreshToken, true)
