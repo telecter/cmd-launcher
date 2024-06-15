@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	util "github.com/telecter/cmd-launcher/internal"
-	"github.com/telecter/cmd-launcher/pkg/api"
+	"github.com/telecter/cmd-launcher/internal/api"
 )
 
 type LaunchOptions struct {

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/telecter/cmd-launcher/pkg/api"
+	"github.com/telecter/cmd-launcher/internal/api"
 	"github.com/urfave/cli/v2"
 )
 

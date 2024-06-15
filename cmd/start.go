@@ -6,8 +6,8 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/telecter/cmd-launcher/pkg/api"
-	"github.com/telecter/cmd-launcher/pkg/launcher"
+	"github.com/telecter/cmd-launcher/internal/api"
+	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v2"
 )
 
