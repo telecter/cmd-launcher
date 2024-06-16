@@ -13,17 +13,34 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func add(ctx *cli.Context) error {
-	if ctx.Args().Len() < 3 {
+func download(ctx *cli.Context) error {
+	if ctx.Args().Len() < 2 {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
 	name := ctx.Args().First()
 	gameVersion := ctx.Args().Get(1)
 	loader := ctx.Args().Get(2)
-	err := api.DownloadModrinthProject(filepath.Join(util.GetInstanceDir(ctx.String("dir"), ctx.Args().First()), "mods"), name, gameVersion, loader)
-	if err != nil {
-		return cli.Exit(fmt.Errorf("failed to download mod: %s", err), 1)
+
+	if loader == "" {
+		loader = "minecraft"
 	}
+
+	project, err := api.GetModrinthProject(ctx.Args().First())
+	if err != nil {
+		return cli.Exit(fmt.Errorf("failed to get project info: %s", err), 1)
+	}
+
+	version, err := api.GetModrinthProjVersion(name, gameVersion, loader)
+	if err != nil {
+		return cli.Exit(fmt.Errorf("failed to get version info: %s", err), 1)
+	}
+	path := util.GetInstanceDir(ctx.String("dir"), gameVersion)
+	if project.ProjectType == "mod" {
+		path = filepath.Join(path, "mods")
+	} else if project.ProjectType == "resourcepack" {
+		path = filepath.Join(path, "resourcepacks")
+	}
+	util.DownloadFile(version.Files[0].URL, filepath.Join(path, version.Files[0].Filename))
 	return nil
 }
 func info(ctx *cli.Context) error {
@@ -55,18 +72,18 @@ func show(ctx *cli.Context) error {
 
 var Mod = &cli.Command{
 	Name:  "mod",
-	Usage: "Add and manage mods (modrinth)",
+	Usage: "Add and manage mods and resource packs",
 	Subcommands: []*cli.Command{
 		{
-			Name:      "add",
-			Usage:     "Add mods",
+			Name:      "download",
+			Usage:     "Download mods (modrinth)",
 			Args:      true,
-			ArgsUsage: "<id> <instance> <fabric|quilt>",
-			Action:    add,
+			ArgsUsage: "<id> <instance> [fabric|quilt]",
+			Action:    download,
 		},
 		{
 			Name:      "info",
-			Usage:     "Show info about mods",
+			Usage:     "Show info about mods (modrinth)",
 			Args:      true,
 			ArgsUsage: "<id>",
 			Action:    info,
