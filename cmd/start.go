@@ -16,8 +16,9 @@ func start(ctx *cli.Context) error {
 	var authData api.AuthData
 	// online mode
 	if ctx.String("username") == "" {
+		accountDataPath := filepath.Join(ctx.String("dir"), "account.txt")
 		var refresh string
-		data, err := os.ReadFile(filepath.Join(ctx.String("dir"), "account.txt"))
+		data, err := os.ReadFile(accountDataPath)
 		if errors.Is(err, fs.ErrNotExist) {
 			fmt.Println("no account found, authenticating...")
 			refresh = ""
@@ -28,6 +29,7 @@ func start(ctx *cli.Context) error {
 		if err != nil {
 			return cli.Exit(err, 1)
 		}
+		os.WriteFile(accountDataPath, []byte(authData.Refresh), 0644)
 	} else {
 		authData = api.AuthData{
 			Username: ctx.String("username"),

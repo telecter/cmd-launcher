@@ -31,7 +31,7 @@ type FabricMeta struct {
 		Game []any    `json:"game"`
 		Jvm  []string `json:"jvm"`
 	} `json:"arguments"`
-	Libraries []FabricLibrary `json:"libraries"`
+	Libraries []FabricLibrary
 }
 
 const FabricURLPrefix = "https://meta.fabricmc.net/v2/versions/loader"

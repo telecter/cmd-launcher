@@ -108,7 +108,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		jvmArgs = append([]string{"-XstartOnFirstThread"}, jvmArgs...)
 	}
 	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
-		jvmArgs = append(jvmArgs, "-DFabricMcEmu= net.minecraft.client.main.Main")
+		jvmArgs = append(jvmArgs, loaderMeta.Arguments.Jvm...)
 		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
 	} else {
 		jvmArgs = append(jvmArgs, meta.MainClass)
