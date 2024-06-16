@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/telecter/cmd-launcher/internal/api"
 	"github.com/telecter/cmd-launcher/internal/launcher"
@@ -16,9 +17,9 @@ func start(ctx *cli.Context) error {
 	// online mode
 	if ctx.String("username") == "" {
 		var refresh string
-		data, err := os.ReadFile(ctx.String("dir") + "/account.txt")
+		data, err := os.ReadFile(filepath.Join(ctx.String("dir"), "account.txt"))
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Println("no account data file found")
+			fmt.Println("no account found, authenticating...")
 			refresh = ""
 		} else {
 			refresh = string(data)

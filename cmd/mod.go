@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/browser"
+	util "github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/api"
 	"github.com/urfave/cli/v2"
 )
@@ -18,7 +20,7 @@ func add(ctx *cli.Context) error {
 	name := ctx.Args().First()
 	gameVersion := ctx.Args().Get(1)
 	loader := ctx.Args().Get(2)
-	err := api.DownloadModrinthProject(fmt.Sprintf("%s/instances/%s/mods", ctx.String("dir"), gameVersion), name, gameVersion, loader)
+	err := api.DownloadModrinthProject(filepath.Join(util.GetInstanceDir(ctx.String("dir"), ctx.Args().First()), "mods"), name, gameVersion, loader)
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to download mod: %s", err), 1)
 	}
@@ -40,11 +42,11 @@ func show(ctx *cli.Context) error {
 	if ctx.Args().Len() < 1 {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
-	modsDirectory := fmt.Sprintf("%s/instances/%s/mods", ctx.String("dir"), ctx.Args().First())
-	if _, err := os.Stat(modsDirectory); errors.Is(err, fs.ErrNotExist) {
+	modsDir := filepath.Join(util.GetInstanceDir(ctx.String("dir"), ctx.Args().First()), "mods")
+	if _, err := os.Stat(modsDir); errors.Is(err, fs.ErrNotExist) {
 		return cli.Exit("no mods directory found", 1)
 	}
-	err := browser.OpenFile(modsDirectory)
+	err := browser.OpenFile(modsDir)
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to open mods directory: %s", err), 1)
 	}

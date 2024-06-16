@@ -92,6 +92,7 @@ func getMsaAuthCode() (string, error) {
 		params := req.URL.Query()
 		code = params.Get("code")
 		fmt.Fprintf(w, "Response recorded. You can close this tab.")
+		// what the hell is this? TODO: learn how to actually use go
 		go func() {
 			time.Sleep(10000)
 			server.Shutdown(context.TODO())

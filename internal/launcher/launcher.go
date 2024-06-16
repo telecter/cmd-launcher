@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -19,8 +20,7 @@ type LaunchOptions struct {
 func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 	var paths []string
 	for _, library := range libraries {
-		libraryPath := rootDir + "/libraries/" + library.Downloads.Artifact.Path
-
+		libraryPath := filepath.Join(rootDir, "libraries", library.Downloads.Artifact.Path)
 		err := util.DownloadFile(library.Downloads.Artifact.URL, libraryPath)
 		if err != nil {
 			return paths, fmt.Errorf("error while downloading library %s: %s", library.Name, err)
@@ -33,7 +33,7 @@ func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 func fetchFabricLibraries(libraries []api.FabricLibrary, rootDir string) ([]string, error) {
 	var paths []string
 	for _, library := range libraries {
-		libraryPath := rootDir + "/libraries/" + util.GetPathFromMaven(library.Name)
+		libraryPath := filepath.Join(rootDir, "libraries", util.GetPathFromMaven(library.Name))
 		err := util.DownloadFile(library.URL+util.GetPathFromMaven(library.Name), libraryPath)
 		if err != nil {
 			return paths, fmt.Errorf("error while downloading Fabric/Quilt library %s: %s", library.Name, err)
@@ -48,9 +48,9 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 	util.GetJSON(meta.AssetIndex.URL, &index)
 	for _, asset := range index.Objects {
 		beginOfHash := asset.Hash[:2]
-		util.DownloadFile(fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", beginOfHash, asset.Hash), fmt.Sprintf("%v/assets/objects/%v/%v", rootDir, beginOfHash, asset.Hash))
+		util.DownloadFile(fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", beginOfHash, asset.Hash), filepath.Join(rootDir, "assets", "objects", beginOfHash, asset.Hash))
 	}
-	util.DownloadFile(meta.AssetIndex.URL, fmt.Sprintf("%v/assets/indexes/%v.json", rootDir, meta.AssetIndex.ID))
+	util.DownloadFile(meta.AssetIndex.URL, filepath.Join(rootDir, "assets", "indexes", meta.AssetIndex.ID+".json"))
 }
 
 func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
@@ -59,8 +59,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		return err
 	}
 	version = meta.ID // set version if not already specified by user
-	instanceDir := rootDir + "/instances/" + version
-
+	instanceDir := filepath.Join(rootDir, "instances", version)
 	err = os.MkdirAll(instanceDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("could not create game directory: %s", err)
@@ -92,17 +91,16 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		}
 	}
 
-	err = util.DownloadFile(meta.Downloads.Client.URL, instanceDir+"/client.jar")
+	err = util.DownloadFile(meta.Downloads.Client.URL, filepath.Join(instanceDir, version+".jar"))
 	if err != nil {
 		return fmt.Errorf("error while downloading game client: %s", err)
 	}
 
-	paths = append(paths, instanceDir+"/client.jar")
+	paths = append(paths, filepath.Join(instanceDir, version+".jar"))
 
 	fetchAssets(meta, rootDir)
 
 	classPath := strings.Join(paths, ":")
-	fmt.Println(instanceDir)
 	os.Chdir(instanceDir)
 
 	jvmArgs := []string{"-cp", classPath}
@@ -116,7 +114,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		jvmArgs = append(jvmArgs, meta.MainClass)
 	}
 
-	gameArgs := []string{"--accessToken", authData.Token, "--version", "", "--assetsDir", rootDir + "/assets", "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username}
+	gameArgs := []string{"--accessToken", authData.Token, "--version", "", "--assetsDir", filepath.Join(rootDir, "assets"), "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username}
 
 	if authData.UUID != "" {
 		gameArgs = append(gameArgs, "--uuid", authData.UUID)

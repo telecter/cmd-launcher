@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,10 +35,10 @@ func DownloadFile(url string, dest string) error {
 	if _, err := os.Stat(dest); err == nil {
 		return nil
 	}
-	fmt.Println("Downloading file: " + url)
+	fmt.Printf("Downloading %s\n", url)
 	err := os.MkdirAll(path.Dir(dest), os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("failed to create directory structure for file: %s", err)
+		return fmt.Errorf("failed to create directory for file: %s", err)
 	}
 	out, err := os.Create(dest)
 	if err != nil {
@@ -58,4 +59,8 @@ func GetPathFromMaven(mavenPath string) string {
 	groupID := strings.Replace(identifier[0], ".", "/", -1)
 	basename := fmt.Sprintf("%s-%s.jar", identifier[1], identifier[2])
 	return fmt.Sprintf("%s/%s/%s/%s", groupID, identifier[1], identifier[2], basename)
+}
+
+func GetInstanceDir(rootDir string, version string) string {
+	return filepath.Join(rootDir, "instances", version)
 }
