@@ -38,9 +38,6 @@ cmd-launcher start 1.21
 > mainly because this launcher does not yet support installing native libraries.
 
 ### Online Mode
-:warning: **Online mode will not work right now** due to issues with Microsoft Azure.
-
-
 Without any options, the launcher will automatically attempt to use online mode.
 As part of Microsoft's OAuth2 flow, the default web browser will be opened to
 complete the authentication.
