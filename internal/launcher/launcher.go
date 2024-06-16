@@ -20,6 +20,13 @@ type LaunchOptions struct {
 func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 	var paths []string
 	for _, library := range libraries {
+		if len(library.Rules) > 0 {
+			os := library.Rules[0].Os.Name
+			os = strings.ReplaceAll(os, "osx", "darwin")
+			if os != "" && os != runtime.GOOS {
+				continue
+			}
+		}
 		libraryPath := filepath.Join(rootDir, "libraries", library.Downloads.Artifact.Path)
 		err := util.DownloadFile(library.Downloads.Artifact.URL, libraryPath)
 		if err != nil {
