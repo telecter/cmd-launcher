@@ -17,6 +17,7 @@ func main() {
 		Commands: []*cli.Command{
 			cmd.Start,
 			cmd.Mod,
+			cmd.Auth,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
