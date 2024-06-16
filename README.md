@@ -18,7 +18,6 @@ Run `go install github.com/telecter/cmd-launcher@main`
 
 1. Clone this repository with `git`
 2. `cd` into the directory and run `go build .`
-3. Run the binary that is created
 
 > Prebuilt binaries will be available in the future.
 
