@@ -1,6 +1,7 @@
 package launcher
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -61,13 +62,31 @@ func fetchAssets(meta api.VersionMeta, rootDir string) {
 }
 
 func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
-	meta, err := api.GetVersionMeta(version)
-	if err != nil {
-		return err
+	instanceDir := util.GetInstanceDir(rootDir, version)
+	cacheDir := filepath.Join(rootDir, "caches")
+
+	metaCacheDir := filepath.Join(cacheDir, "meta")
+	loaderCacheDir := filepath.Join(cacheDir, "loaders")
+
+	os.MkdirAll(metaCacheDir, 0755)
+	os.MkdirAll(loaderCacheDir, 0755)
+
+	var meta api.VersionMeta
+
+	metaCache := filepath.Join(metaCacheDir, version+".json")
+	if _, err := os.Stat(metaCache); err == nil {
+		data, _ := os.ReadFile(metaCache)
+		json.Unmarshal(data, &meta)
+	} else {
+		meta, err = api.GetVersionMeta(version)
+		if err != nil {
+			return err
+		}
+		data, _ := json.Marshal(meta)
+		os.WriteFile(metaCache, data, 0755)
 	}
-	version = meta.ID // set version if not already specified by user
-	instanceDir := filepath.Join(rootDir, "instances", version)
-	err = os.MkdirAll(instanceDir, os.ModePerm)
+
+	err := os.MkdirAll(instanceDir, 0755)
 	if err != nil {
 		return fmt.Errorf("could not create game directory: %s", err)
 	}
@@ -87,10 +106,20 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		} else {
 			return fmt.Errorf("invalid mod loader")
 		}
-		loaderMeta, err = api.GetLoaderMeta(url, version)
-		if err != nil {
-			return err
+
+		loaderMetaCache := filepath.Join(loaderCacheDir, options.ModLoader)
+		if _, err := os.Stat(loaderMetaCache); err == nil {
+			data, _ := os.ReadFile(loaderMetaCache)
+			json.Unmarshal(data, &loaderMeta)
+		} else {
+			loaderMeta, err = api.GetLoaderMeta(url, version)
+			if err != nil {
+				return err
+			}
+			data, _ := json.Marshal(loaderMeta)
+			os.WriteFile(loaderMetaCache, data, 0755)
 		}
+
 		fabricPaths, err := fetchFabricLibraries(loaderMeta.Libraries, rootDir)
 		paths = append(paths, fabricPaths...)
 		if err != nil {

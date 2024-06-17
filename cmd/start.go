@@ -47,7 +47,7 @@ var Start = &cli.Command{
 	Name:      "start",
 	Usage:     "Start the game",
 	Args:      true,
-	ArgsUsage: " [version]",
+	ArgsUsage: " <version>",
 	Action:    start,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
