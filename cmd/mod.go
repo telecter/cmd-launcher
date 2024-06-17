@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/browser"
 	util "github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/api"
+	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v2"
 )
 
@@ -34,7 +35,7 @@ func download(ctx *cli.Context) error {
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to get version info: %s", err), 1)
 	}
-	path := util.GetInstanceDir(ctx.String("dir"), gameVersion)
+	path := launcher.GetVersionDir(ctx.String("dir"), gameVersion)
 	if project.ProjectType == "mod" {
 		path = filepath.Join(path, "mods")
 	} else if project.ProjectType == "resourcepack" {
@@ -59,7 +60,7 @@ func show(ctx *cli.Context) error {
 	if ctx.Args().Len() < 1 {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
-	modsDir := filepath.Join(util.GetInstanceDir(ctx.String("dir"), ctx.Args().First()), "mods")
+	modsDir := filepath.Join(launcher.GetVersionDir(ctx.String("dir"), ctx.Args().First()), "mods")
 	if _, err := os.Stat(modsDir); errors.Is(err, fs.ErrNotExist) {
 		return cli.Exit("no mods directory found", 1)
 	}
