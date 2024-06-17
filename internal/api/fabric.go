@@ -11,15 +11,6 @@ type FabricVersionList []struct {
 		Version string `json:"version"`
 	} `json:"loader"`
 }
-type FabricLibrary struct {
-	Name   string `json:"name"`
-	URL    string `json:"url"`
-	Md5    string `json:"md5,omitempty"`
-	Sha1   string `json:"sha1,omitempty"`
-	Sha256 string `json:"sha256,omitempty"`
-	Sha512 string `json:"sha512,omitempty"`
-	Size   int    `json:"size,omitempty"`
-}
 type FabricMeta struct {
 	ID           string `json:"id"`
 	InheritsFrom string `json:"inheritsFrom"`
@@ -31,7 +22,7 @@ type FabricMeta struct {
 		Game []any    `json:"game"`
 		Jvm  []string `json:"jvm"`
 	} `json:"arguments"`
-	Libraries []FabricLibrary
+	Libraries []Library
 }
 
 const FabricURLPrefix = "https://meta.fabricmc.net/v2/versions/loader"

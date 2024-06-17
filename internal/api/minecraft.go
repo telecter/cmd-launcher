@@ -34,6 +34,7 @@ type Library struct {
 		} `json:"artifact"`
 	} `json:"downloads"`
 	Name  string `json:"name"`
+	URL   string `json:"url"`
 	Rules []struct {
 		Action string `json:"action"`
 		Os     struct {

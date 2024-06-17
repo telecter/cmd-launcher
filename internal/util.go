@@ -62,5 +62,5 @@ func GetPathFromMaven(mavenPath string) string {
 }
 
 func GetInstanceDir(rootDir string, version string) string {
-	return filepath.Join(rootDir, "instances", version)
+	return filepath.Join(rootDir, "versions", version)
 }

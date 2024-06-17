@@ -15,10 +15,11 @@ import (
 )
 
 type LaunchOptions struct {
-	ModLoader string
+	ModLoader       string
+	QuickPlayServer string
 }
 
-func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
+func getLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 	var paths []string
 	for _, library := range libraries {
 		if len(library.Rules) > 0 {
@@ -28,136 +29,45 @@ func fetchLibraries(libraries []api.Library, rootDir string) ([]string, error) {
 				continue
 			}
 		}
-		libraryPath := filepath.Join(rootDir, "libraries", library.Downloads.Artifact.Path)
-		err := util.DownloadFile(library.Downloads.Artifact.URL, libraryPath)
-		if err != nil {
-			return paths, fmt.Errorf("error while downloading library %s: %s", library.Name, err)
-		}
-		paths = append(paths, libraryPath)
-	}
-	return paths, nil
-}
-
-func fetchFabricLibraries(libraries []api.FabricLibrary, rootDir string) ([]string, error) {
-	var paths []string
-	for _, library := range libraries {
-		libraryPath := filepath.Join(rootDir, "libraries", util.GetPathFromMaven(library.Name))
-		err := util.DownloadFile(library.URL+util.GetPathFromMaven(library.Name), libraryPath)
-		if err != nil {
-			return paths, fmt.Errorf("error while downloading Fabric/Quilt library %s: %s", library.Name, err)
-		}
-		paths = append(paths, libraryPath)
-	}
-	return paths, nil
-}
-
-func fetchAssets(meta api.VersionMeta, rootDir string) {
-	index := api.AssetIndex{}
-	util.GetJSON(meta.AssetIndex.URL, &index)
-	for _, asset := range index.Objects {
-		beginOfHash := asset.Hash[:2]
-		util.DownloadFile(fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", beginOfHash, asset.Hash), filepath.Join(rootDir, "assets", "objects", beginOfHash, asset.Hash))
-	}
-	util.DownloadFile(meta.AssetIndex.URL, filepath.Join(rootDir, "assets", "indexes", meta.AssetIndex.ID+".json"))
-}
-
-func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
-	instanceDir := util.GetInstanceDir(rootDir, version)
-	cacheDir := filepath.Join(rootDir, "caches")
-
-	metaCacheDir := filepath.Join(cacheDir, "meta")
-	loaderCacheDir := filepath.Join(cacheDir, "loaders")
-
-	os.MkdirAll(metaCacheDir, 0755)
-	os.MkdirAll(loaderCacheDir, 0755)
-
-	var meta api.VersionMeta
-
-	metaCache := filepath.Join(metaCacheDir, version+".json")
-	if _, err := os.Stat(metaCache); err == nil {
-		data, _ := os.ReadFile(metaCache)
-		json.Unmarshal(data, &meta)
-	} else {
-		meta, err = api.GetVersionMeta(version)
-		if err != nil {
-			return err
-		}
-		data, _ := json.Marshal(meta)
-		os.WriteFile(metaCache, data, 0755)
-	}
-
-	err := os.MkdirAll(instanceDir, 0755)
-	if err != nil {
-		return fmt.Errorf("could not create game directory: %s", err)
-	}
-
-	paths, err := fetchLibraries(meta.Libraries, rootDir)
-	if err != nil {
-		return err
-	}
-
-	var loaderMeta api.FabricMeta
-	if options.ModLoader != "" {
 		var url string
-		if options.ModLoader == "fabric" {
-			url = api.FabricURLPrefix
-		} else if options.ModLoader == "quilt" {
-			url = api.QuiltURLPrefix
+		var file string
+		if library.URL != "" {
+			url = library.URL + util.GetPathFromMaven(library.Name)
+			file = filepath.Join(rootDir, "libraries", util.GetPathFromMaven(library.Name))
 		} else {
-			return fmt.Errorf("invalid mod loader")
+			url = library.Downloads.Artifact.URL
+			file = filepath.Join(rootDir, "libraries", library.Downloads.Artifact.Path)
 		}
-
-		loaderMetaCache := filepath.Join(loaderCacheDir, options.ModLoader)
-		if _, err := os.Stat(loaderMetaCache); err == nil {
-			data, _ := os.ReadFile(loaderMetaCache)
-			json.Unmarshal(data, &loaderMeta)
-		} else {
-			loaderMeta, err = api.GetLoaderMeta(url, version)
-			if err != nil {
-				return err
-			}
-			data, _ := json.Marshal(loaderMeta)
-			os.WriteFile(loaderMetaCache, data, 0755)
-		}
-
-		fabricPaths, err := fetchFabricLibraries(loaderMeta.Libraries, rootDir)
-		paths = append(paths, fabricPaths...)
+		err := util.DownloadFile(url, file)
 		if err != nil {
-			return err
+			return paths, fmt.Errorf("error while downloading %s: %s", library.Name, err)
+		}
+		paths = append(paths, file)
+	}
+	return paths, nil
+}
+
+func getAssets(meta api.VersionMeta, rootDir string) error {
+	index := api.AssetIndex{}
+	indexPath := filepath.Join(rootDir, "assets", "indexes", meta.AssetIndex.ID+".json")
+
+	if data, err := os.ReadFile(indexPath); err == nil {
+		json.Unmarshal(data, &index)
+	} else {
+		if err := util.GetJSON(meta.AssetIndex.URL, &index); err != nil {
+			return fmt.Errorf("error while getting asset index: %s", err)
 		}
 	}
-
-	err = util.DownloadFile(meta.Downloads.Client.URL, filepath.Join(instanceDir, version+".jar"))
-	if err != nil {
-		return fmt.Errorf("error while downloading game client: %s", err)
+	for _, asset := range index.Objects {
+		prefix := asset.Hash[:2]
+		util.DownloadFile(fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", prefix, asset.Hash), filepath.Join(rootDir, "assets", "objects", prefix, asset.Hash))
 	}
 
-	paths = append(paths, filepath.Join(instanceDir, version+".jar"))
+	util.DownloadFile(meta.AssetIndex.URL, indexPath)
+	return nil
+}
 
-	fetchAssets(meta, rootDir)
-
-	classPath := strings.Join(paths, ":")
-	os.Chdir(instanceDir)
-
-	jvmArgs := []string{"-cp", classPath}
-	if runtime.GOOS == "darwin" {
-		jvmArgs = append([]string{"-XstartOnFirstThread"}, jvmArgs...)
-	}
-	if options.ModLoader == "fabric" || options.ModLoader == "quilt" {
-		jvmArgs = append(jvmArgs, loaderMeta.Arguments.Jvm...)
-		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
-	} else {
-		jvmArgs = append(jvmArgs, meta.MainClass)
-	}
-
-	gameArgs := []string{"--accessToken", authData.Token, "--version", "", "--assetsDir", filepath.Join(rootDir, "assets"), "--assetIndex", meta.AssetIndex.ID, "--username", authData.Username}
-
-	if authData.UUID != "" {
-		gameArgs = append(gameArgs, "--uuid", authData.UUID)
-	}
-
-	args := append(jvmArgs, gameArgs...)
-
+func runJava(args []string) error {
 	cmd := exec.Command("java", args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
@@ -171,8 +81,87 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		io.Copy(os.Stderr, stderr)
 	}()
 
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("error waiting for command: %v", err)
+	return cmd.Wait()
+}
+
+func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
+	versionDir := util.GetInstanceDir(rootDir, version)
+	if err := os.MkdirAll(versionDir, 0755); err != nil {
+		return fmt.Errorf("error creating game directory: %s", err)
 	}
-	return nil
+
+	var meta api.VersionMeta
+	if data, err := os.ReadFile(filepath.Join(versionDir, version+".json")); err == nil {
+		json.Unmarshal(data, &meta)
+	} else {
+		meta, err = api.GetVersionMeta(version)
+		if err != nil {
+			return err
+		}
+		version = meta.ID
+	}
+
+	libraries, err := getLibraries(meta.Libraries, rootDir)
+	if err != nil {
+		return fmt.Errorf("error downloading libraries: %s", err)
+	}
+
+	var loaderMeta api.FabricMeta
+	if options.ModLoader != "" {
+		var url string
+		switch options.ModLoader {
+		case "fabric":
+			url = api.FabricURLPrefix
+		case "quilt":
+			url = api.QuiltURLPrefix
+		default:
+			return fmt.Errorf("invalid mod loader")
+		}
+		if data, err := os.ReadFile(filepath.Join(versionDir, options.ModLoader+".json")); err == nil {
+			json.Unmarshal(data, &loaderMeta)
+		} else {
+			loaderMeta, err = api.GetLoaderMeta(url, version)
+			if err != nil {
+				return err
+			}
+			data, _ := json.Marshal(loaderMeta)
+			os.WriteFile(filepath.Join(versionDir, options.ModLoader+".json"), data, 0644)
+		}
+		loaderLibraries, err := getLibraries(loaderMeta.Libraries, rootDir)
+		if err != nil {
+			return fmt.Errorf("error downloading loader libraries: %s", err)
+		}
+		libraries = append(libraries, loaderLibraries...)
+	}
+
+	if err = getAssets(meta, rootDir); err != nil {
+		return fmt.Errorf("error downloading assets: %s", err)
+	}
+
+	if err := util.DownloadFile(meta.Downloads.Client.URL, filepath.Join(versionDir, version+".jar")); err != nil {
+		return fmt.Errorf("error downloading client: %s", err)
+	}
+	libraries = append(libraries, filepath.Join(versionDir, version+".jar"))
+
+	jvmArgs := []string{"-cp", strings.Join(libraries, ":")}
+
+	if runtime.GOOS == "darwin" {
+		jvmArgs = append(jvmArgs, "-XstartOnFirstThread")
+	}
+	if options.ModLoader != "" {
+		jvmArgs = append(jvmArgs, loaderMeta.Arguments.Jvm...)
+		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
+		fmt.Println(loaderMeta.MainClass)
+	} else {
+		jvmArgs = append(jvmArgs, meta.MainClass)
+	}
+
+	gameArgs := []string{"--username", authData.Username, "--accessToken", authData.Token, "--gameDir", versionDir, "--assetsDir", filepath.Join(rootDir, "assets"), "--assetIndex", meta.AssetIndex.ID, "--version", ""}
+	if authData.UUID != "" {
+		gameArgs = append(gameArgs, "--uuid", authData.UUID)
+	}
+
+	os.Chdir(versionDir)
+	fmt.Println(jvmArgs, gameArgs)
+	return runJava(append(jvmArgs, gameArgs...))
 }
