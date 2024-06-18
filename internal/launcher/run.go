@@ -12,6 +12,7 @@ import (
 
 	util "github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/api"
+	"github.com/telecter/cmd-launcher/internal/auth"
 )
 
 type LaunchOptions struct {
@@ -23,7 +24,7 @@ func GetVersionDir(rootDir string, version string) string {
 	return filepath.Join(rootDir, "versions", version)
 }
 
-func run(libraries []string, args []string, dir string) error {
+func run(args []string, dir string) error {
 	os.Chdir(dir)
 
 	cmd := exec.Command("java", args...)
@@ -42,7 +43,7 @@ func run(libraries []string, args []string, dir string) error {
 	return cmd.Wait()
 }
 
-func Launch(version string, rootDir string, options LaunchOptions, authData api.AuthData) error {
+func Launch(version string, rootDir string, options LaunchOptions, authData auth.MinecraftLoginData) error {
 	versionDir := GetVersionDir(rootDir, version)
 	if err := os.MkdirAll(versionDir, 0755); err != nil {
 		return fmt.Errorf("error creating game directory: %s", err)
@@ -119,5 +120,5 @@ func Launch(version string, rootDir string, options LaunchOptions, authData api.
 		gameArgs = append(gameArgs, "--uuid", authData.UUID)
 	}
 
-	return run(libraries, append(jvmArgs, gameArgs...), versionDir)
+	return run(append(jvmArgs, gameArgs...), versionDir)
 }

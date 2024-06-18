@@ -7,13 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal/api"
+	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v2"
 )
 
 func start(ctx *cli.Context) error {
-	var authData api.AuthData
+	var loginData auth.MinecraftLoginData
 	// online mode
 	if ctx.String("username") == "" {
 		accountDataPath := filepath.Join(ctx.String("dir"), "account.txt")
@@ -25,19 +25,19 @@ func start(ctx *cli.Context) error {
 		} else {
 			refresh = string(data)
 		}
-		authData, err = api.GetAuthData(refresh)
+		loginData, err = auth.LoginWithMicrosoft(refresh)
 		if err != nil {
 			return cli.Exit(err, 1)
 		}
-		os.WriteFile(accountDataPath, []byte(authData.Refresh), 0644)
+		os.WriteFile(accountDataPath, []byte(loginData.Refresh), 0644)
 	} else {
-		authData = api.AuthData{
+		loginData = auth.MinecraftLoginData{
 			Username: ctx.String("username"),
 		}
 	}
 	if err := launcher.Launch(ctx.Args().Get(0), ctx.String("dir"), launcher.LaunchOptions{
 		ModLoader: ctx.String("loader"),
-	}, authData); err != nil {
+	}, loginData); err != nil {
 		return cli.Exit(err, 1)
 	}
 	return nil

@@ -1,4 +1,4 @@
-package api
+package auth
 
 import (
 	"context"
@@ -14,11 +14,11 @@ import (
 	util "github.com/telecter/cmd-launcher/internal"
 )
 
-type MSATokenResponse struct {
+type msaTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
-type XboxAuthResponse struct {
+type xboxAuthResponse struct {
 	Token         string `json:"Token"`
 	DisplayClaims struct {
 		Xui []struct {
@@ -26,39 +26,39 @@ type XboxAuthResponse struct {
 		} `json:"xui"`
 	} `json:"DisplayClaims"`
 }
-type XboxAuthReqProps struct {
+type xboxAuthReqProps struct {
 	AuthMethod string `json:"AuthMethod"`
 	SiteName   string `json:"SiteName"`
 	RpsTicket  string `json:"RpsTicket"`
 }
-type XboxAuthRequest struct {
-	Properties   XboxAuthReqProps `json:"Properties"`
+type xboxAuthRequest struct {
+	Properties   xboxAuthReqProps `json:"Properties"`
 	TokenType    string           `json:"TokenType"`
 	RelyingParty string           `json:"RelyingParty"`
 }
-type XboxXSTSReqProps struct {
+type xboxXSTSReqProps struct {
 	SandboxID  string   `json:"SandboxId"`
 	UserTokens []string `json:"UserTokens"`
 }
-type XboxXSTSRequest struct {
-	Properties   XboxXSTSReqProps `json:"Properties"`
+type xboxXSTSRequest struct {
+	Properties   xboxXSTSReqProps `json:"Properties"`
 	RelyingParty string           `json:"RelyingParty"`
 	TokenType    string           `json:"TokenType"`
 }
-type XboxXSTSResponse struct {
+type xboxXSTSResponse struct {
 	Token string `json:"Token"`
 }
-type MCAuthTokenRequest struct {
+type mcAuthTokenRequest struct {
 	IdentityToken string `json:"identityToken"`
 }
-type MCAuthTokenResponse struct {
+type mcAuthTokenResponse struct {
 	AccessToken string `json:"access_token"`
 }
-type MCProfileResponse struct {
+type mcProfileResponse struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
 }
-type AuthData struct {
+type MinecraftLoginData struct {
 	Token    string
 	Refresh  string
 	UUID     string
@@ -102,7 +102,7 @@ func getMsaAuthCode() (string, error) {
 	return code, nil
 }
 func getMsaAuthToken(code string, refresh bool) (string, string, error) {
-	data := MSATokenResponse{}
+	data := msaTokenResponse{}
 	params := url.Values{
 		"client_id":    {clientID},
 		"scope":        {scope},
@@ -129,8 +129,8 @@ func getMsaAuthToken(code string, refresh bool) (string, string, error) {
 	return data.AccessToken, data.RefreshToken, nil
 }
 func getXboxAuthData(msaAuthToken string) (string, string, error) {
-	data := XboxAuthRequest{
-		Properties: XboxAuthReqProps{
+	data := xboxAuthRequest{
+		Properties: xboxAuthReqProps{
 			AuthMethod: "RPS",
 			SiteName:   "user.auth.xboxlive.com",
 			RpsTicket:  "d=" + msaAuthToken,
@@ -145,13 +145,13 @@ func getXboxAuthData(msaAuthToken string) (string, string, error) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-	respData := XboxAuthResponse{}
+	respData := xboxAuthResponse{}
 	err = json.Unmarshal(body, &respData)
 	return respData.Token, respData.DisplayClaims.Xui[0].Uhs, err
 }
 func getXSTSToken(xblToken string) (string, error) {
-	data := XboxXSTSRequest{
-		Properties: XboxXSTSReqProps{
+	data := xboxXSTSRequest{
+		Properties: xboxXSTSReqProps{
 			SandboxID:  "RETAIL",
 			UserTokens: []string{xblToken},
 		},
@@ -165,14 +165,14 @@ func getXSTSToken(xblToken string) (string, error) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-	respData := XboxAuthResponse{}
+	respData := xboxXSTSResponse{}
 	json.Unmarshal(body, &respData)
 	return respData.Token, nil
 }
 
 func getMinecraftAuthToken(xstsToken string, userhash string) (string, error) {
 	var token string
-	data := MCAuthTokenRequest{
+	data := mcAuthTokenRequest{
 		IdentityToken: fmt.Sprintf("XBL3.0 x=%s;%s", userhash, xstsToken),
 	}
 	req, _ := json.Marshal(data)
@@ -180,7 +180,7 @@ func getMinecraftAuthToken(xstsToken string, userhash string) (string, error) {
 	if err := util.CheckResponse(resp, err); err != nil {
 		return token, err
 	}
-	respData := MCAuthTokenResponse{}
+	respData := mcAuthTokenResponse{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &respData)
 	return respData.AccessToken, nil
@@ -194,14 +194,14 @@ func getMinecraftProfile(jwtToken string) (string, string, error) {
 	if err := util.CheckResponse(resp, err); err != nil {
 		return username, uuid, err
 	}
-	respData := MCProfileResponse{}
+	respData := mcProfileResponse{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &respData)
 	return respData.Name, respData.ID, nil
 }
 
-func GetAuthData(refreshToken string) (AuthData, error) {
-	var authData AuthData
+func LoginWithMicrosoft(refreshToken string) (MinecraftLoginData, error) {
+	var loginData MinecraftLoginData
 	var code string
 	var msaToken string
 	var err error
@@ -209,34 +209,34 @@ func GetAuthData(refreshToken string) (AuthData, error) {
 	if refreshToken == "" {
 		code, err = getMsaAuthCode()
 		if err != nil {
-			return authData, fmt.Errorf("failed to retrieve Microsoft authentication code (%s)", err)
+			return loginData, fmt.Errorf("failed to retrieve Microsoft authentication code (%s)", err)
 		}
 		msaToken, refreshToken, err = getMsaAuthToken(code, false)
 	} else {
 		msaToken, refreshToken, err = getMsaAuthToken(refreshToken, true)
 	}
 	if err != nil {
-		return authData, fmt.Errorf("failed to retrieve Microsoft authentication token (%s)", err)
+		return loginData, fmt.Errorf("failed to retrieve Microsoft authentication token (%s)", err)
 	}
-	authData.Refresh = refreshToken
+	loginData.Refresh = refreshToken
 	token, userhash, err := getXboxAuthData(msaToken)
 	if err != nil {
-		return authData, fmt.Errorf("failed to authenticate with Xbox (%s)", err)
+		return loginData, fmt.Errorf("failed to authenticate with Xbox (%s)", err)
 	}
 	xstsToken, err := getXSTSToken(token)
 	if err != nil {
-		return authData, fmt.Errorf("failed to authenticate with Xbox (%s)", err)
+		return loginData, fmt.Errorf("failed to authenticate with Xbox (%s)", err)
 	}
 	authToken, err := getMinecraftAuthToken(xstsToken, userhash)
-	authData.Token = authToken
+	loginData.Token = authToken
 	if err != nil {
-		return authData, fmt.Errorf("couldn't get Minecraft authentication token (%s)", err)
+		return loginData, fmt.Errorf("couldn't get Minecraft authentication token (%s)", err)
 	}
 	username, uuid, err := getMinecraftProfile(authToken)
-	authData.Username = username
-	authData.UUID = uuid
+	loginData.Username = username
+	loginData.UUID = uuid
 	if err != nil {
-		return authData, fmt.Errorf("couldn't get Minecraft profile (%s)", err)
+		return loginData, fmt.Errorf("couldn't get Minecraft profile (%s)", err)
 	}
-	return authData, nil
+	return loginData, nil
 }
