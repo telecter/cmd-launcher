@@ -27,7 +27,7 @@ func GetVersionDir(rootDir string, version string) string {
 func run(args []string, dir string) error {
 	os.Chdir(dir)
 
-	cmd := exec.Command("java", args...)
+	cmd := exec.Command("/Library/Java/JavaVirtualMachines/amazon-corretto-8.jdk/Contents/Home/bin/java", args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 

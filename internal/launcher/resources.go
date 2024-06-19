@@ -20,29 +20,54 @@ func getPathFromMaven(mavenPath string) string {
 }
 
 func getLibraries(libraries []api.Library, rootDir string) ([]string, error) {
-	var paths []string
+	var artifacts []api.Artifact
 	for _, library := range libraries {
-		if len(library.Rules) > 0 {
-			os := library.Rules[0].Os.Name
-			os = strings.ReplaceAll(os, "osx", "darwin")
-			if os != "" && os != runtime.GOOS {
+		install := true
+		for _, rule := range library.Rules {
+			if rule.Os.Name == "" {
 				continue
 			}
+			os := rule.Os.Name
+			os = strings.ReplaceAll(os, "osx", "darwin")
+			if os != runtime.GOOS && rule.Action == "allow" {
+				install = false
+			}
+			if os == runtime.GOOS && rule.Action == "disallow" {
+				install = false
+			}
 		}
-		var url string
-		var file string
+		if !install {
+			continue
+		}
+		classifiers := library.Downloads.Classifiers
+		osToClassifier := map[string]api.Artifact{
+			"darwin":  classifiers.NativesMacOS,
+			"linux":   classifiers.NativesLinux,
+			"windows": classifiers.NativesWindows,
+		}
+
+		if classifier, ok := osToClassifier[runtime.GOOS]; ok && classifier.URL != "" {
+			artifacts = append(artifacts, classifier)
+		}
+
 		if library.URL != "" {
-			url = library.URL + getPathFromMaven(library.Name)
-			file = filepath.Join(rootDir, "libraries", getPathFromMaven(library.Name))
+			artifacts = append(artifacts, api.Artifact{
+				Path: getPathFromMaven(library.Name),
+				URL:  library.URL + getPathFromMaven(library.Name),
+			})
 		} else {
-			url = library.Downloads.Artifact.URL
-			file = filepath.Join(rootDir, "libraries", library.Downloads.Artifact.Path)
+			artifacts = append(artifacts, library.Downloads.Artifact)
 		}
-		err := util.DownloadFile(url, file)
+	}
+
+	var paths []string
+	for _, artifact := range artifacts {
+		path := filepath.Join(rootDir, "libraries", artifact.Path)
+		err := util.DownloadFile(artifact.URL, path)
 		if err != nil {
-			return paths, fmt.Errorf("error while downloading %s: %s", library.Name, err)
+			return paths, fmt.Errorf("error while downloading libraries: %s", err)
 		}
-		paths = append(paths, file)
+		paths = append(paths, path)
 	}
 	return paths, nil
 }

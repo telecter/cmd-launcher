@@ -24,6 +24,12 @@ type Version struct {
 	Time        time.Time `json:"time"`
 	ReleaseTime time.Time `json:"releaseTime"`
 }
+type Artifact struct {
+	Path string `json:"path"`
+	Sha1 string `json:"sha1"`
+	Size int    `json:"size"`
+	URL  string `json:"url"`
+}
 type Library struct {
 	Downloads struct {
 		Artifact struct {
@@ -32,8 +38,18 @@ type Library struct {
 			Size int    `json:"size"`
 			URL  string `json:"url"`
 		} `json:"artifact"`
+		Classifiers struct {
+			NativesMacOS   Artifact `json:"natives-macos"`
+			NativesLinux   Artifact `json:"natives-linux"`
+			NativesWindows Artifact `json:"natives-windows"`
+		} `json:"classifiers"`
 	} `json:"downloads"`
-	Name  string `json:"name"`
+	Name    string `json:"name"`
+	Natives struct {
+		Linux   string `json:"linux"`
+		MacOS   string `json:"macos"`
+		Windows string `json:"windows"`
+	}
 	URL   string `json:"url"`
 	Rules []struct {
 		Action string `json:"action"`
@@ -112,7 +128,6 @@ type AssetIndex struct {
 func GetVersionMeta(id string) (VersionMeta, error) {
 	manifest := VersionManifest{}
 	meta := VersionMeta{}
-
 	err := util.GetJSON("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest)
 
 	if err != nil {
