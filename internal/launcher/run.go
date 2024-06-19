@@ -27,7 +27,7 @@ func GetVersionDir(rootDir string, version string) string {
 func run(args []string, dir string) error {
 	os.Chdir(dir)
 
-	cmd := exec.Command("/Library/Java/JavaVirtualMachines/amazon-corretto-8.jdk/Contents/Home/bin/java", args...)
+	cmd := exec.Command("java", args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 
@@ -114,7 +114,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData auth
 		jvmArgs = append(jvmArgs, meta.MainClass)
 	}
 
-	gameArgs := []string{"--username", authData.Username, "--accessToken", authData.Token, "--gameDir", versionDir, "--assetsDir", filepath.Join(rootDir, "assets"), "--assetIndex", meta.AssetIndex.ID, "--version", ""}
+	gameArgs := []string{"--username", authData.Username, "--accessToken", authData.Token, "--gameDir", versionDir, "--assetsDir", filepath.Join(rootDir, "assets"), "--assetIndex", meta.AssetIndex.ID, "--version", version, "--versionType", meta.Type}
 	if authData.UUID != "" {
 		gameArgs = append(gameArgs, "--uuid", authData.UUID)
 	}
