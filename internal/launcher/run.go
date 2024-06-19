@@ -110,7 +110,6 @@ func Launch(version string, rootDir string, options LaunchOptions, authData auth
 	if options.ModLoader != "" {
 		jvmArgs = append(jvmArgs, loaderMeta.Arguments.Jvm...)
 		jvmArgs = append(jvmArgs, loaderMeta.MainClass)
-		fmt.Println(loaderMeta.MainClass)
 	} else {
 		jvmArgs = append(jvmArgs, meta.MainClass)
 	}
