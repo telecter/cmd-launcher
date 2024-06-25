@@ -54,6 +54,9 @@ func Launch(version string, rootDir string, options LaunchOptions, authData auth
 		version = meta.ID
 	}
 	versionDir := GetVersionDir(rootDir, version)
+	if err := os.MkdirAll(versionDir, 0755); err != nil {
+		return fmt.Errorf("failed to create game directory: %s", err)
+	}
 	if data, err := os.ReadFile(filepath.Join(versionDir, version+".json")); err == nil {
 		json.Unmarshal(data, &meta)
 	} else {
