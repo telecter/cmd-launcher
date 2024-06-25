@@ -21,12 +21,11 @@ type LaunchOptions struct {
 }
 
 func GetVersionDir(rootDir string, version string) string {
-	return filepath.Join(rootDir, "versions", version)
+	path := filepath.Join(rootDir, "versions", version)
+	return path
 }
 
-func run(args []string, dir string) error {
-	os.Chdir(dir)
-
+func run(args []string) error {
 	cmd := exec.Command("java", args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
@@ -44,12 +43,17 @@ func run(args []string, dir string) error {
 }
 
 func Launch(version string, rootDir string, options LaunchOptions, authData auth.MinecraftLoginData) error {
-	versionDir := GetVersionDir(rootDir, version)
-	if err := os.MkdirAll(versionDir, 0755); err != nil {
-		return fmt.Errorf("error creating game directory: %s", err)
-	}
-
 	var meta api.VersionMeta
+	// TODO: fix repeating code here
+	if version == "" {
+		var err error
+		meta, err = api.GetVersionMeta("")
+		if err != nil {
+			return err
+		}
+		version = meta.ID
+	}
+	versionDir := GetVersionDir(rootDir, version)
 	if data, err := os.ReadFile(filepath.Join(versionDir, version+".json")); err == nil {
 		json.Unmarshal(data, &meta)
 	} else {
@@ -57,7 +61,7 @@ func Launch(version string, rootDir string, options LaunchOptions, authData auth
 		if err != nil {
 			return err
 		}
-		version = meta.ID
+		os.WriteFile(filepath.Join(versionDir, version+".json"), data, 0644)
 	}
 
 	libraries, err := getLibraries(meta.Libraries, rootDir)
@@ -118,6 +122,6 @@ func Launch(version string, rootDir string, options LaunchOptions, authData auth
 	if authData.UUID != "" {
 		gameArgs = append(gameArgs, "--uuid", authData.UUID)
 	}
-
-	return run(append(jvmArgs, gameArgs...), versionDir)
+	os.Chdir(versionDir)
+	return run(append(jvmArgs, gameArgs...))
 }
