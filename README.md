@@ -1,5 +1,7 @@
-# cmd-launcher
+# I have moved this project to Codeberg!
+New link: <https://codeberg.org/telecter/cmd-launcher>
 
+# cmd-launcher
 A minimal command line Minecraft launcher.
 
 - [Installation](#installation)
