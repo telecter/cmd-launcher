@@ -14,7 +14,7 @@ Make sure you have [Go](https://go.dev) installed.
 
 **To install, run:**
 ```sh
-go install codeberg.org/telecter/cmd-launcher@main
+go install github.com/telecter/cmd-launcher@main
 ```
 ### Building from source
 
