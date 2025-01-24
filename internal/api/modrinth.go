@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	util "codeberg.org/telecter/cmd-launcher/internal"
+	util "github.com/telecter/cmd-launcher/internal"
 )
 
 type Project struct {

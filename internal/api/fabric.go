@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 
-	util "codeberg.org/telecter/cmd-launcher/internal"
+	util "github.com/telecter/cmd-launcher/internal"
 )
 
 type FabricVersionList []struct {

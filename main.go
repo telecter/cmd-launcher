@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"codeberg.org/telecter/cmd-launcher/cmd"
+	"github.com/telecter/cmd-launcher/cmd"
 	"github.com/urfave/cli/v2"
 )
 

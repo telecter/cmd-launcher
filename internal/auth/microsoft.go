@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	util "codeberg.org/telecter/cmd-launcher/internal"
 	"github.com/pkg/browser"
+	util "github.com/telecter/cmd-launcher/internal"
 )
 
 type msaTokenResponse struct {

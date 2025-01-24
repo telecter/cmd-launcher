@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"codeberg.org/telecter/cmd-launcher/internal/auth"
-	"codeberg.org/telecter/cmd-launcher/internal/launcher"
+	"github.com/telecter/cmd-launcher/internal/auth"
+	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v2"
 )
 

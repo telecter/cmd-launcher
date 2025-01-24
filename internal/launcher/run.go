@@ -10,9 +10,9 @@ import (
 	"runtime"
 	"strings"
 
-	util "codeberg.org/telecter/cmd-launcher/internal"
-	"codeberg.org/telecter/cmd-launcher/internal/api"
-	"codeberg.org/telecter/cmd-launcher/internal/auth"
+	util "github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/api"
+	"github.com/telecter/cmd-launcher/internal/auth"
 )
 
 type LaunchOptions struct {

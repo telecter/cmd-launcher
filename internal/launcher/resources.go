@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"strings"
 
-	util "codeberg.org/telecter/cmd-launcher/internal"
-	"codeberg.org/telecter/cmd-launcher/internal/api"
+	util "github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/api"
 )
 
 func getPathFromMaven(mavenPath string) string {

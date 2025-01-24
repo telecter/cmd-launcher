@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	util "codeberg.org/telecter/cmd-launcher/internal"
-	"codeberg.org/telecter/cmd-launcher/internal/api"
-	"codeberg.org/telecter/cmd-launcher/internal/launcher"
 	"github.com/pkg/browser"
+	util "github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/api"
+	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v2"
 )
 
