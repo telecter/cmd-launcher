@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	util "github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 type Project struct {
@@ -88,18 +88,18 @@ type ProjectVersion struct {
 }
 
 func GetModrinthProject(id string) (Project, error) {
-	data := Project{}
-	err := util.GetJSON("https://api.modrinth.com/v2/project/"+id, &data)
+	var data Project
+	err := network.FetchJSONData("https://api.modrinth.com/v2/project/"+id, &data)
 	if err != nil {
-		return data, fmt.Errorf("failed to get project: %s", err)
+		return data, fmt.Errorf("failed to get project: %w", err)
 	}
 	return data, nil
 }
 func GetModrinthProjVersion(id string, gameVersion string, loader string) (ProjectVersion, error) {
-	data := []ProjectVersion{}
-	err := util.GetJSON(fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version", id), &data)
+	var data []ProjectVersion
+	err := network.FetchJSONData(fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version", id), &data)
 	if err != nil {
-		return ProjectVersion{}, fmt.Errorf("failed to get version info: %v", err)
+		return ProjectVersion{}, fmt.Errorf("failed to get version info: %w", err)
 	}
 	for _, version := range data {
 		if slices.Contains(version.Loaders, loader) && slices.Contains(version.GameVersions, gameVersion) {

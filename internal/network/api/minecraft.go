@@ -1,13 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
-	util "github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 type VersionManifest struct {
@@ -32,17 +29,7 @@ type Artifact struct {
 }
 type Library struct {
 	Downloads struct {
-		Artifact struct {
-			Path string `json:"path"`
-			Sha1 string `json:"sha1"`
-			Size int    `json:"size"`
-			URL  string `json:"url"`
-		} `json:"artifact"`
-		Classifiers struct {
-			NativesMacOS   Artifact `json:"natives-macos"`
-			NativesLinux   Artifact `json:"natives-linux"`
-			NativesWindows Artifact `json:"natives-windows"`
-		} `json:"classifiers"`
+		Artifact Artifact `json:"artifact"`
 	} `json:"downloads"`
 	Name    string `json:"name"`
 	Natives struct {
@@ -125,32 +112,38 @@ type AssetIndex struct {
 	}
 }
 
-func GetVersionMeta(id string) (VersionMeta, error) {
-	manifest := VersionManifest{}
-	meta := VersionMeta{}
-	err := util.GetJSON("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest)
-
+func GetVersionManifest() (VersionManifest, error) {
+	var manifest VersionManifest
+	err := network.FetchJSONData("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest)
 	if err != nil {
-		return meta, fmt.Errorf("failed to retrieve version manifest (%s)", err)
+		return VersionManifest{}, fmt.Errorf("failed to retrieve version manifest: %w", err)
 	}
+	return manifest, nil
+}
 
-	if id == "" {
-		id = manifest.Latest.Release
+func GetLatestRelease() (string, error) {
+	manifest, err := GetVersionManifest()
+	if err != nil {
+		return "", err
+	}
+	return manifest.Latest.Release, err
+}
+
+func GetVersionMeta(id string) (VersionMeta, error) {
+	manifest, err := GetVersionManifest()
+	if err != nil {
+		return VersionMeta{}, err
 	}
 
 	for _, v := range manifest.Versions {
 		if v.ID == id {
-			resp, err := http.Get(v.URL)
-
-			if err := util.CheckResponse(resp, err); err != nil {
-				return meta, fmt.Errorf("failed to retrieve version metadata (%s)", err)
+			var meta VersionMeta
+			err := network.FetchJSONData(v.URL, &meta)
+			if err != nil {
+				return VersionMeta{}, fmt.Errorf("failed to retrieve version metadata: %w", err)
 			}
-			defer resp.Body.Close()
-			body, _ := io.ReadAll(resp.Body)
-			json.Unmarshal(body, &meta)
-
 			return meta, nil
 		}
 	}
-	return meta, fmt.Errorf("invalid version")
+	return VersionMeta{}, fmt.Errorf("invalid version")
 }

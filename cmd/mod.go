@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -8,25 +9,25 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/browser"
-	util "github.com/telecter/cmd-launcher/internal"
-	"github.com/telecter/cmd-launcher/internal/api"
 	"github.com/telecter/cmd-launcher/internal/launcher"
-	"github.com/urfave/cli/v2"
+	"github.com/telecter/cmd-launcher/internal/network"
+	"github.com/telecter/cmd-launcher/internal/network/api"
+	"github.com/urfave/cli/v3"
 )
 
-func download(ctx *cli.Context) error {
-	if ctx.Args().Len() < 2 {
-		cli.ShowSubcommandHelpAndExit(ctx, 1)
+func download(ctx context.Context, c *cli.Command) error {
+	if c.Args().Len() < 2 {
+		cli.ShowSubcommandHelpAndExit(c, 1)
 	}
-	name := ctx.Args().First()
-	gameVersion := ctx.Args().Get(1)
-	loader := ctx.Args().Get(2)
+	name := c.Args().First()
+	gameVersion := c.Args().Get(1)
+	loader := c.Args().Get(2)
 
 	if loader == "" {
 		loader = "minecraft"
 	}
 
-	project, err := api.GetModrinthProject(ctx.Args().First())
+	project, err := api.GetModrinthProject(c.Args().First())
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to get project info: %s", err), 1)
 	}
@@ -35,20 +36,20 @@ func download(ctx *cli.Context) error {
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to get version info: %s", err), 1)
 	}
-	path := launcher.GetVersionDir(ctx.String("dir"), gameVersion)
+	path := launcher.GetVersionDir(c.String("dir"), gameVersion)
 	if project.ProjectType == "mod" {
 		path = filepath.Join(path, "mods")
 	} else if project.ProjectType == "resourcepack" {
 		path = filepath.Join(path, "resourcepacks")
 	}
-	util.DownloadFile(version.Files[0].URL, filepath.Join(path, version.Files[0].Filename))
+	network.DownloadFile(version.Files[0].URL, filepath.Join(path, version.Files[0].Filename))
 	return nil
 }
-func info(ctx *cli.Context) error {
-	if ctx.Args().Len() < 1 {
-		cli.ShowSubcommandHelpAndExit(ctx, 1)
+func info(ctx context.Context, c *cli.Command) error {
+	if c.Args().Len() < 1 {
+		cli.ShowSubcommandHelpAndExit(c, 1)
 	}
-	project, err := api.GetModrinthProject(ctx.Args().First())
+	project, err := api.GetModrinthProject(c.Args().First())
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to get mod info: %s", err), 1)
 	}
@@ -56,11 +57,11 @@ func info(ctx *cli.Context) error {
 	fmt.Printf("Latest: %s\n", project.GameVersions[len(project.GameVersions)-1])
 	return nil
 }
-func show(ctx *cli.Context) error {
-	if ctx.Args().Len() < 1 {
-		cli.ShowSubcommandHelpAndExit(ctx, 1)
+func show(ctx context.Context, c *cli.Command) error {
+	if c.Args().Len() < 1 {
+		cli.ShowSubcommandHelpAndExit(c, 1)
 	}
-	modsDir := filepath.Join(launcher.GetVersionDir(ctx.String("dir"), ctx.Args().First()), "mods")
+	modsDir := filepath.Join(launcher.GetVersionDir(c.String("dir"), c.Args().First()), "mods")
 	if _, err := os.Stat(modsDir); errors.Is(err, fs.ErrNotExist) {
 		return cli.Exit("no mods directory found", 1)
 	}
@@ -73,26 +74,23 @@ func show(ctx *cli.Context) error {
 
 var Mod = &cli.Command{
 	Name:  "mod",
-	Usage: "Add and manage mods and resource packs",
-	Subcommands: []*cli.Command{
+	Usage: "Add and manage mods and resource packs from Modrinth",
+	Commands: []*cli.Command{
 		{
 			Name:      "download",
-			Usage:     "Download mods (modrinth)",
-			Args:      true,
+			Usage:     "Download mods",
 			ArgsUsage: "<id> <instance> [fabric|quilt]",
 			Action:    download,
 		},
 		{
 			Name:      "info",
-			Usage:     "Show info about mods (modrinth)",
-			Args:      true,
+			Usage:     "Show info about mods",
 			ArgsUsage: "<id>",
 			Action:    info,
 		},
 		{
 			Name:      "show",
 			Usage:     "Open mods directory for the specified instance",
-			Args:      true,
 			ArgsUsage: "<instance>",
 			Action:    show,
 		},

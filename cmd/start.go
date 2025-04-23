@@ -1,42 +1,39 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
+	"context"
+	"log"
 
 	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/telecter/cmd-launcher/internal/launcher"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
-func start(ctx *cli.Context) error {
+func start(ctx context.Context, c *cli.Command) error {
 	var loginData auth.MinecraftLoginData
 	// online mode
-	if ctx.String("username") == "" {
-		accountDataPath := filepath.Join(ctx.String("dir"), "account.txt")
-		var refresh string
-		data, err := os.ReadFile(accountDataPath)
-		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Println("no account found, authenticating...")
-			refresh = ""
-		} else {
-			refresh = string(data)
+	if c.String("username") == "" {
+		if !auth.IsLoggedIn() {
+			log.Println("No account found, authenticating...")
 		}
-		loginData, err = auth.LoginWithMicrosoft(refresh)
+		var err error
+		loginData, err = auth.LoginWithMicrosoft()
 		if err != nil {
 			return cli.Exit(err, 1)
 		}
-		os.WriteFile(accountDataPath, []byte(loginData.Refresh), 0644)
+
 	} else {
 		loginData = auth.MinecraftLoginData{
-			Username: ctx.String("username"),
+			Username: c.String("username"),
 		}
 	}
-	if err := launcher.Launch(ctx.Args().Get(0), ctx.String("dir"), launcher.LaunchOptions{
-		ModLoader: ctx.String("loader"),
+
+	gameVersion := c.Args().First()
+	if gameVersion == "" {
+		gameVersion = "latest"
+	}
+	if err := launcher.Launch(gameVersion, launcher.LaunchOptions{
+		ModLoader: c.String("loader"),
 	}, loginData); err != nil {
 		return cli.Exit(err, 1)
 	}
@@ -46,8 +43,7 @@ func start(ctx *cli.Context) error {
 var Start = &cli.Command{
 	Name:      "start",
 	Usage:     "Start the game",
-	Args:      true,
-	ArgsUsage: " <version>",
+	ArgsUsage: "<version>",
 	Action:    start,
 	Flags: []cli.Flag{
 		&cli.StringFlag{

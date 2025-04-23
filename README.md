@@ -27,15 +27,15 @@ Run the `help` subcommand to get the usage information.
 
 ### Selecting Versions
 
-To choose the version of the game to run, use the `start <version>` subcommand.
+To choose the version of the game to run, use the `start` subcommand.
 
 ```sh
-cmd-launcher start 1.21
+cmd-launcher start 1.21.5
 ```
+If you do not provide a version, the lastest version will be automatically chosen.
 
 > [!IMPORTANT]
-> This launcher is not tested for versions < 1.19. It may not work,
-> mainly because this launcher does not yet support installing native libraries.
+> This launcher has not been tested for versions < 1.19. It may not work.
 
 ### Online Mode
 Without any options, the launcher will automatically attempt to use online mode.
@@ -46,8 +46,8 @@ to set your username and the game will automatically launch in offline mode.
 
 ### Mod Loaders
 
-Currently, only Fabric and Quilt are supported. Use the `-l, --loader` flag to use them.
+Currently, only Fabric is supported. Use the `-l, --loader` flag to use them.
 
 ```sh
-cmd-launcher start -l fabric 1.21
+cmd-launcher start -l fabric 1.21.5
 ```
