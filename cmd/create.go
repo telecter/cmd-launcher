@@ -15,7 +15,7 @@ func create(ctx context.Context, c *cli.Command) error {
 	}
 
 	if _, err := launcher.CreateInstance(launcher.InstanceOptions{
-		GameVersion: "release",
+		GameVersion: c.String("version"),
 		Name:        c.Args().First(),
 		ModLoader:   c.String("loader"),
 	}); err != nil {
@@ -34,6 +34,11 @@ var Create = &cli.Command{
 			Name:    "loader",
 			Usage:   "Mod loader to use",
 			Aliases: []string{"l"},
+		},
+		&cli.StringFlag{
+			Name:    "version",
+			Usage:   "Game version",
+			Aliases: []string{"v"},
 		},
 	},
 	Action: create,

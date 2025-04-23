@@ -85,6 +85,10 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		options.GameVersion = id
 	}
 
+	if _, err := api.GetVersionMeta(options.GameVersion); err != nil {
+		return Instance{}, err
+	}
+
 	dir := filepath.Join(env.InstancesDir, options.Name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return Instance{}, fmt.Errorf("failed to create instance directory: %w", err)

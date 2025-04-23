@@ -28,17 +28,24 @@ go install github.com/telecter/cmd-launcher@main
 ## Usage
 Run the `help` subcommand to get the usage information.
 
-### Selecting Versions
+### Creating an instance
 
-To choose the version of the game to run, use the `start` subcommand.
-
+To create a new instance, use the `create` subcommand.
+You can use the `--loader, -l` flag to set the mod loader (only fabric at the moment.)  
+Use the `--version, -v` flag to set the game version. If no value is supplied, the latest release is used. Acceptable values also include `release` or `snapshot` for the latest of either.
 ```sh
-cmd-launcher start 1.21.5
+cmd-launcher create -v 1.21.5 -l fabric CoolInstance
 ```
-If you do not provide a version, the lastest version will be automatically chosen.
 
 > [!IMPORTANT]
 > This launcher has not been tested for versions < 1.19. It may not work.
+
+### Starting the Game
+To start Minecraft, simply run the `start` subcommand followed by the instance ID.
+
+```sh
+cmd-launcher start CoolInstance
+```
 
 ### Online Mode
 Without any options, the launcher will automatically attempt to use online mode.
@@ -46,11 +53,3 @@ As part of Microsoft's OAuth2 flow, the default web browser will be opened to co
 
 If you want to use offline mode, just pass the `-u, --username <username>` flag before the version
 to set your username and the game will automatically launch in offline mode.
-
-### Mod Loaders
-
-Currently, only Fabric is supported. Use the `-l, --loader` flag to use them.
-
-```sh
-cmd-launcher start -l fabric 1.21.5
-```
