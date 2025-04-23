@@ -1,3 +1,6 @@
+<img src="icon.png" width="180">
+
+
 # cmd-launcher
 
 A minimal command line Minecraft launcher.
