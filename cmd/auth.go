@@ -9,9 +9,7 @@ import (
 )
 
 func logout(ctx context.Context, c *cli.Command) error {
-	err := auth.Logout()
-
-	if err != nil {
+	if err := auth.Logout(); err != nil {
 		return cli.Exit(err, 1)
 	}
 	log.Println("Logged out")

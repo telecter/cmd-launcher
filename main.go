@@ -20,8 +20,9 @@ func main() {
 		Usage: "A minimal command line Minecraft launcher.",
 		Commands: []*cli.Command{
 			cmd.Start,
-			cmd.Mod,
 			cmd.Auth,
+			cmd.Create,
+			cmd.Delete,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -37,6 +38,7 @@ func main() {
 			}
 
 			env.RootDir = c.String("dir")
+			env.InstancesDir = filepath.Join(env.RootDir, "instances")
 			return nil, nil
 		},
 		ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {

@@ -112,10 +112,3 @@ func downloadAssets(meta api.VersionMeta) error {
 	}
 	return nil
 }
-
-func downloadClient(meta api.VersionMeta, name string) error {
-	if err := network.DownloadFile(meta.Downloads.Client.URL, filepath.Join(env.RootDir, "versions", name, name+".jar")); err != nil {
-		return fmt.Errorf("error downloading client: %s", err)
-	}
-	return nil
-}

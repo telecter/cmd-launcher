@@ -128,6 +128,13 @@ func GetLatestRelease() (string, error) {
 	}
 	return manifest.Latest.Release, err
 }
+func GetLatestSnapshot() (string, error) {
+	manifest, err := GetVersionManifest()
+	if err != nil {
+		return "", err
+	}
+	return manifest.Latest.Snapshot, err
+}
 
 func GetVersionMeta(id string) (VersionMeta, error) {
 	manifest, err := GetVersionManifest()
