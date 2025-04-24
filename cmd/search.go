@@ -3,42 +3,54 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/telecter/cmd-launcher/internal/network/api"
 	"github.com/urfave/cli/v3"
 )
 
 func searchInstance(ctx context.Context, c *cli.Command) error {
-	query := c.Args().First()
-
 	instances, err := launcher.GetAllInstances()
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to get all instances"), 1)
 	}
-	for _, instance := range instances {
-		if strings.Contains(instance.Name, query) {
-			fmt.Printf("%s (%s) %s\n", instance.Name, instance.GameVersion, instance.ModLoader)
+
+	var rows []table.Row
+	for i, instance := range instances {
+		if strings.Contains(instance.Name, c.Args().First()) {
+			rows = append(rows, table.Row{i, instance.Name, instance.GameVersion, instance.ModLoader})
 		}
 	}
+	t := table.NewWriter()
+	t.SetStyle(table.StyleLight)
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"#", "Name", "Version", "Flags"})
+	t.AppendRows(rows)
+	t.Render()
 	return nil
 }
 func searchVersions(ctx context.Context, c *cli.Command) error {
-	query := c.Args().First()
-
 	manifest, err := api.GetVersionManifest()
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to search for versions: %w", err), 1)
 	}
 
-	for _, version := range manifest.Versions {
-		if strings.Contains(version.ID, query) {
-			fmt.Printf("%s (%s) released at %s\n", version.ID, version.Type, version.ReleaseTime.Format(time.UnixDate))
+	var rows []table.Row
+	for i, version := range manifest.Versions {
+		if strings.Contains(version.ID, c.Args().First()) {
+			rows = append(rows, table.Row{i, version.ID, version.Type, version.ReleaseTime.Format(time.UnixDate)})
 		}
 	}
-
+	t := table.NewWriter()
+	t.SetStyle(table.StyleLight)
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"#", "Version", "Type", "Release Date"})
+	t.AppendRows(rows)
+	t.Render()
 	return nil
 }
 

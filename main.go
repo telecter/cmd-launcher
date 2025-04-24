@@ -43,10 +43,11 @@ func main() {
 			return nil, nil
 		},
 		ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {
-			log.Fatalln("\033[31m" + err.Error() + "\033[0m")
+			log.Fatalln(err)
+			cli.OsExiter(err.(cli.ExitCoder).ExitCode())
 		},
 	}
 	if err := app.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 }
