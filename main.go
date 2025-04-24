@@ -23,6 +23,7 @@ func main() {
 			cmd.Auth,
 			cmd.Create,
 			cmd.Delete,
+			cmd.Search,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{

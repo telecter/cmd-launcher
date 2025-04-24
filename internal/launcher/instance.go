@@ -161,6 +161,24 @@ func GetInstance(id string) (Instance, error) {
 	}
 	return instance, nil
 }
+func GetAllInstances() ([]Instance, error) {
+	entries, err := os.ReadDir(env.InstancesDir)
+	if err != nil {
+		return []Instance{}, fmt.Errorf("failed to read instances directory: %w", err)
+	}
+	var instances []Instance
+	for _, entry := range entries {
+		if entry.IsDir() {
+			instance, err := GetInstance(entry.Name())
+			if err != nil {
+				continue
+			}
+			instances = append(instances, instance)
+		}
+	}
+	return instances, nil
+}
+
 func IsInstanceExist(id string) bool {
 	if _, err := GetInstance(id); err != nil {
 		return false
