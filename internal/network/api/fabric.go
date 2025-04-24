@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 
 	"github.com/telecter/cmd-launcher/internal/network"
@@ -45,7 +44,5 @@ func GetLoaderMeta(gameVersion string) (FabricMeta, error) {
 	if err != nil {
 		return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric metadata for loader version %s: %w", list[0].Loader.Version, err)
 	}
-
-	log.Println(loc)
 	return meta, nil
 }

@@ -14,7 +14,8 @@ func start(ctx context.Context, c *cli.Command) error {
 	}
 
 	if err := launcher.Launch(c.Args().First(), launcher.LaunchOptions{
-		OfflineMode: c.String("username") != "",
+		QuickPlayServer: c.String("server"),
+		OfflineMode:     c.String("username") != "",
 		LoginData: auth.MinecraftLoginData{
 			Username: c.String("username"),
 		},
@@ -33,8 +34,13 @@ var Start = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",
-			Usage:   "Set your username to the provided value (launch game in offline mode)",
+			Usage:   "Sets your username to the provided value (launches game in offline mode)",
 			Aliases: []string{"u"},
+		},
+		&cli.StringFlag{
+			Name:    "server",
+			Usage:   "Joins a server immediately upon starting the game.",
+			Aliases: []string{"s"},
 		},
 	},
 }

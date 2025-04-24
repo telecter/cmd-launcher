@@ -26,6 +26,7 @@ func delete(ctx context.Context, c *cli.Command) error {
 		if err := launcher.DeleteInstance(c.Args().First()); err != nil {
 			return cli.Exit(fmt.Errorf("failed to remove instance: %w", err), 1)
 		}
+		log.Printf("Deleted instance '%s'", instance.Name)
 	} else {
 		log.Println("Operation aborted.")
 	}

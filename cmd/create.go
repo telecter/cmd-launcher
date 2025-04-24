@@ -14,14 +14,15 @@ func create(ctx context.Context, c *cli.Command) error {
 		cli.ShowSubcommandHelpAndExit(c, 1)
 	}
 
-	if _, err := launcher.CreateInstance(launcher.InstanceOptions{
+	instance, err := launcher.CreateInstance(launcher.InstanceOptions{
 		GameVersion: c.String("version"),
 		Name:        c.Args().First(),
 		ModLoader:   c.String("loader"),
-	}); err != nil {
+	})
+	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to create instance: %w", err), 1)
 	}
-	log.Println("Created new instance.")
+	log.Printf("Created instance '%s' with Minecraft %s %s", instance.Name, instance.GameVersion, instance.ModLoader)
 	return nil
 }
 
@@ -39,6 +40,7 @@ var Create = &cli.Command{
 			Name:    "version",
 			Usage:   "Game version",
 			Aliases: []string{"v"},
+			Value:   "release",
 		},
 	},
 	Action: create,

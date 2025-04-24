@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/telecter/cmd-launcher/internal/env"
@@ -21,10 +22,24 @@ type InstanceOptions struct {
 }
 
 type Instance struct {
-	Dir         string
-	GameVersion string
-	Name        string
-	ModLoader   string
+	Dir         string         `json:"dir"`
+	GameVersion string         `json:"game_version"`
+	Name        string         `json:"name"`
+	ModLoader   string         `json:"mod_loader"`
+	Config      InstanceConfig `json:"config"`
+}
+type InstanceConfig struct {
+	WindowResolution   [2]int `json:"window_resolution"`
+	JavaExecutablePath string `json:"java_location"`
+	MinMemory          int    `json:"min_memory"`
+	MaxMemory          int    `json:"max_memory"`
+}
+
+var defaultInstanceConfig = InstanceConfig{
+	WindowResolution:   [2]int{1708, 960},
+	JavaExecutablePath: "/usr/bin/java",
+	MinMemory:          512,
+	MaxMemory:          4096,
 }
 
 func (instance *Instance) Start(classpath []string, options LaunchOptions) error {
@@ -38,12 +53,17 @@ func (instance *Instance) Start(classpath []string, options LaunchOptions) error
 	}
 
 	classpath = append(classpath, filepath.Join(instance.Dir, instance.GameVersion+".jar"))
-	jvmArgs := []string{"-cp", strings.Join(classpath, ":")}
 
+	jvmArgs := []string{"-cp", strings.Join(classpath, ":")}
 	if runtime.GOOS == "darwin" {
 		jvmArgs = append(jvmArgs, "-XstartOnFirstThread")
 	}
-
+	if instance.Config.MinMemory != 0 {
+		jvmArgs = append(jvmArgs, fmt.Sprintf("-Xms%dm", instance.Config.MinMemory))
+	}
+	if instance.Config.MaxMemory != 0 {
+		jvmArgs = append(jvmArgs, fmt.Sprintf("-Xmx%dm", instance.Config.MaxMemory))
+	}
 	if instance.ModLoader == "fabric" {
 		fabricMeta, err := instance.GetFabricMeta()
 		if err != nil {
@@ -52,7 +72,7 @@ func (instance *Instance) Start(classpath []string, options LaunchOptions) error
 		jvmArgs = append(jvmArgs, fabricMeta.Arguments.Jvm...)
 		jvmArgs = append(jvmArgs, fabricMeta.MainClass)
 	} else {
-
+		jvmArgs = append(jvmArgs, meta.MainClass)
 	}
 
 	gameArgs := []string{
@@ -62,19 +82,27 @@ func (instance *Instance) Start(classpath []string, options LaunchOptions) error
 		"--assetsDir", filepath.Join(env.RootDir, "assets"),
 		"--assetIndex", meta.AssetIndex.ID,
 		"--version", instance.GameVersion,
-		"--versionType", meta.Type}
-
-	jvmArgs = append(jvmArgs, meta.MainClass)
+		"--versionType", meta.Type,
+		"--width", strconv.Itoa(instance.Config.WindowResolution[0]),
+		"--height", strconv.Itoa(instance.Config.WindowResolution[1]),
+	}
+	if options.QuickPlayServer != "" {
+		gameArgs = append(gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
+	}
 	if options.LoginData.UUID != "" {
 		gameArgs = append(gameArgs, "--uuid", options.LoginData.UUID)
 	}
 	os.Chdir(instance.Dir)
-	return run(append(jvmArgs, gameArgs...))
+	return run(instance.Config.JavaExecutablePath, append(jvmArgs, gameArgs...))
 }
 
 func CreateInstance(options InstanceOptions) (Instance, error) {
 	if options.ModLoader != "" && options.ModLoader != "fabric" {
 		return Instance{}, fmt.Errorf("invalid mod loader")
+	}
+
+	if IsInstanceExist(options.Name) {
+		return Instance{}, fmt.Errorf("instance already exists")
 	}
 
 	if options.GameVersion == "release" {
@@ -99,6 +127,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		GameVersion: options.GameVersion,
 		ModLoader:   options.ModLoader,
 		Name:        options.Name,
+		Config:      defaultInstanceConfig,
 	}
 
 	data, _ := json.Marshal(instance)
@@ -131,6 +160,12 @@ func GetInstance(id string) (Instance, error) {
 		return Instance{}, fmt.Errorf("instance metadata is invalid: %w", err)
 	}
 	return instance, nil
+}
+func IsInstanceExist(id string) bool {
+	if _, err := GetInstance(id); err != nil {
+		return false
+	}
+	return true
 }
 
 func (instance *Instance) GetVersionMeta() (api.VersionMeta, error) {
