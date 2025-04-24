@@ -9,14 +9,14 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/telecter/cmd-launcher/internal/launcher"
-	"github.com/telecter/cmd-launcher/internal/network/api"
+	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/urfave/cli/v3"
 )
 
 func searchInstance(ctx context.Context, c *cli.Command) error {
 	instances, err := launcher.GetAllInstances()
 	if err != nil {
-		return cli.Exit(fmt.Errorf("failed to get all instances"), 1)
+		return cli.Exit(fmt.Errorf("failed to get all instances: %w", err), 1)
 	}
 
 	var rows []table.Row
@@ -34,7 +34,7 @@ func searchInstance(ctx context.Context, c *cli.Command) error {
 	return nil
 }
 func searchVersions(ctx context.Context, c *cli.Command) error {
-	manifest, err := api.GetVersionManifest()
+	manifest, err := meta.GetVersionManifest()
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to search for versions: %w", err), 1)
 	}

@@ -1,4 +1,4 @@
-package api
+package meta
 
 import (
 	"fmt"
@@ -112,11 +112,20 @@ type AssetIndex struct {
 	}
 }
 
+const versionManifestCache = "minecraft/version_manifest.json"
+const versionMetaCache = "minecraft/%s.json"
+
 func GetVersionManifest() (VersionManifest, error) {
 	var manifest VersionManifest
-	err := network.FetchJSONData("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest)
-	if err != nil {
-		return VersionManifest{}, fmt.Errorf("failed to retrieve version manifest: %w", err)
+	if isCacheValid(versionManifestCache) {
+		if err := readCache(versionManifestCache, &manifest); err != nil {
+			return VersionManifest{}, fmt.Errorf("failed to read version manifest cache: %w", err)
+		}
+	} else {
+		if err := network.FetchJSONData("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest); err != nil {
+			return VersionManifest{}, fmt.Errorf("failed to retrieve version manifest: %w", err)
+		}
+		writeCache(versionManifestCache, manifest)
 	}
 	return manifest, nil
 }
@@ -144,12 +153,19 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 
 	for _, v := range manifest.Versions {
 		if v.ID == id {
-			var meta VersionMeta
-			err := network.FetchJSONData(v.URL, &meta)
-			if err != nil {
-				return VersionMeta{}, fmt.Errorf("failed to retrieve version metadata: %w", err)
+			cache := fmt.Sprintf(versionMetaCache, v.ID)
+			var versionMeta VersionMeta
+			if isCacheValid(cache) {
+				if err := readCache(cache, &versionMeta); err != nil {
+					return VersionMeta{}, fmt.Errorf("failed to read version metadata cache: %w", err)
+				}
+			} else {
+				if err := network.FetchJSONData(v.URL, &versionMeta); err != nil {
+					return VersionMeta{}, fmt.Errorf("failed to retrieve version metadata: %w", err)
+				}
+				writeCache(cache, versionMeta)
 			}
-			return meta, nil
+			return versionMeta, nil
 		}
 	}
 	return VersionMeta{}, fmt.Errorf("invalid version")

@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/telecter/cmd-launcher/internal/env"
+	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/internal/network"
-	"github.com/telecter/cmd-launcher/internal/network/api"
 )
 
 // for Fabric libraries
@@ -23,8 +23,8 @@ func getPathFromMaven(mavenPath string) string {
 	return fmt.Sprintf("%s/%s/%s/%s", groupID, identifier[1], identifier[2], basename)
 }
 
-func installLibraries(libraries []api.Library) ([]string, error) {
-	var artifacts []api.Artifact
+func installLibraries(libraries []meta.Library) ([]string, error) {
+	var artifacts []meta.Artifact
 	for _, library := range libraries {
 		if len(library.Rules) > 0 { // library has rules
 			shouldInstall := false
@@ -40,8 +40,8 @@ func installLibraries(libraries []api.Library) ([]string, error) {
 				if os == runtime.GOOS && rule.Action == "allow" && runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
 					if strings.HasPrefix(library.Name, "org.lwjgl") {
 						artifactPath := strings.ReplaceAll(library.Downloads.Artifact.Path, ".jar", "-arm64.jar")
-						artifacts = append(artifacts, api.Artifact{
-							Path: library.Downloads.Artifact.Path,
+						artifacts = append(artifacts, meta.Artifact{
+							Path: artifactPath,
 							URL:  "https://repo1.maven.org/maven2/" + artifactPath,
 						})
 						shouldInstall = false
@@ -56,11 +56,7 @@ func installLibraries(libraries []api.Library) ([]string, error) {
 		}
 
 		if library.URL != "" {
-			// duplicate fabric asm library
-			if library.Name == "org.ow2.asm:asm:9.8" {
-				continue
-			}
-			artifacts = append(artifacts, api.Artifact{
+			artifacts = append(artifacts, meta.Artifact{
 				Path: getPathFromMaven(library.Name),
 				URL:  library.URL + getPathFromMaven(library.Name),
 			})
@@ -81,9 +77,9 @@ func installLibraries(libraries []api.Library) ([]string, error) {
 	return paths, nil
 }
 
-func downloadAssets(meta api.VersionMeta) error {
-	var index api.AssetIndex
-	indexPath := filepath.Join(env.RootDir, "assets", "indexes", meta.AssetIndex.ID+".json")
+func downloadAssets(versionMeta meta.VersionMeta) error {
+	var index meta.AssetIndex
+	indexPath := filepath.Join(env.RootDir, "assets", "indexes", versionMeta.AssetIndex.ID+".json")
 
 	downloadAssetIndex := true
 	if data, err := os.ReadFile(indexPath); err == nil {
@@ -94,7 +90,7 @@ func downloadAssets(meta api.VersionMeta) error {
 		}
 	}
 	if downloadAssetIndex {
-		if err := network.FetchJSONData(meta.AssetIndex.URL, &index); err != nil {
+		if err := network.FetchJSONData(versionMeta.AssetIndex.URL, &index); err != nil {
 			return fmt.Errorf("error while downloading asset index: %w", err)
 		}
 	}
@@ -108,7 +104,7 @@ func downloadAssets(meta api.VersionMeta) error {
 
 	if downloadAssetIndex {
 		os.Remove(indexPath)
-		network.DownloadFile(meta.AssetIndex.URL, indexPath)
+		network.DownloadFile(versionMeta.AssetIndex.URL, indexPath)
 	}
 	return nil
 }
