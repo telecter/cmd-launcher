@@ -12,12 +12,14 @@ A minimal command line Minecraft launcher.
   - [Starting the game](#starting-the-game)
   - [Authentication](#authentication)
   - [Instance Configuration](#instance-configuration)
+  - [Search](#search)
+  - [Caching](#caching)
 
 ## Installation
 Make sure you have [Go](https://go.dev) installed.
 
 **To install, run:**
-```sh
+```bash
 go install github.com/telecter/cmd-launcher@main
 ```
 ### Building from source
@@ -40,12 +42,12 @@ cmd-launcher create -v 1.21.5 -l fabric CoolInstance
 ```
 If you want to delete an instance, use the `delete` subcommand.
 > [!IMPORTANT]
-> This launcher has not been tested for versions < 1.19. It may not work.
+> This launcher has not been tested for versions < 1.19. It may not work, but I am working on fixing these issues.
 
 ### Starting the Game
 To start Minecraft, simply run the `start` subcommand followed by the instance ID.
 
-```sh
+```bash
 cmd-launcher start CoolInstance
 ```
 
@@ -82,3 +84,12 @@ Currently configurable values are:
   }
 }
 ```
+### Search
+The `search` subcommand can search for Minecraft versions or instances that you have.
+
+```bash
+cmd-launcher search <versions|instances> [query]
+```
+
+### Caching
+Because the launcher tries to use cached metadata when possible, you may need to include the `--clear-caches` flag once to get it to download new metadata.
