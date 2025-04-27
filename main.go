@@ -24,7 +24,6 @@ func main() {
 			cmd.CreateCommand,
 			cmd.DeleteCommand,
 			cmd.SearchCommand,
-			cmd.ModsCommand,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{

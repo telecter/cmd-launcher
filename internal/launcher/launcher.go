@@ -21,8 +21,8 @@ type LaunchOptions struct {
 	OfflineMode     bool
 }
 
-func run(javaPath string, args []string) error {
-	cmd := exec.Command(javaPath, args...)
+func run(path string, args []string) error {
+	cmd := exec.Command(path, args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 

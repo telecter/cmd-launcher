@@ -86,7 +86,6 @@ func mavenNameToPath(mavenPath string) string {
 
 func fetchLibraryFromMaven(name string, path string) (RuntimeLibrary, error) {
 	url := fmt.Sprintf("https://repo1.maven.org/maven2/%s", path)
-
 	checksumCachePath := filepath.Join(env.CachesDir, filepath.Base(path)+".sha1")
 	var checksum []byte
 	checksum, err := os.ReadFile(checksumCachePath)
@@ -125,10 +124,8 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 				library, _ = fetchLibraryFromMaven(library.Name, path)
 			}
 			if library.IsInstalled() {
-				//log.Printf("IS INSTALLED: %s\n", library.Name)
 				installed = append(installed, library)
 			} else {
-				//log.Printf("INSTALLING: %s\n", library.Name)
 				required = append(required, library)
 			}
 		}
