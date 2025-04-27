@@ -136,8 +136,8 @@ func Launch(instanceId string, options LaunchOptions) error {
 		"--assetIndex", versionMeta.AssetIndex.ID,
 		"--version", versionMeta.ID,
 		"--versionType", versionMeta.Type,
-		"--width", strconv.Itoa(instance.Config.WindowResolution[0]),
-		"--height", strconv.Itoa(instance.Config.WindowResolution[1]),
+		"--width", strconv.Itoa(instance.Config.WindowResolution.Width),
+		"--height", strconv.Itoa(instance.Config.WindowResolution.Height),
 	}
 	if options.QuickPlayServer != "" {
 		gameArgs = append(gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)

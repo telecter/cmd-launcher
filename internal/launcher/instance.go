@@ -24,14 +24,23 @@ type Instance struct {
 	Config      InstanceConfig `json:"config"`
 }
 type InstanceConfig struct {
-	WindowResolution   [2]int `json:"window_resolution"`
+	WindowResolution struct {
+		Width  int `json:"width"`
+		Height int `json:"height"`
+	} `json:"window_resolution"`
 	JavaExecutablePath string `json:"java_location"`
 	MinMemory          int    `json:"min_memory"`
 	MaxMemory          int    `json:"max_memory"`
 }
 
-var defaultInstanceConfig = InstanceConfig{
-	WindowResolution:   [2]int{1708, 960},
+var defaultConfig = InstanceConfig{
+	WindowResolution: struct {
+		Width  int "json:\"width\""
+		Height int "json:\"height\""
+	}{
+		Width:  1708,
+		Height: 960,
+	},
 	JavaExecutablePath: "/usr/bin/java",
 	MinMemory:          512,
 	MaxMemory:          4096,
@@ -40,6 +49,9 @@ var defaultInstanceConfig = InstanceConfig{
 func CreateInstance(options InstanceOptions) (Instance, error) {
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
+	}
+	if options.Loader != LoaderFabric && options.Loader != LoaderVanilla {
+		return Instance{}, fmt.Errorf("invalid mod loader")
 	}
 
 	if options.GameVersion == "release" || options.GameVersion == "snapshot" {
@@ -68,7 +80,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		GameVersion: options.GameVersion,
 		Loader:      options.Loader,
 		Name:        options.Name,
-		Config:      defaultInstanceConfig,
+		Config:      defaultConfig,
 	}
 
 	data, _ := json.Marshal(inst)

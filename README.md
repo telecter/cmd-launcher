@@ -74,10 +74,10 @@ Currently configurable values are:
   "name": "CoolInstance",
   "mod_loader": "fabric",
   "config": {
-    "window_resolution": [
-      1708,
-      960
-    ],
+    "window_resolution": {
+      "width": 1708,
+      "height": 960
+    },
     "java_location": "/usr/bin/java",
     "min_memory": 512,
     "max_memory": 4096
