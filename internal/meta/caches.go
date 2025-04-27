@@ -9,18 +9,18 @@ import (
 	"github.com/telecter/cmd-launcher/internal/env"
 )
 
-// NOTE: All paths relative to env.CachesDir
+// Paths are relative to env.CachesDir
 
-func isCacheValid(location string) bool {
-	path := filepath.Join(env.CachesDir, location)
-	if _, err := os.Stat(path); err != nil {
-		return false
-	}
-	return true
+type JSONCache struct {
+	Path string
 }
-func readCache(location string, v any) error {
-	path := filepath.Join(env.CachesDir, location)
-	data, err := os.ReadFile(path)
+
+func getAbsolutePath(path string) string {
+	return filepath.Join(env.CachesDir, path)
+}
+
+func (cache JSONCache) Read(v any) error {
+	data, err := os.ReadFile(getAbsolutePath(cache.Path))
 	if err != nil {
 		return err
 	}
@@ -30,13 +30,17 @@ func readCache(location string, v any) error {
 	}
 	return nil
 }
-func writeCache(location string, v any) error {
-	path := filepath.Join(env.CachesDir, location)
+func (cache JSONCache) Write(v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal data: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+
+	if err := os.MkdirAll(filepath.Dir(getAbsolutePath(cache.Path)), 0755); err != nil {
+		return fmt.Errorf("failed to create directory for cache: %w", err)
+	}
+
+	if err := os.WriteFile(getAbsolutePath(cache.Path), data, 0644); err != nil {
 		return fmt.Errorf("failed to write cache: %w", err)
 	}
 	return nil

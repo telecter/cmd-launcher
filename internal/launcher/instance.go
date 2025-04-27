@@ -16,7 +16,6 @@ type InstanceOptions struct {
 	Name        string
 	ModLoader   string
 }
-
 type Instance struct {
 	Dir         string         `json:"dir"`
 	GameVersion string         `json:"game_version"`
@@ -47,12 +46,16 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
 
-	if options.GameVersion == "release" {
-		id, _ := meta.GetLatestRelease()
-		options.GameVersion = id
-	} else if options.GameVersion == "snapshot" {
-		id, _ := meta.GetLatestSnapshot()
-		options.GameVersion = id
+	if options.GameVersion == "release" || options.GameVersion == "snapshot" {
+		manifest, err := meta.GetVersionManifest()
+		if err != nil {
+			return Instance{}, err
+		}
+		if options.GameVersion == "release" {
+			options.GameVersion = manifest.Latest.Release
+		} else if options.GameVersion == "snapshot" {
+			options.GameVersion = manifest.Latest.Snapshot
+		}
 	}
 
 	if _, err := meta.GetVersionMeta(options.GameVersion); err != nil {
@@ -103,6 +106,7 @@ func GetInstance(id string) (Instance, error) {
 	}
 	return instance, nil
 }
+
 func GetAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(env.InstancesDir)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -21,24 +20,20 @@ func FetchJSONData(url string, v any) error {
 }
 
 func DownloadFile(url string, dest string) error {
-	if _, err := os.Stat(dest); err == nil {
-		return nil
-	}
 	err := os.MkdirAll(path.Dir(dest), 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create directory for file: %s", err)
+		return fmt.Errorf("failed to create directory for file %s: %w", dest, err)
 	}
 	out, err := os.Create(dest)
 	if err != nil {
-		return fmt.Errorf("failed to create file %s: %s", dest, err)
+		return fmt.Errorf("failed to create file %s: %w", dest, err)
 	}
 	defer out.Close()
 	resp, err := http.Get(url)
-	if err != nil || resp.StatusCode > 299 || resp.StatusCode < 200 {
+	if err := CheckResponse(resp, err); err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	log.Printf("Downloading...%s\n", url)
 	io.Copy(out, resp.Body)
 	return nil
 }

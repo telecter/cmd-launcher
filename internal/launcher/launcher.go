@@ -3,7 +3,6 @@ package launcher
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -55,8 +54,11 @@ func Launch(instanceId string, options LaunchOptions) error {
 		return err
 	}
 
-	client := meta.Library{
-		Name: "com.mojang:minecraft:" + instance.GameVersion,
+	var javaArgs []string
+	mainClass := versionMeta.MainClass
+
+	allLibraries := append(versionMeta.Libraries, meta.Library{
+		Name: "com.mojang:minecraft:" + versionMeta.ID,
 		Downloads: struct {
 			Artifact meta.Artifact "json:\"artifact\""
 		}{
@@ -67,42 +69,45 @@ func Launch(instanceId string, options LaunchOptions) error {
 				URL:  versionMeta.Downloads.Client.URL,
 			},
 		},
-	}
-	versionMeta.Libraries = append(versionMeta.Libraries, client)
+	})
 
-	libraryPaths, err := installLibraries(versionMeta.Libraries)
-	if err != nil {
-		return err
-	}
-
-	// TEMPORARY FIX: Duplicate ASM classes
-	for i, libraryPath := range libraryPaths {
-		if strings.Contains(libraryPath, "asm-9.6.jar") {
-			log.Println("Not including duplicate ASM class")
-			libraryPaths = slices.Delete(libraryPaths, i, i+1)
-			break
-		}
-	}
-
-	if err := downloadAssets(versionMeta); err != nil {
-		return err
-	}
-
-	var javaArgs []string
-	mainClass := versionMeta.MainClass
 	if instance.ModLoader == "fabric" {
 		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID)
 		if err != nil {
 			return err
 		}
-		fabricLibraryPaths, err := installLibraries(fabricMeta.Libraries)
-		if err != nil {
-			return err
-		}
-		libraryPaths = append(libraryPaths, fabricLibraryPaths...)
+		allLibraries = append(allLibraries, fabricMeta.Libraries...)
 		javaArgs = append(javaArgs, fabricMeta.Arguments.Jvm...)
 		mainClass = fabricMeta.MainClass
 	}
+	installed, required := filterLibraries(allLibraries)
+	if err := installLibraries(required); err != nil {
+		return err
+	}
+
+	libraries := append(installed, required...)
+	libraryPaths := getRuntimeLibraryPaths(libraries)
+
+	// TEMPORARY FIX: Duplicate ASM classes
+	if instance.ModLoader == "fabric" {
+		for i, libraryPath := range libraryPaths {
+			if strings.Contains(libraryPath, "asm-9.6.jar") {
+				libraryPaths = slices.Delete(libraryPaths, i, i+1)
+				break
+			}
+		}
+	}
+
+	assetIndex, err := downloadAssetIndex(versionMeta)
+	if err != nil {
+		return fmt.Errorf("failed to get asset index: %w", err)
+	}
+
+	requiredAssetIndex := getRequiredAssets(assetIndex)
+	if err := downloadAssets(requiredAssetIndex); err != nil {
+		return err
+	}
+
 	javaArgs = append(javaArgs, "-cp")
 	javaArgs = append(javaArgs, strings.Join(libraryPaths, ":"))
 

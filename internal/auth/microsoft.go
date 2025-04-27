@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,17 +14,75 @@ import (
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
-type MinecraftLoginData struct {
-	Token    string
-	UUID     string
-	Username string
+var (
+	clientID    = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
+	scope       = "XboxLive.SignIn,offline_access"
+	redirectURL = "http://localhost:8000/signin"
+)
+
+func fetchMSACode() (string, error) {
+	query := url.Values{
+		"client_id":     {clientID},
+		"response_type": {"code"},
+		"redirect_uri":  {redirectURL},
+		"scope":         {scope},
+		"response_mode": {"query"},
+	}
+	url, _ := url.Parse("https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize")
+	url.RawQuery = query.Encode()
+	err := browser.OpenURL(url.String())
+	if err != nil {
+		return "", fmt.Errorf("couldn't open browser: %w", err)
+	}
+
+	var code string
+	server := &http.Server{Addr: ":8000", Handler: nil}
+	http.HandleFunc("/signin", func(w http.ResponseWriter, req *http.Request) {
+		params := req.URL.Query()
+		code = params.Get("code")
+		fmt.Fprintf(w, "Response recorded. You can close this tab.")
+		go server.Shutdown(context.Background())
+	})
+	server.ListenAndServe()
+	return code, nil
 }
 
-type msaTokenResponse struct {
+type msaAuthResult struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
-type xboxAuthResponse struct {
+
+func authenticateMSA(code string, refresh bool) (msaAuthResult, error) {
+	params := url.Values{
+		"client_id":    {clientID},
+		"scope":        {scope},
+		"redirect_uri": {redirectURL},
+	}
+	grantType := "authorization_code"
+	if refresh {
+		grantType = "refresh_token"
+	}
+	params.Add("grant_type", grantType)
+	paramName := "code"
+	if refresh {
+		paramName = "refresh_token"
+	}
+	params.Add(paramName, code)
+
+	var result msaAuthResult
+	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
+	if err := network.CheckResponse(resp, err); err != nil {
+		a, _ := io.ReadAll(resp.Body)
+		fmt.Println(string(a))
+		return msaAuthResult{}, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	json.Unmarshal(body, &result)
+	return result, nil
+}
+
+type xboxAuthData struct {
 	Token         string `json:"Token"`
 	DisplayClaims struct {
 		Xui []struct {
@@ -45,92 +104,8 @@ type xboxAuthRequest struct {
 	TokenType    string `json:"TokenType"`
 	RelyingParty string `json:"RelyingParty"`
 }
-type xstsProperties struct {
-	SandboxID  string   `json:"SandboxId"`
-	UserTokens []string `json:"UserTokens"`
-}
-type xstsRequest struct {
-	Properties   xstsProperties `json:"Properties"`
-	RelyingParty string         `json:"RelyingParty"`
-	TokenType    string         `json:"TokenType"`
-}
-type xstsResponse struct {
-	Token string `json:"Token"`
-}
-type minecraftAuthTokenRequest struct {
-	IdentityToken string `json:"identityToken"`
-}
-type minecraftAuthTokenResponse struct {
-	AccessToken string `json:"access_token"`
-}
-type minecraftProfileResponse struct {
-	Name string `json:"name"`
-	ID   string `json:"id"`
-}
 
-const clientID string = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
-const scope string = "XboxLive.SignIn,offline_access"
-const redirectURL string = "http://localhost:8000/signin"
-
-func fetchMSAOAuthCode() (string, error) {
-	query := url.Values{
-		"client_id":     {clientID},
-		"response_type": {"code"},
-		"redirect_uri":  {redirectURL},
-		"scope":         {scope},
-		"response_mode": {"query"},
-	}
-	url, _ := url.Parse("https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize")
-	url.RawQuery = query.Encode()
-
-	err := browser.OpenURL(url.String())
-	if err != nil {
-		return "", fmt.Errorf("couldn't open browser: %w", err)
-	}
-
-	var code string
-
-	server := &http.Server{Addr: ":8000", Handler: nil}
-	http.HandleFunc("/signin", func(w http.ResponseWriter, req *http.Request) {
-		params := req.URL.Query()
-		code = params.Get("code")
-		fmt.Fprintf(w, "Response recorded. You can close this tab.")
-
-		go server.Shutdown(context.Background())
-	})
-	server.ListenAndServe()
-	return code, nil
-}
-
-func fetchMSAToken(code string, refresh bool) (string, string, error) {
-	params := url.Values{
-		"client_id":    {clientID},
-		"scope":        {scope},
-		"redirect_uri": {redirectURL},
-	}
-	grantType := "authorization_code"
-	if refresh {
-		grantType = "refresh_token"
-	}
-	params.Add("grant_type", grantType)
-	paramName := "code"
-	if refresh {
-		paramName = "refresh_token"
-	}
-	params.Add(paramName, code)
-
-	var data msaTokenResponse
-	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
-	if err := network.CheckResponse(resp, err); err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &data)
-	return data.AccessToken, data.RefreshToken, nil
-}
-
-func fetchXboxAuthData(msaAuthToken string) (string, string, error) {
+func authenticateXbox(msaAuthToken string) (xboxAuthData, error) {
 	req, _ := json.Marshal(
 		xboxAuthRequest{
 			Properties: xboxAuthProperties{
@@ -143,17 +118,30 @@ func fetchXboxAuthData(msaAuthToken string) (string, string, error) {
 		})
 	resp, err := http.Post("https://user.auth.xboxlive.com/user/authenticate", "application/json", strings.NewReader(string(req)))
 	if err := network.CheckResponse(resp, err); err != nil {
-		return "", "", err
+		return xboxAuthData{}, err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 
-	var data xboxAuthResponse
-	err = json.Unmarshal(body, &data)
-	return data.Token, data.DisplayClaims.Xui[0].Uhs, err
+	var data xboxAuthData
+	json.Unmarshal(body, &data)
+	return data, nil
 }
 
-func fetchXboxXSTSToken(xblToken string) (string, error) {
+type xstsProperties struct {
+	SandboxID  string   `json:"SandboxId"`
+	UserTokens []string `json:"UserTokens"`
+}
+type xstsRequest struct {
+	Properties   xstsProperties `json:"Properties"`
+	RelyingParty string         `json:"RelyingParty"`
+	TokenType    string         `json:"TokenType"`
+}
+type xstsAuthData struct {
+	Token string `json:"Token"`
+}
+
+func authenticateXSTS(xblToken string) (xstsAuthData, error) {
 	req, _ := json.Marshal(xstsRequest{
 		Properties: xstsProperties{
 			SandboxID:  "RETAIL",
@@ -164,80 +152,106 @@ func fetchXboxXSTSToken(xblToken string) (string, error) {
 	})
 	resp, err := http.Post("https://xsts.auth.xboxlive.com/xsts/authorize", "application/json", strings.NewReader(string(req)))
 	if err := network.CheckResponse(resp, err); err != nil {
-		return "", err
+		return xstsAuthData{}, err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-	var data xstsResponse
+	var data xstsAuthData
 	json.Unmarshal(body, &data)
-	return data.Token, nil
+	return data, nil
 }
 
-func fetchMinecraftAuthToken(xstsToken string, userhash string) (string, error) {
-	req, _ := json.Marshal(minecraftAuthTokenRequest{
+type minecraftAuthRequest struct {
+	IdentityToken string `json:"identityToken"`
+}
+type minecraftAuthData struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   string `json:"expires_in"`
+}
+
+func authenticateMinecraft(xstsToken string, userhash string) (minecraftAuthData, error) {
+	req, _ := json.Marshal(minecraftAuthRequest{
 		IdentityToken: fmt.Sprintf("XBL3.0 x=%s;%s", userhash, xstsToken),
 	})
 	resp, err := http.Post("https://api.minecraftservices.com/authentication/login_with_xbox", "application/json", strings.NewReader(string(req)))
 	if err := network.CheckResponse(resp, err); err != nil {
-		return "", err
+		return minecraftAuthData{}, err
 	}
-	var data minecraftAuthTokenResponse
+	var data minecraftAuthData
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &data)
-	return data.AccessToken, nil
+	return data, nil
 }
-func fetchMinecraftProfile(jwtToken string) (string, string, error) {
+
+type minecraftProfile struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+func fetchMinecraftProfile(jwtToken string) (minecraftProfile, error) {
 	req, _ := http.NewRequest("GET", "https://api.minecraftservices.com/minecraft/profile", nil)
 	req.Header.Add("Authorization", "Bearer "+jwtToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err := network.CheckResponse(resp, err); err != nil {
-		return "", "", err
+		return minecraftProfile{}, err
 	}
-	var data minecraftProfileResponse
+	var data minecraftProfile
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &data)
-	return data.Name, data.ID, nil
+	return data, nil
+}
+
+type MinecraftLoginData struct {
+	Token    string
+	UUID     string
+	Username string
 }
 
 func LoginWithMicrosoft() (MinecraftLoginData, error) {
-	var err error
 	refreshToken := GetRefreshToken()
-	var msaToken string
+	var msaAuthResult msaAuthResult
 	if refreshToken == "" {
-		oAuthCode, err := fetchMSAOAuthCode()
+		log.Println("No refresh token found, opening browser for authentication...")
+		code, err := fetchMSACode()
 		if err != nil {
 			return MinecraftLoginData{}, fmt.Errorf("failed to retrieve Microsoft authentication code: %w", err)
 		}
-		msaToken, refreshToken, err = fetchMSAToken(oAuthCode, false)
+		msaAuthResult, err = authenticateMSA(code, false)
+		if err != nil {
+			return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with MSA: %w", err)
+		}
 	} else {
-		msaToken, refreshToken, err = fetchMSAToken(refreshToken, true)
+		var err error
+		msaAuthResult, err = authenticateMSA(refreshToken, true)
+		if err != nil {
+			return MinecraftLoginData{}, fmt.Errorf("failed to re-authenticate with MSA: %w", err)
+		}
 	}
-	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to retrieve Microsoft authentication token: %w", err)
-	}
-
-	xblToken, userhash, err := fetchXboxAuthData(msaToken)
-	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Xbox: %w", err)
-	}
-	xstsToken, err := fetchXboxXSTSToken(xblToken)
+	xboxAuthData, err := authenticateXbox(msaAuthResult.AccessToken)
 	if err != nil {
 		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Xbox: %w", err)
 	}
-
-	minecraftToken, err := fetchMinecraftAuthToken(xstsToken, userhash)
+	xstsAuthData, err := authenticateXSTS(xboxAuthData.Token)
 	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to get Minecraft authentication token: %w", err)
+		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Xbox: %w", err)
 	}
-	username, uuid, err := fetchMinecraftProfile(minecraftToken)
+
+	minecraftAuthData, err := authenticateMinecraft(xstsAuthData.Token, xboxAuthData.DisplayClaims.Xui[0].Uhs)
+	if err != nil {
+		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Minecraft: %w", err)
+	}
+	profile, err := fetchMinecraftProfile(minecraftAuthData.AccessToken)
 	if err != nil {
 		return MinecraftLoginData{}, fmt.Errorf("failed to get Minecraft profile: %w", err)
 	}
 
-	SetRefreshToken(refreshToken)
+	if err := SetRefreshToken(msaAuthResult.RefreshToken); err != nil {
+		return MinecraftLoginData{}, fmt.Errorf("error setting refresh token: %w", err)
+	}
 	return MinecraftLoginData{
-		Username: username,
-		UUID:     uuid,
-		Token:    minecraftToken,
+		Username: profile.Name,
+		UUID:     profile.ID,
+		Token:    minecraftAuthData.AccessToken,
 	}, nil
 }

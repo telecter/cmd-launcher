@@ -1,37 +1,41 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/telecter/cmd-launcher/internal/env"
 )
 
-func getAccountDataFilePath() string {
-	return filepath.Join(env.RootDir, "account.txt")
+type AuthStoreData struct {
+	Refresh string `json:"refresh"`
 }
 
 func GetRefreshToken() string {
-	data, err := os.ReadFile(getAccountDataFilePath())
-
-	if os.IsNotExist(err) {
+	data, err := os.ReadFile(env.AccountDataCache)
+	if err != nil {
 		return ""
 	}
-	if err != nil {
-		panic(err)
-	}
 
-	return string(data)
-}
-func SetRefreshToken(token string) {
-	if err := os.WriteFile(getAccountDataFilePath(), []byte(token), 0644); err != nil {
-		panic(err)
+	var authStoreData AuthStoreData
+	if err := json.Unmarshal(data, &authStoreData); err != nil {
+		return ""
 	}
+	return authStoreData.Refresh
+}
+func SetRefreshToken(token string) error {
+	data, _ := json.Marshal(AuthStoreData{
+		Refresh: token,
+	})
+	if err := os.WriteFile(env.AccountDataCache, data, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func Logout() error {
-	if err := os.Remove(getAccountDataFilePath()); os.IsNotExist(err) {
+	if err := os.Remove(env.AccountDataCache); os.IsNotExist(err) {
 		return fmt.Errorf("already logged out")
 	} else if err != nil {
 		return fmt.Errorf("error removing account information: %w", err)

@@ -40,31 +40,19 @@ func main() {
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			env.RootDir = c.String("dir")
 			env.InstancesDir = filepath.Join(env.RootDir, "instances")
+			env.LibrariesDir = filepath.Join(env.RootDir, "libraries")
 			env.CachesDir = filepath.Join(env.RootDir, "caches")
-			env.VersionCachesDir = filepath.Join(env.CachesDir, "minecraft")
-			env.FabricCachesDir = filepath.Join(env.CachesDir, "fabric")
 			env.AssetsDir = filepath.Join(env.RootDir, "assets")
-
+			env.AccountDataCache = filepath.Join(env.RootDir, "account.json")
+			if err := os.MkdirAll(env.InstancesDir, 0755); err != nil {
+				return nil, cli.Exit(fmt.Errorf("failed to create instances directory: %w", err), 1)
+			}
 			if c.Bool("clear-caches") {
 				if err := os.RemoveAll(env.CachesDir); err != nil {
 					return nil, cli.Exit(fmt.Errorf("failed to clear caches: %w", err), 1)
 				}
 				log.Println("Cleared all caches")
 			}
-
-			if err := os.MkdirAll(c.String("dir"), 0755); err != nil {
-				return nil, cli.Exit(fmt.Errorf("failed to create launcher directory: %w", err), 1)
-			}
-			if err := os.MkdirAll(env.VersionCachesDir, 0755); err != nil {
-				return nil, cli.Exit(fmt.Errorf("failed to create Minecraft cache directory: %w", err), 1)
-			}
-			if err := os.MkdirAll(env.FabricCachesDir, 0755); err != nil {
-				return nil, cli.Exit(fmt.Errorf("failed to create Fabric cache directory: %w", err), 1)
-			}
-			if err := os.MkdirAll(env.InstancesDir, 0755); err != nil {
-				return nil, cli.Exit(fmt.Errorf("failed to create instances directory: %w", err), 1)
-			}
-
 			return nil, nil
 		},
 		ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {

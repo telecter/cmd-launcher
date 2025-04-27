@@ -12,39 +12,17 @@ type VersionManifest struct {
 		Release  string `json:"release"`
 		Snapshot string `json:"snapshot"`
 	} `json:"latest"`
-	Versions []Version `json:"versions"`
+	Versions []struct {
+		ID              string    `json:"id"`
+		Type            string    `json:"type"`
+		URL             string    `json:"url"`
+		Time            time.Time `json:"time"`
+		ReleaseTime     time.Time `json:"releaseTime"`
+		Sha1            string    `json:"sha1"`
+		ComplianceLevel int       `json:"complianceLevel"`
+	} `json:"versions"`
 }
-type Version struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	URL         string    `json:"url"`
-	Time        time.Time `json:"time"`
-	ReleaseTime time.Time `json:"releaseTime"`
-}
-type Artifact struct {
-	Path string `json:"path"`
-	Sha1 string `json:"sha1"`
-	Size int    `json:"size"`
-	URL  string `json:"url"`
-}
-type Library struct {
-	Downloads struct {
-		Artifact Artifact `json:"artifact"`
-	} `json:"downloads"`
-	Name    string `json:"name"`
-	Natives struct {
-		Linux   string `json:"linux"`
-		MacOS   string `json:"macos"`
-		Windows string `json:"windows"`
-	}
-	URL   string `json:"url"`
-	Rules []struct {
-		Action string `json:"action"`
-		Os     struct {
-			Name string `json:"name"`
-		} `json:"os"`
-	} `json:"rules,omitempty"`
-}
+
 type VersionMeta struct {
 	Arguments struct {
 		Game []any `json:"game"`
@@ -105,44 +83,51 @@ type VersionMeta struct {
 	Time                   time.Time `json:"time"`
 	Type                   string    `json:"type"`
 }
-type AssetIndex struct {
-	Objects map[string]struct {
-		Hash string
-		Size int
-	}
+type Artifact struct {
+	Path string `json:"path"`
+	Sha1 string `json:"sha1"`
+	Size int    `json:"size"`
+	URL  string `json:"url"`
 }
-
-const versionManifestCache = "minecraft/version_manifest.json"
-const versionMetaCache = "minecraft/%s.json"
+type Library struct {
+	Downloads struct {
+		Artifact Artifact `json:"artifact"`
+	} `json:"downloads"`
+	Name    string `json:"name"`
+	Natives struct {
+		Linux   string `json:"linux"`
+		MacOS   string `json:"macos"`
+		Windows string `json:"windows"`
+	}
+	// these fields are present in Fabric libraries that don't contain a 'downloads' field
+	URL   string `json:"url"`
+	Sha1  string `json:"sha1"`
+	Size  int    `json:"size"`
+	Rules []struct {
+		Action string `json:"action"`
+		Os     struct {
+			Name string `json:"name"`
+		} `json:"os"`
+	} `json:"rules,omitempty"`
+}
+type AssetIndex struct {
+	Objects map[string]AssetObject `json:"objects"`
+}
+type AssetObject struct {
+	Hash string `json:"hash"`
+	Size int    `json:"size"`
+}
 
 func GetVersionManifest() (VersionManifest, error) {
+	cache := JSONCache{Path: "minecraft/version_manifest.json"}
 	var manifest VersionManifest
-	if isCacheValid(versionManifestCache) {
-		if err := readCache(versionManifestCache, &manifest); err != nil {
-			return VersionManifest{}, fmt.Errorf("failed to read version manifest cache: %w", err)
-		}
-	} else {
-		if err := network.FetchJSONData("https://launchermeta.mojang.com/mc/game/version_manifest.json", &manifest); err != nil {
+	if err := cache.Read(&manifest); err != nil {
+		if err := network.FetchJSONData("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", &manifest); err != nil {
 			return VersionManifest{}, fmt.Errorf("failed to retrieve version manifest: %w", err)
 		}
-		writeCache(versionManifestCache, manifest)
+		cache.Write(manifest)
 	}
 	return manifest, nil
-}
-
-func GetLatestRelease() (string, error) {
-	manifest, err := GetVersionManifest()
-	if err != nil {
-		return "", err
-	}
-	return manifest.Latest.Release, err
-}
-func GetLatestSnapshot() (string, error) {
-	manifest, err := GetVersionManifest()
-	if err != nil {
-		return "", err
-	}
-	return manifest.Latest.Snapshot, err
 }
 
 func GetVersionMeta(id string) (VersionMeta, error) {
@@ -150,20 +135,15 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	if err != nil {
 		return VersionMeta{}, err
 	}
-
 	for _, v := range manifest.Versions {
 		if v.ID == id {
-			cache := fmt.Sprintf(versionMetaCache, v.ID)
+			cache := JSONCache{Path: fmt.Sprintf("minecraft/%s.json", v.ID)}
 			var versionMeta VersionMeta
-			if isCacheValid(cache) {
-				if err := readCache(cache, &versionMeta); err != nil {
-					return VersionMeta{}, fmt.Errorf("failed to read version metadata cache: %w", err)
-				}
-			} else {
+			if err := cache.Read(&versionMeta); err != nil {
 				if err := network.FetchJSONData(v.URL, &versionMeta); err != nil {
 					return VersionMeta{}, fmt.Errorf("failed to retrieve version metadata: %w", err)
 				}
-				writeCache(cache, versionMeta)
+				cache.Write(versionMeta)
 			}
 			return versionMeta, nil
 		}

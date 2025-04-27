@@ -25,34 +25,29 @@ type FabricMeta struct {
 	Libraries []Library
 }
 
-const fabricVersionsListCache = "fabric/%s-versions.json"
-const fabricLauncherProfileCache = "fabric/%s-profile.json"
-
 func GetFabricMeta(gameVersion string) (FabricMeta, error) {
-	versionsCache := fmt.Sprintf(fabricVersionsListCache, gameVersion)
-	profileCache := fmt.Sprintf(fabricLauncherProfileCache, gameVersion)
+	versionsCache := JSONCache{Path: fmt.Sprintf("fabric/%s-versions.json", gameVersion)}
+	profileCache := JSONCache{Path: fmt.Sprintf("fabric/%s-profile.json", gameVersion)}
 
 	var list FabricVersionList
-	var err error
-	if isCacheValid(versionsCache) {
-		err = readCache(versionsCache, &list)
-	} else {
-		err = network.FetchJSONData(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s", gameVersion), &list)
-		writeCache(versionsCache, list)
-	}
+
+	err := versionsCache.Read(&list)
 	if err != nil {
-		return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric loader list: %w", err)
+		err = network.FetchJSONData(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s", gameVersion), &list)
+		if err != nil {
+			return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric loader versions: %w", err)
+		}
+		versionsCache.Write(list)
 	}
 
 	var meta FabricMeta
-	if isCacheValid(profileCache) {
-		err = readCache(profileCache, &meta)
-	} else {
-		err = network.FetchJSONData(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json", gameVersion, list[0].Loader.Version), &meta)
-		writeCache(profileCache, meta)
+	if err := profileCache.Read(&meta); err != nil {
+		err := network.FetchJSONData(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json", gameVersion, list[0].Loader.Version), &meta)
+		if err != nil {
+			return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric metadata for loader version %s: %w", list[0].Loader.Version, err)
+		}
+		profileCache.Write(meta)
 	}
-	if err != nil {
-		return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric metadata for loader version %s: %w", list[0].Loader.Version, err)
-	}
+
 	return meta, nil
 }

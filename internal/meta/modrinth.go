@@ -8,7 +8,7 @@ import (
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
-type Project struct {
+type ModrinthProject struct {
 	ClientSide       string      `json:"client_side"`
 	ServerSide       string      `json:"server_side"`
 	GameVersions     []string    `json:"game_versions"`
@@ -57,7 +57,7 @@ type Project struct {
 	ThreadID           string `json:"thread_id"`
 	MonetizationStatus string `json:"monetization_status"`
 }
-type ProjectVersion struct {
+type ModrinthProjectVersion struct {
 	GameVersions    []string    `json:"game_versions"`
 	Loaders         []string    `json:"loaders"`
 	ID              string      `json:"id"`
@@ -87,24 +87,24 @@ type ProjectVersion struct {
 	Dependencies []interface{} `json:"dependencies"`
 }
 
-func GetModrinthProject(id string) (Project, error) {
-	var data Project
+func GetModrinthProject(id string) (ModrinthProject, error) {
+	var data ModrinthProject
 	err := network.FetchJSONData("https://api.modrinth.com/v2/project/"+id, &data)
 	if err != nil {
 		return data, fmt.Errorf("failed to get project: %w", err)
 	}
 	return data, nil
 }
-func GetModrinthProjVersion(id string, gameVersion string, loader string) (ProjectVersion, error) {
-	var data []ProjectVersion
+func GetModrinthProjectVersion(id string, gameVersion string, loader string) (ModrinthProjectVersion, error) {
+	var data []ModrinthProjectVersion
 	err := network.FetchJSONData(fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version", id), &data)
 	if err != nil {
-		return ProjectVersion{}, fmt.Errorf("failed to get version info: %w", err)
+		return ModrinthProjectVersion{}, fmt.Errorf("failed to get version info: %w", err)
 	}
 	for _, version := range data {
 		if slices.Contains(version.Loaders, loader) && slices.Contains(version.GameVersions, gameVersion) {
 			return version, nil
 		}
 	}
-	return ProjectVersion{}, fmt.Errorf("no version found")
+	return ModrinthProjectVersion{}, fmt.Errorf("no suitable version found")
 }

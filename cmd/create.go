@@ -13,7 +13,6 @@ func create(ctx context.Context, c *cli.Command) error {
 	if c.Args().Len() < 1 {
 		cli.ShowSubcommandHelpAndExit(c, 1)
 	}
-
 	instance, err := launcher.CreateInstance(launcher.InstanceOptions{
 		GameVersion: c.String("version"),
 		Name:        c.Args().First(),
@@ -22,7 +21,7 @@ func create(ctx context.Context, c *cli.Command) error {
 	if err != nil {
 		return cli.Exit(fmt.Errorf("failed to create instance: %w", err), 1)
 	}
-	log.Printf("Created instance '%s' with Minecraft %s %s", instance.Name, instance.GameVersion, instance.ModLoader)
+	log.Printf("Created instance '%s' with Minecraft %s %s\n", instance.Name, instance.GameVersion, instance.ModLoader)
 	return nil
 }
 
