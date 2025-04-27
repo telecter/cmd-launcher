@@ -10,9 +10,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/auth"
-	"github.com/telecter/cmd-launcher/internal/env"
 	"github.com/telecter/cmd-launcher/internal/meta"
+)
+
+const (
+	LoaderVanilla string = "vanilla"
+	LoaderFabric  string = "fabric"
 )
 
 type LaunchOptions struct {
@@ -57,7 +62,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 	var javaArgs []string
 	mainClass := versionMeta.MainClass
 
-	allLibraries := append(versionMeta.Libraries, meta.Library{
+	libraries := append(versionMeta.Libraries, meta.Library{
 		Name: "com.mojang:minecraft:" + versionMeta.ID,
 		Downloads: struct {
 			Artifact meta.Artifact "json:\"artifact\""
@@ -71,25 +76,25 @@ func Launch(instanceId string, options LaunchOptions) error {
 		},
 	})
 
-	if instance.ModLoader == "fabric" {
+	if instance.Loader == LoaderFabric {
 		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID)
 		if err != nil {
 			return err
 		}
-		allLibraries = append(allLibraries, fabricMeta.Libraries...)
+		libraries = append(libraries, fabricMeta.Libraries...)
 		javaArgs = append(javaArgs, fabricMeta.Arguments.Jvm...)
 		mainClass = fabricMeta.MainClass
 	}
-	installed, required := filterLibraries(allLibraries)
+	installed, required := filterLibraries(libraries)
 	if err := installLibraries(required); err != nil {
 		return err
 	}
 
-	libraries := append(installed, required...)
-	libraryPaths := getRuntimeLibraryPaths(libraries)
+	allLibraries := append(installed, required...)
+	libraryPaths := getRuntimeLibraryPaths(allLibraries)
 
 	// TEMPORARY FIX: Duplicate ASM classes
-	if instance.ModLoader == "fabric" {
+	if instance.Loader == LoaderFabric {
 		for i, libraryPath := range libraryPaths {
 			if strings.Contains(libraryPath, "asm-9.6.jar") {
 				libraryPaths = slices.Delete(libraryPaths, i, i+1)
@@ -127,7 +132,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 		"--accessToken", options.LoginData.Token,
 		"--userType", "msa",
 		"--gameDir", instance.Dir,
-		"--assetsDir", env.AssetsDir,
+		"--assetsDir", internal.AssetsDir,
 		"--assetIndex", versionMeta.AssetIndex.ID,
 		"--version", versionMeta.ID,
 		"--versionType", versionMeta.Type,

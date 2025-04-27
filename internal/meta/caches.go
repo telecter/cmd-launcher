@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal/env"
+	"github.com/telecter/cmd-launcher/internal"
 )
 
 // Paths are relative to env.CachesDir
@@ -17,7 +17,7 @@ type JSONCache struct {
 }
 
 func (cache JSONCache) GetAbsolutePath() string {
-	return filepath.Join(env.CachesDir, cache.Path)
+	return filepath.Join(internal.CachesDir, cache.Path)
 }
 
 func (cache JSONCache) Read(v any) error {

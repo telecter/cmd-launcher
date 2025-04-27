@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-var loginCommand = &cli.Command{
+var login = &cli.Command{
 	Name:  "logout",
 	Usage: "Log out from account",
 	Action: func(ctx context.Context, c *cli.Command) error {
@@ -19,7 +19,7 @@ var loginCommand = &cli.Command{
 		return nil
 	},
 }
-var logoutCommand = &cli.Command{
+var logout = &cli.Command{
 	Name:  "login",
 	Usage: "Log in to an account",
 	Action: func(ctx context.Context, c *cli.Command) error {
@@ -35,11 +35,11 @@ var logoutCommand = &cli.Command{
 	},
 }
 
-var AuthCommand = &cli.Command{
+var Auth = &cli.Command{
 	Name:  "auth",
 	Usage: "Manage account authentication",
 	Commands: []*cli.Command{
-		loginCommand,
-		logoutCommand,
+		login,
+		logout,
 	},
 }

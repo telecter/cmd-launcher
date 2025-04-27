@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/telecter/cmd-launcher/cmd"
-	"github.com/telecter/cmd-launcher/internal/env"
+	"github.com/telecter/cmd-launcher/internal"
 	"github.com/urfave/cli/v3"
 )
 
@@ -19,11 +19,11 @@ func main() {
 		Name:  "cmd-launcher",
 		Usage: "A minimal command line Minecraft launcher.",
 		Commands: []*cli.Command{
-			cmd.StartCommand,
-			cmd.AuthCommand,
-			cmd.CreateCommand,
-			cmd.DeleteCommand,
-			cmd.SearchCommand,
+			cmd.Start,
+			cmd.Auth,
+			cmd.Create,
+			cmd.Delete,
+			cmd.Search,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -36,7 +36,7 @@ func main() {
 				Usage: "Clears all caches. Use this flag to see new updates and metadata.",
 				Value: false,
 				Action: func(ctx context.Context, c *cli.Command, b bool) error {
-					if err := os.RemoveAll(env.CachesDir); err != nil {
+					if err := os.RemoveAll(internal.CachesDir); err != nil {
 						return cli.Exit(fmt.Errorf("failed to clear caches: %w", err), 1)
 					}
 					return nil
@@ -44,13 +44,13 @@ func main() {
 			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-			env.RootDir = c.String("dir")
-			env.InstancesDir = filepath.Join(env.RootDir, "instances")
-			env.LibrariesDir = filepath.Join(env.RootDir, "libraries")
-			env.CachesDir = filepath.Join(env.RootDir, "caches")
-			env.AssetsDir = filepath.Join(env.RootDir, "assets")
-			env.AccountDataCache = filepath.Join(env.RootDir, "account.json")
-			if err := os.MkdirAll(env.InstancesDir, 0755); err != nil {
+			internal.RootDir = c.String("dir")
+			internal.InstancesDir = filepath.Join(internal.RootDir, "instances")
+			internal.LibrariesDir = filepath.Join(internal.RootDir, "libraries")
+			internal.CachesDir = filepath.Join(internal.RootDir, "caches")
+			internal.AssetsDir = filepath.Join(internal.RootDir, "assets")
+			internal.AccountDataCache = filepath.Join(internal.RootDir, "account.json")
+			if err := os.MkdirAll(internal.InstancesDir, 0755); err != nil {
 				return nil, cli.Exit(fmt.Errorf("failed to create instances directory: %w", err), 1)
 			}
 			return nil, nil

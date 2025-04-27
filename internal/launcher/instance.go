@@ -7,20 +7,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal/env"
+	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/meta"
 )
 
 type InstanceOptions struct {
 	GameVersion string
 	Name        string
-	ModLoader   string
+	Loader      string
 }
 type Instance struct {
 	Dir         string         `json:"dir"`
 	GameVersion string         `json:"game_version"`
 	Name        string         `json:"name"`
-	ModLoader   string         `json:"mod_loader"`
+	Loader      string         `json:"mod_loader"`
 	Config      InstanceConfig `json:"config"`
 }
 type InstanceConfig struct {
@@ -38,10 +38,6 @@ var defaultInstanceConfig = InstanceConfig{
 }
 
 func CreateInstance(options InstanceOptions) (Instance, error) {
-	if options.ModLoader != "" && options.ModLoader != "fabric" {
-		return Instance{}, fmt.Errorf("invalid mod loader")
-	}
-
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
@@ -62,37 +58,37 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		return Instance{}, err
 	}
 
-	dir := filepath.Join(env.InstancesDir, options.Name)
+	dir := filepath.Join(internal.InstancesDir, options.Name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return Instance{}, fmt.Errorf("failed to create instance directory: %w", err)
 	}
 
-	instance := Instance{
+	inst := Instance{
 		Dir:         dir,
 		GameVersion: options.GameVersion,
-		ModLoader:   options.ModLoader,
+		Loader:      options.Loader,
 		Name:        options.Name,
 		Config:      defaultInstanceConfig,
 	}
 
-	data, _ := json.Marshal(instance)
+	data, _ := json.Marshal(inst)
 	os.WriteFile(filepath.Join(dir, "instance.json"), data, 0644)
 
-	return instance, nil
+	return inst, nil
 }
 func DeleteInstance(id string) error {
-	instance, err := GetInstance(id)
+	inst, err := GetInstance(id)
 	if err != nil {
 		return err
 	}
-	if err := os.RemoveAll(instance.Dir); err != nil {
+	if err := os.RemoveAll(inst.Dir); err != nil {
 		return fmt.Errorf("failed to remove instance directory: %w", err)
 	}
 	return nil
 }
 
 func GetInstance(id string) (Instance, error) {
-	dir := filepath.Join(env.InstancesDir, id)
+	dir := filepath.Join(internal.InstancesDir, id)
 	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
 		return Instance{}, errors.New("instance does not exist")
 	}
@@ -100,29 +96,29 @@ func GetInstance(id string) (Instance, error) {
 	if err != nil {
 		return Instance{}, fmt.Errorf("failed to read instance metadata: %w", err)
 	}
-	var instance Instance
-	if err := json.Unmarshal(data, &instance); err != nil {
+	var inst Instance
+	if err := json.Unmarshal(data, &inst); err != nil {
 		return Instance{}, fmt.Errorf("instance metadata is invalid: %w", err)
 	}
-	return instance, nil
+	return inst, nil
 }
 
 func GetAllInstances() ([]Instance, error) {
-	entries, err := os.ReadDir(env.InstancesDir)
+	entries, err := os.ReadDir(internal.InstancesDir)
 	if err != nil {
 		return []Instance{}, fmt.Errorf("failed to read instances directory: %w", err)
 	}
-	var instances []Instance
+	var insts []Instance
 	for _, entry := range entries {
 		if entry.IsDir() {
-			instance, err := GetInstance(entry.Name())
+			inst, err := GetInstance(entry.Name())
 			if err != nil {
 				continue
 			}
-			instances = append(instances, instance)
+			insts = append(insts, inst)
 		}
 	}
-	return instances, nil
+	return insts, nil
 }
 
 func IsInstanceExist(id string) bool {

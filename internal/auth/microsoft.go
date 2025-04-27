@@ -58,16 +58,16 @@ func authenticateMSA(code string, refresh bool) (msaAuthResult, error) {
 		"scope":        {scope},
 		"redirect_uri": {redirectURL},
 	}
-	grantType := "authorization_code"
+	grant := "authorization_code"
 	if refresh {
-		grantType = "refresh_token"
+		grant = "refresh_token"
 	}
-	params.Add("grant_type", grantType)
-	paramName := "code"
+	params.Add("grant_type", grant)
+	param := "code"
 	if refresh {
-		paramName = "refresh_token"
+		param = "refresh_token"
 	}
-	params.Add(paramName, code)
+	params.Add(param, code)
 
 	var result msaAuthResult
 	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))

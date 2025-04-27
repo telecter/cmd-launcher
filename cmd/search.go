@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-var versionsCommand = &cli.Command{
+var versions = &cli.Command{
 	Name:  "versions",
 	Usage: "Search for Minecraft versions",
 	Arguments: []cli.Argument{
@@ -43,7 +43,7 @@ var versionsCommand = &cli.Command{
 	},
 }
 
-var instancesCommand = &cli.Command{
+var instances = &cli.Command{
 	Name:  "instances",
 	Usage: "Search for an instance",
 	Arguments: []cli.Argument{
@@ -60,7 +60,7 @@ var instancesCommand = &cli.Command{
 		var rows []table.Row
 		for i, instance := range instances {
 			if strings.Contains(instance.Name, c.StringArg("instance")) {
-				rows = append(rows, table.Row{i, instance.Name, instance.GameVersion, instance.ModLoader})
+				rows = append(rows, table.Row{i, instance.Name, instance.GameVersion, instance.Loader})
 			}
 		}
 		t := table.NewWriter()
@@ -73,11 +73,11 @@ var instancesCommand = &cli.Command{
 	},
 }
 
-var SearchCommand = &cli.Command{
+var Search = &cli.Command{
 	Name:  "search",
 	Usage: "Search versions and instances",
 	Commands: []*cli.Command{
-		versionsCommand,
-		instancesCommand,
+		versions,
+		instances,
 	},
 }

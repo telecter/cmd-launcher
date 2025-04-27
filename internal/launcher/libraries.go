@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/schollz/progressbar/v3"
-	"github.com/telecter/cmd-launcher/internal/env"
+	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
@@ -28,9 +28,13 @@ func (library RuntimeLibrary) GetArtifact() meta.Artifact {
 	if !library.IsFabric() {
 		return library.Downloads.Artifact
 	}
+	identifier := strings.Split(library.Name, ":")
+	group := strings.ReplaceAll(identifier[0], ".", "/")
+	path := strings.Join([]string{group, identifier[1], identifier[2], fmt.Sprintf("%s-%s.jar", identifier[1], identifier[2])}, "/")
+
 	return meta.Artifact{
-		Path: mavenNameToPath(library.Name),
-		URL:  fmt.Sprintf("%s/%s", library.URL, mavenNameToPath(library.Name)),
+		Path: path,
+		URL:  strings.Join([]string{library.URL, path}, "/"),
 		Sha1: library.Sha1,
 		Size: library.Size,
 	}
@@ -50,7 +54,7 @@ func (library RuntimeLibrary) ShouldBeInstalled() bool {
 }
 func (library RuntimeLibrary) IsInstalled() bool {
 	artifact := library.GetArtifact()
-	data, err := os.ReadFile(filepath.Join(env.LibrariesDir, artifact.Path))
+	data, err := os.ReadFile(filepath.Join(internal.LibrariesDir, artifact.Path))
 	if err != nil {
 		return false
 	}
@@ -63,7 +67,7 @@ func (library RuntimeLibrary) IsInstalled() bool {
 }
 func (library RuntimeLibrary) Install() error {
 	artifact := library.GetArtifact()
-	err := network.DownloadFile(artifact.URL, filepath.Join(env.LibrariesDir, artifact.Path))
+	err := network.DownloadFile(artifact.URL, filepath.Join(internal.LibrariesDir, artifact.Path))
 	if err != nil {
 		return fmt.Errorf("error while downloading artifact '%s': %w", artifact.Path, err)
 	}
@@ -73,20 +77,12 @@ func (library RuntimeLibrary) GetRuntimePath() (string, error) {
 	if !library.IsInstalled() {
 		return "", fmt.Errorf("library is not installed")
 	}
-	return filepath.Join(env.LibrariesDir, library.GetArtifact().Path), nil
-}
-
-// for Fabric libraries
-func mavenNameToPath(mavenPath string) string {
-	identifier := strings.Split(mavenPath, ":")
-	groupID := strings.Replace(identifier[0], ".", "/", -1)
-	basename := fmt.Sprintf("%s-%s.jar", identifier[1], identifier[2])
-	return fmt.Sprintf("%s/%s/%s/%s", groupID, identifier[1], identifier[2], basename)
+	return filepath.Join(internal.LibrariesDir, library.GetArtifact().Path), nil
 }
 
 func fetchLibraryFromMaven(name string, path string) (RuntimeLibrary, error) {
 	url := fmt.Sprintf("https://repo1.maven.org/maven2/%s", path)
-	checksumCachePath := filepath.Join(env.CachesDir, filepath.Base(path)+".sha1")
+	checksumCachePath := filepath.Join(internal.CachesDir, filepath.Base(path)+".sha1")
 	var checksum []byte
 	checksum, err := os.ReadFile(checksumCachePath)
 	if err != nil {
@@ -135,7 +131,7 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 
 func getRuntimeLibraryPaths(libraries []RuntimeLibrary) (paths []string) {
 	for _, library := range libraries {
-		path := filepath.Join(env.LibrariesDir, library.GetArtifact().Path)
+		path := filepath.Join(internal.LibrariesDir, library.GetArtifact().Path)
 		paths = append(paths, path)
 	}
 	return paths

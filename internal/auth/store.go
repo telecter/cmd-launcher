@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/telecter/cmd-launcher/internal/env"
+	"github.com/telecter/cmd-launcher/internal"
 )
 
 type AuthStoreData struct {
@@ -13,29 +13,29 @@ type AuthStoreData struct {
 }
 
 func GetRefreshToken() string {
-	data, err := os.ReadFile(env.AccountDataCache)
+	data, err := os.ReadFile(internal.AccountDataCache)
 	if err != nil {
 		return ""
 	}
 
-	var authStoreData AuthStoreData
-	if err := json.Unmarshal(data, &authStoreData); err != nil {
+	var store AuthStoreData
+	if err := json.Unmarshal(data, &store); err != nil {
 		return ""
 	}
-	return authStoreData.Refresh
+	return store.Refresh
 }
 func SetRefreshToken(token string) error {
 	data, _ := json.Marshal(AuthStoreData{
 		Refresh: token,
 	})
-	if err := os.WriteFile(env.AccountDataCache, data, 0644); err != nil {
+	if err := os.WriteFile(internal.AccountDataCache, data, 0644); err != nil {
 		return err
 	}
 	return nil
 }
 
 func Logout() error {
-	if err := os.Remove(env.AccountDataCache); os.IsNotExist(err) {
+	if err := os.Remove(internal.AccountDataCache); os.IsNotExist(err) {
 		return fmt.Errorf("already logged out")
 	} else if err != nil {
 		return fmt.Errorf("error removing account information: %w", err)

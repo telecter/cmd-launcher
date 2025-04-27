@@ -1,4 +1,4 @@
-package env
+package internal
 
 var RootDir string
 var LibrariesDir string

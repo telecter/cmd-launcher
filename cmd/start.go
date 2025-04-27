@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-var StartCommand = &cli.Command{
+var Start = &cli.Command{
 	Name:  "start",
 	Usage: "Start the specified instance",
 	Flags: []cli.Flag{
