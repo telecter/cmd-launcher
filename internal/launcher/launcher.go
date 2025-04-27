@@ -125,6 +125,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 	gameArgs := []string{
 		"--username", options.LoginData.Username,
 		"--accessToken", options.LoginData.Token,
+		"--userType", "msa",
 		"--gameDir", instance.Dir,
 		"--assetsDir", env.AssetsDir,
 		"--assetIndex", versionMeta.AssetIndex.ID,

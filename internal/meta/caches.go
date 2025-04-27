@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,12 +16,12 @@ type JSONCache struct {
 	Path string
 }
 
-func getAbsolutePath(path string) string {
-	return filepath.Join(env.CachesDir, path)
+func (cache JSONCache) GetAbsolutePath() string {
+	return filepath.Join(env.CachesDir, cache.Path)
 }
 
 func (cache JSONCache) Read(v any) error {
-	data, err := os.ReadFile(getAbsolutePath(cache.Path))
+	data, err := os.ReadFile(cache.GetAbsolutePath())
 	if err != nil {
 		return err
 	}
@@ -36,12 +37,21 @@ func (cache JSONCache) Write(v any) error {
 		return fmt.Errorf("failed to marshal data: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(getAbsolutePath(cache.Path)), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(cache.GetAbsolutePath()), 0755); err != nil {
 		return fmt.Errorf("failed to create directory for cache: %w", err)
 	}
 
-	if err := os.WriteFile(getAbsolutePath(cache.Path), data, 0644); err != nil {
+	if err := os.WriteFile(cache.GetAbsolutePath(), data, 0644); err != nil {
 		return fmt.Errorf("failed to write cache: %w", err)
 	}
 	return nil
+}
+
+func (cache JSONCache) Sha1Sum() (string, error) {
+	data, err := os.ReadFile(cache.GetAbsolutePath())
+	if err != nil {
+		return "", fmt.Errorf("failed to read cache: %w", err)
+	}
+	sum := sha1.Sum(data)
+	return string(sum[:]), nil
 }

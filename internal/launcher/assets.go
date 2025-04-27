@@ -52,7 +52,7 @@ func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
 	var assetIndex meta.AssetIndex
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if err := network.FetchJSONData(versionMeta.AssetIndex.URL, &assetIndex); err != nil {
+		if err := network.FetchJSON(versionMeta.AssetIndex.URL, &assetIndex); err != nil {
 			return meta.AssetIndex{}, fmt.Errorf("failed to fetch asset index: %w", err)
 		}
 		data, _ := json.Marshal(assetIndex)

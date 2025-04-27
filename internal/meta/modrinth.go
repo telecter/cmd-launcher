@@ -2,7 +2,6 @@ package meta
 
 import (
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/telecter/cmd-launcher/internal/network"
@@ -86,25 +85,58 @@ type ModrinthProjectVersion struct {
 	} `json:"files"`
 	Dependencies []interface{} `json:"dependencies"`
 }
+type ModrinthSearchResults struct {
+	Hits []struct {
+		ProjectID         string    `json:"project_id"`
+		ProjectType       string    `json:"project_type"`
+		Slug              string    `json:"slug"`
+		Author            string    `json:"author"`
+		Title             string    `json:"title"`
+		Description       string    `json:"description"`
+		Categories        []string  `json:"categories"`
+		DisplayCategories []string  `json:"display_categories"`
+		Versions          []string  `json:"versions"`
+		Downloads         int       `json:"downloads"`
+		Follows           int       `json:"follows"`
+		IconURL           string    `json:"icon_url"`
+		DateCreated       time.Time `json:"date_created"`
+		DateModified      time.Time `json:"date_modified"`
+		LatestVersion     string    `json:"latest_version"`
+		License           string    `json:"license"`
+		ClientSide        string    `json:"client_side"`
+		ServerSide        string    `json:"server_side"`
+		Gallery           []string  `json:"gallery"`
+		FeaturedGallery   any       `json:"featured_gallery"`
+		Color             int       `json:"color"`
+	} `json:"hits"`
+	Offset    int `json:"offset"`
+	Limit     int `json:"limit"`
+	TotalHits int `json:"total_hits"`
+}
 
-func GetModrinthProject(id string) (ModrinthProject, error) {
-	var data ModrinthProject
-	err := network.FetchJSONData("https://api.modrinth.com/v2/project/"+id, &data)
-	if err != nil {
-		return data, fmt.Errorf("failed to get project: %w", err)
+func SearchModrinthProjects(query string, page int) (ModrinthSearchResults, error) {
+	if page < 1 {
+		return ModrinthSearchResults{}, fmt.Errorf("negative page not allowed")
+	}
+	var data ModrinthSearchResults
+	url := fmt.Sprintf("https://api.modrinth.com/v2/search?query=%s&offset=%d", query, 10*(page-1))
+	if err := network.FetchJSON(url, &data); err != nil {
+		return ModrinthSearchResults{}, fmt.Errorf("failed to get search results: %w", err)
 	}
 	return data, nil
 }
-func GetModrinthProjectVersion(id string, gameVersion string, loader string) (ModrinthProjectVersion, error) {
+func GetModrinthProject(id string) (ModrinthProject, error) {
+	var data ModrinthProject
+	if err := network.FetchJSON("https://api.modrinth.com/v2/project/"+id, &data); err != nil {
+		return ModrinthProject{}, fmt.Errorf("failed to get project data: %w", err)
+	}
+	return data, nil
+}
+
+func GetModrinthProjectVersions(id string) ([]ModrinthProjectVersion, error) {
 	var data []ModrinthProjectVersion
-	err := network.FetchJSONData(fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version", id), &data)
-	if err != nil {
-		return ModrinthProjectVersion{}, fmt.Errorf("failed to get version info: %w", err)
+	if err := network.FetchJSON(fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version", id), &data); err != nil {
+		return []ModrinthProjectVersion{}, fmt.Errorf("failed to get version info: %w", err)
 	}
-	for _, version := range data {
-		if slices.Contains(version.Loaders, loader) && slices.Contains(version.GameVersions, gameVersion) {
-			return version, nil
-		}
-	}
-	return ModrinthProjectVersion{}, fmt.Errorf("no suitable version found")
+	return data, nil
 }

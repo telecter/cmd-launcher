@@ -19,11 +19,12 @@ func main() {
 		Name:  "cmd-launcher",
 		Usage: "A minimal command line Minecraft launcher.",
 		Commands: []*cli.Command{
-			cmd.Start,
-			cmd.Auth,
-			cmd.Create,
-			cmd.Delete,
-			cmd.Search,
+			cmd.StartCommand,
+			cmd.AuthCommand,
+			cmd.CreateCommand,
+			cmd.DeleteCommand,
+			cmd.SearchCommand,
+			cmd.ModsCommand,
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -35,6 +36,12 @@ func main() {
 				Name:  "clear-caches",
 				Usage: "Clears all caches. Use this flag to see new updates and metadata.",
 				Value: false,
+				Action: func(ctx context.Context, c *cli.Command, b bool) error {
+					if err := os.RemoveAll(env.CachesDir); err != nil {
+						return cli.Exit(fmt.Errorf("failed to clear caches: %w", err), 1)
+					}
+					return nil
+				},
 			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
@@ -46,12 +53,6 @@ func main() {
 			env.AccountDataCache = filepath.Join(env.RootDir, "account.json")
 			if err := os.MkdirAll(env.InstancesDir, 0755); err != nil {
 				return nil, cli.Exit(fmt.Errorf("failed to create instances directory: %w", err), 1)
-			}
-			if c.Bool("clear-caches") {
-				if err := os.RemoveAll(env.CachesDir); err != nil {
-					return nil, cli.Exit(fmt.Errorf("failed to clear caches: %w", err), 1)
-				}
-				log.Println("Cleared all caches")
 			}
 			return nil, nil
 		},

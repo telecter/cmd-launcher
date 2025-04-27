@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-func FetchJSONData(url string, v any) error {
+func FetchJSON(url string, v any) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
