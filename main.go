@@ -50,9 +50,6 @@ func main() {
 			internal.CachesDir = filepath.Join(internal.RootDir, "caches")
 			internal.AssetsDir = filepath.Join(internal.RootDir, "assets")
 			internal.AccountDataCache = filepath.Join(internal.RootDir, "account.json")
-			if err := os.MkdirAll(internal.InstancesDir, 0755); err != nil {
-				return nil, cli.Exit(fmt.Errorf("failed to create instances directory: %w", err), 1)
-			}
 			return nil, nil
 		},
 		ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {

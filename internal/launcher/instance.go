@@ -117,8 +117,11 @@ func GetInstance(id string) (Instance, error) {
 
 func GetAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(internal.InstancesDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return []Instance{}, nil
+	}
 	if err != nil {
-		return []Instance{}, fmt.Errorf("failed to read instances directory: %w", err)
+		return []Instance{}, fmt.Errorf("read instances directory: %w", err)
 	}
 	var insts []Instance
 	for _, entry := range entries {
