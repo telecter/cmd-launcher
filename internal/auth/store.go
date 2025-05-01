@@ -38,7 +38,7 @@ func Logout() error {
 	if err := os.Remove(internal.AccountDataCache); os.IsNotExist(err) {
 		return fmt.Errorf("already logged out")
 	} else if err != nil {
-		return fmt.Errorf("error removing account information: %w", err)
+		return fmt.Errorf("remove account store: %w", err)
 	}
 	return nil
 }

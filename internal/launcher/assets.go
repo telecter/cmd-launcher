@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -36,10 +35,10 @@ func downloadAssets(index meta.AssetIndex) error {
 		return nil
 	}
 	bar := progressbar.Default(int64(len(index.Objects)), "Downloading assets")
-	for _, asset := range index.Objects {
+	for name, asset := range index.Objects {
 		url := fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", asset.Hash[:2], asset.Hash)
 		if err := network.DownloadFile(url, filepath.Join(internal.AssetsDir, "objects", asset.Hash[:2], asset.Hash)); err != nil {
-			log.Println("Warning! Asset download failed.")
+			return fmt.Errorf("download asset '%s': %w", name, err)
 		}
 		bar.Add(1)
 	}
@@ -53,7 +52,7 @@ func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if err := network.FetchJSON(versionMeta.AssetIndex.URL, &assetIndex); err != nil {
-			return meta.AssetIndex{}, fmt.Errorf("failed to fetch asset index: %w", err)
+			return meta.AssetIndex{}, fmt.Errorf("fetch asset index: %w", err)
 		}
 		data, _ := json.Marshal(assetIndex)
 		os.MkdirAll(filepath.Dir(path), 0755)
@@ -62,7 +61,7 @@ func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
 		}
 	} else {
 		if err := json.Unmarshal(data, &assetIndex); err != nil {
-			return meta.AssetIndex{}, fmt.Errorf("failed to read cached asset index: %w", err)
+			return meta.AssetIndex{}, fmt.Errorf("read cached asset index: %w", err)
 		}
 	}
 	return assetIndex, nil

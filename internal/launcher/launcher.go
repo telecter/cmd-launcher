@@ -49,7 +49,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 	if !options.OfflineMode {
 		loginData, err := auth.LoginWithMicrosoft()
 		if err != nil {
-			return fmt.Errorf("error logging in with Microsoft: %w", err)
+			return fmt.Errorf("login with Microsoft: %w", err)
 		}
 		options.LoginData = loginData
 	}
@@ -105,7 +105,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 
 	assetIndex, err := downloadAssetIndex(versionMeta)
 	if err != nil {
-		return fmt.Errorf("failed to get asset index: %w", err)
+		return fmt.Errorf("fetch asset index: %w", err)
 	}
 
 	requiredAssetIndex := getRequiredAssets(assetIndex)

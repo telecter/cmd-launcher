@@ -35,7 +35,7 @@ func GetFabricMeta(gameVersion string) (FabricMeta, error) {
 	if err != nil {
 		err = network.FetchJSON(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s", gameVersion), &list)
 		if err != nil {
-			return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric loader versions: %w", err)
+			return FabricMeta{}, fmt.Errorf("retrieve Fabric versions: %w", err)
 		}
 		versionsCache.Write(list)
 	}
@@ -44,7 +44,7 @@ func GetFabricMeta(gameVersion string) (FabricMeta, error) {
 	if err := profileCache.Read(&meta); err != nil {
 		err := network.FetchJSON(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json", gameVersion, list[0].Loader.Version), &meta)
 		if err != nil {
-			return FabricMeta{}, fmt.Errorf("failed to retrieve Fabric metadata for loader version %s: %w", list[0].Loader.Version, err)
+			return FabricMeta{}, fmt.Errorf("retrieve metadata for Fabric version %s: %w", list[0].Loader.Version, err)
 		}
 		profileCache.Write(meta)
 	}

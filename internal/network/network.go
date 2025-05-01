@@ -22,11 +22,11 @@ func FetchJSON(url string, v any) error {
 func DownloadFile(url string, dest string) error {
 	err := os.MkdirAll(path.Dir(dest), 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create directory for file %s: %w", dest, err)
+		return fmt.Errorf("create directory for file '%s': %w", dest, err)
 	}
 	out, err := os.Create(dest)
 	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", dest, err)
+		return fmt.Errorf("create file '%s': %w", dest, err)
 	}
 	defer out.Close()
 	resp, err := http.Get(url)

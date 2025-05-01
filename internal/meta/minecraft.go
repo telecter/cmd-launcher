@@ -124,7 +124,7 @@ func GetVersionManifest() (VersionManifest, error) {
 
 	if err := cache.Read(&manifest); err != nil {
 		if err := network.FetchJSON("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", &manifest); err != nil {
-			return VersionManifest{}, fmt.Errorf("failed to retrieve version manifest: %w", err)
+			return VersionManifest{}, fmt.Errorf("retrieve version manifest: %w", err)
 		}
 		cache.Write(manifest)
 	}
@@ -142,7 +142,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 			var versionMeta VersionMeta
 			if err := cache.Read(&versionMeta); err != nil {
 				if err := network.FetchJSON(v.URL, &versionMeta); err != nil {
-					return VersionMeta{}, fmt.Errorf("failed to retrieve version metadata: %w", err)
+					return VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
 				}
 				cache.Write(versionMeta)
 			}

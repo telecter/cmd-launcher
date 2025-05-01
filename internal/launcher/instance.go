@@ -72,7 +72,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 
 	dir := filepath.Join(internal.InstancesDir, options.Name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return Instance{}, fmt.Errorf("failed to create instance directory: %w", err)
+		return Instance{}, fmt.Errorf("create instance directory: %w", err)
 	}
 
 	inst := Instance{
@@ -94,7 +94,7 @@ func DeleteInstance(id string) error {
 		return err
 	}
 	if err := os.RemoveAll(inst.Dir); err != nil {
-		return fmt.Errorf("failed to remove instance directory: %w", err)
+		return fmt.Errorf("remove instance directory: %w", err)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func GetInstance(id string) (Instance, error) {
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
 	if err != nil {
-		return Instance{}, fmt.Errorf("failed to read instance metadata: %w", err)
+		return Instance{}, fmt.Errorf("read instance metadata: %w", err)
 	}
 	var inst Instance
 	if err := json.Unmarshal(data, &inst); err != nil {

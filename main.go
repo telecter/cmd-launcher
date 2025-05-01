@@ -53,7 +53,7 @@ func main() {
 			return nil, nil
 		},
 		ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {
-			log.Fatalln(err)
+			log.Fatalln(fmt.Errorf("error: %w", err))
 			cli.OsExiter(err.(cli.ExitCoder).ExitCode())
 		},
 	}

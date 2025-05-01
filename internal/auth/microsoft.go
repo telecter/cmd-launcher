@@ -32,7 +32,7 @@ func fetchMSACode() (string, error) {
 	url.RawQuery = query.Encode()
 	err := browser.OpenURL(url.String())
 	if err != nil {
-		return "", fmt.Errorf("couldn't open browser: %w", err)
+		return "", fmt.Errorf("open browser: %w", err)
 	}
 
 	var code string
@@ -215,39 +215,39 @@ func LoginWithMicrosoft() (MinecraftLoginData, error) {
 		log.Println("No refresh token found, opening browser for authentication...")
 		code, err := fetchMSACode()
 		if err != nil {
-			return MinecraftLoginData{}, fmt.Errorf("failed to retrieve Microsoft authentication code: %w", err)
+			return MinecraftLoginData{}, fmt.Errorf("retrieve Microsoft authentication code: %w", err)
 		}
 		msaAuthResult, err = authenticateMSA(code, false)
 		if err != nil {
-			return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with MSA: %w", err)
+			return MinecraftLoginData{}, fmt.Errorf("authenticate with MSA: %w", err)
 		}
 	} else {
 		var err error
 		msaAuthResult, err = authenticateMSA(refreshToken, true)
 		if err != nil {
-			return MinecraftLoginData{}, fmt.Errorf("failed to re-authenticate with MSA: %w", err)
+			return MinecraftLoginData{}, fmt.Errorf("re-authenticate with MSA: %w", err)
 		}
 	}
 	xboxAuthData, err := authenticateXbox(msaAuthResult.AccessToken)
 	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Xbox: %w", err)
+		return MinecraftLoginData{}, fmt.Errorf("authenticate with Xbox: %w", err)
 	}
 	xstsAuthData, err := authenticateXSTS(xboxAuthData.Token)
 	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Xbox: %w", err)
+		return MinecraftLoginData{}, fmt.Errorf("authenticate with Xbox: %w", err)
 	}
 
 	minecraftAuthData, err := authenticateMinecraft(xstsAuthData.Token, xboxAuthData.DisplayClaims.Xui[0].Uhs)
 	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to authenticate with Minecraft: %w", err)
+		return MinecraftLoginData{}, fmt.Errorf("authenticate with Minecraft: %w", err)
 	}
 	profile, err := fetchMinecraftProfile(minecraftAuthData.AccessToken)
 	if err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("failed to get Minecraft profile: %w", err)
+		return MinecraftLoginData{}, fmt.Errorf("get Minecraft profile: %w", err)
 	}
 
 	if err := SetRefreshToken(msaAuthResult.RefreshToken); err != nil {
-		return MinecraftLoginData{}, fmt.Errorf("error setting refresh token: %w", err)
+		return MinecraftLoginData{}, fmt.Errorf("set refresh token: %w", err)
 	}
 	return MinecraftLoginData{
 		Username: profile.Name,

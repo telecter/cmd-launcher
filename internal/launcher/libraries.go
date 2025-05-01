@@ -69,7 +69,7 @@ func (library RuntimeLibrary) Install() error {
 	artifact := library.GetArtifact()
 	err := network.DownloadFile(artifact.URL, filepath.Join(internal.LibrariesDir, artifact.Path))
 	if err != nil {
-		return fmt.Errorf("error while downloading artifact '%s': %w", artifact.Path, err)
+		return fmt.Errorf("download artifact '%s': %w", artifact.Path, err)
 	}
 	return nil
 }
@@ -88,12 +88,12 @@ func fetchLibraryFromMaven(name string, path string) (RuntimeLibrary, error) {
 	if err != nil {
 		resp, err := http.Get(fmt.Sprintf("%s.sha1", url))
 		if err != nil {
-			return RuntimeLibrary{}, fmt.Errorf("failed to get Maven library checksum: %w", err)
+			return RuntimeLibrary{}, fmt.Errorf("get Maven library checksum: %w", err)
 		}
 		defer resp.Body.Close()
 		checksum, _ = io.ReadAll(resp.Body)
 		if err := os.WriteFile(checksumCachePath, checksum, 0644); err != nil {
-			return RuntimeLibrary{}, fmt.Errorf("failed to cache Maven library checksum: %w", err)
+			return RuntimeLibrary{}, fmt.Errorf("cache Maven library checksum: %w", err)
 		}
 	}
 
@@ -144,7 +144,7 @@ func installLibraries(libraries []RuntimeLibrary) error {
 	bar := progressbar.Default(int64(len(libraries)), "Installing libraries")
 	for _, library := range libraries {
 		if err := library.Install(); err != nil {
-			return fmt.Errorf("error while downloading library '%s': %w", library.Name, err)
+			return fmt.Errorf("download library '%s': %w", library.Name, err)
 		}
 		bar.Add(1)
 	}
