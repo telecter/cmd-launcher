@@ -33,7 +33,7 @@ var Delete = &cli.Command{
 			if err := launcher.DeleteInstance(c.StringArg("id")); err != nil {
 				return cli.Exit(fmt.Errorf("failed to remove instance: %w", err), 1)
 			}
-			log.Printf("Deleted instance '%s'", inst.Name)
+			log.Printf("Deleted instance '%s'\n", inst.Name)
 		} else {
 			log.Println("Operation aborted.")
 		}

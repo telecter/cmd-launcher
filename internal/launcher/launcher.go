@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -93,10 +94,9 @@ func Launch(instanceId string, options LaunchOptions) error {
 	allLibraries := append(installed, required...)
 	libraryPaths := getRuntimeLibraryPaths(allLibraries)
 
-	// TEMPORARY FIX: Duplicate ASM classes
 	if instance.Loader == LoaderFabric {
-		for i, libraryPath := range libraryPaths {
-			if strings.Contains(libraryPath, "asm-9.6.jar") {
+		for i, path := range libraryPaths {
+			if strings.Contains(filepath.Base(path), "asm-9.6.jar") {
 				libraryPaths = slices.Delete(libraryPaths, i, i+1)
 				break
 			}
@@ -108,8 +108,8 @@ func Launch(instanceId string, options LaunchOptions) error {
 		return fmt.Errorf("fetch asset index: %w", err)
 	}
 
-	requiredAssetIndex := getRequiredAssets(assetIndex)
-	if err := downloadAssets(requiredAssetIndex); err != nil {
+	requiredAssets := getRequiredAssets(assetIndex)
+	if err := downloadAssets(requiredAssets); err != nil {
 		return err
 	}
 
