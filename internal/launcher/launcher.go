@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -56,6 +55,14 @@ func Launch(instanceId string, options LaunchOptions) error {
 	mainClass := versionMeta.MainClass
 
 	libraries := versionMeta.Libraries
+	if instance.Loader == LoaderFabric {
+		for i, library := range libraries {
+			if strings.Contains(library.Name, "org.ow2.asm:asm:") {
+				libraries = slices.Delete(libraries, i, i+1)
+				break
+			}
+		}
+	}
 
 	if instance.Loader == LoaderFabric {
 		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID)
@@ -72,15 +79,6 @@ func Launch(instanceId string, options LaunchOptions) error {
 	}
 
 	libraryPaths := getRuntimeLibraryPaths(append(installed, required...))
-
-	if instance.Loader == LoaderFabric {
-		for i, path := range libraryPaths {
-			if strings.Contains(filepath.Base(path), "asm-9.6.jar") {
-				libraryPaths = slices.Delete(libraryPaths, i, i+1)
-				break
-			}
-		}
-	}
 
 	assetIndex, err := downloadAssetIndex(versionMeta)
 	if err != nil {

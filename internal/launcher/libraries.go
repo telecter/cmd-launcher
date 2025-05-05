@@ -24,7 +24,7 @@ type RuntimeLibrary struct {
 func (library RuntimeLibrary) IsFabric() bool {
 	return library.URL != ""
 }
-func (library RuntimeLibrary) GetArtifact() meta.Artifact {
+func (library RuntimeLibrary) Artifact() meta.Artifact {
 	if !library.IsFabric() {
 		return library.Downloads.Artifact
 	}
@@ -53,7 +53,7 @@ func (library RuntimeLibrary) ShouldBeInstalled() bool {
 	return install
 }
 func (library RuntimeLibrary) IsInstalled() bool {
-	artifact := library.GetArtifact()
+	artifact := library.Artifact()
 	data, err := os.ReadFile(filepath.Join(internal.LibrariesDir, artifact.Path))
 	if err != nil {
 		return false
@@ -66,18 +66,15 @@ func (library RuntimeLibrary) IsInstalled() bool {
 	return artifact.Sha1 == hex.EncodeToString(sum[:])
 }
 func (library RuntimeLibrary) Install() error {
-	artifact := library.GetArtifact()
+	artifact := library.Artifact()
 	err := network.DownloadFile(artifact.URL, filepath.Join(internal.LibrariesDir, artifact.Path))
 	if err != nil {
 		return fmt.Errorf("download artifact '%s': %w", artifact.Path, err)
 	}
 	return nil
 }
-func (library RuntimeLibrary) GetRuntimePath() (string, error) {
-	if !library.IsInstalled() {
-		return "", fmt.Errorf("library is not installed")
-	}
-	return filepath.Join(internal.LibrariesDir, library.GetArtifact().Path), nil
+func (library RuntimeLibrary) RuntimePath() string {
+	return filepath.Join(internal.LibrariesDir, library.Artifact().Path)
 }
 
 func fetchLibraryFromMaven(name string, path string) (RuntimeLibrary, error) {
@@ -130,10 +127,8 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 }
 
 func getRuntimeLibraryPaths(libraries []RuntimeLibrary) (paths []string) {
-
 	for _, library := range libraries {
-		path := filepath.Join(internal.LibrariesDir, library.GetArtifact().Path)
-		paths = append(paths, path)
+		paths = append(paths, library.RuntimePath())
 	}
 	return paths
 }

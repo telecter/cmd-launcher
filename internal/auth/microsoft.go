@@ -249,6 +249,7 @@ func LoginWithMicrosoft() (MinecraftLoginData, error) {
 	if err := SetRefreshToken(msaAuthResult.RefreshToken); err != nil {
 		return MinecraftLoginData{}, fmt.Errorf("set refresh token: %w", err)
 	}
+	log.Println("Authenticated successfully")
 	return MinecraftLoginData{
 		Username: profile.Name,
 		UUID:     profile.ID,
