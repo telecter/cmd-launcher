@@ -1,4 +1,4 @@
-package meta
+package network
 
 import (
 	"crypto/sha1"
@@ -6,22 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/telecter/cmd-launcher/internal"
 )
-
-// Paths are relative to env.CachesDir
 
 type JSONCache struct {
 	Path string
 }
 
-func (cache JSONCache) GetAbsolutePath() string {
-	return filepath.Join(internal.CachesDir, cache.Path)
-}
-
 func (cache JSONCache) Read(v any) error {
-	data, err := os.ReadFile(cache.GetAbsolutePath())
+	data, err := os.ReadFile(cache.Path)
 	if err != nil {
 		return err
 	}
@@ -37,18 +29,18 @@ func (cache JSONCache) Write(v any) error {
 		return fmt.Errorf("marshal data: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(cache.GetAbsolutePath()), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(cache.Path), 0755); err != nil {
 		return fmt.Errorf("create directory for cache: %w", err)
 	}
 
-	if err := os.WriteFile(cache.GetAbsolutePath(), data, 0644); err != nil {
+	if err := os.WriteFile(cache.Path, data, 0644); err != nil {
 		return fmt.Errorf("write cache: %w", err)
 	}
 	return nil
 }
 
 func (cache JSONCache) Sha1Sum() (string, error) {
-	data, err := os.ReadFile(cache.GetAbsolutePath())
+	data, err := os.ReadFile(cache.Path)
 	if err != nil {
 		return "", fmt.Errorf("read cache: %w", err)
 	}

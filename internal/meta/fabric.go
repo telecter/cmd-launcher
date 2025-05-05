@@ -2,7 +2,9 @@ package meta
 
 import (
 	"fmt"
+	"path/filepath"
 
+	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
@@ -26,11 +28,14 @@ type FabricMeta struct {
 }
 
 func GetFabricMeta(gameVersion string) (FabricMeta, error) {
-	versionsCache := JSONCache{Path: fmt.Sprintf("fabric/%s-versions.json", gameVersion)}
-	profileCache := JSONCache{Path: fmt.Sprintf("fabric/%s-profile.json", gameVersion)}
+	versionsCache := network.JSONCache{
+		Path: filepath.Join(internal.CachesDir, "fabric", fmt.Sprintf("%s-versions.json", gameVersion)),
+	}
+	profileCache := network.JSONCache{
+		Path: filepath.Join(internal.CachesDir, "fabric", fmt.Sprintf("%s-profile.json", gameVersion)),
+	}
 
 	var list FabricVersionList
-
 	err := versionsCache.Read(&list)
 	if err != nil {
 		err = network.FetchJSON(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s", gameVersion), &list)

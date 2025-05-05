@@ -3,7 +3,6 @@ package launcher
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,23 +45,14 @@ func downloadAssets(index meta.AssetIndex) error {
 }
 
 func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
-	path := filepath.Join(internal.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json")
+	cache := network.JSONCache{Path: filepath.Join(internal.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json")}
 
 	var assetIndex meta.AssetIndex
-	data, err := os.ReadFile(path)
-	if err != nil {
+	if err := cache.Read(&assetIndex); err != nil {
 		if err := network.FetchJSON(versionMeta.AssetIndex.URL, &assetIndex); err != nil {
 			return meta.AssetIndex{}, fmt.Errorf("fetch asset index: %w", err)
 		}
-		data, _ := json.Marshal(assetIndex)
-		os.MkdirAll(filepath.Dir(path), 0755)
-		if err := os.WriteFile(path, data, 0644); err != nil {
-			panic(err)
-		}
-	} else {
-		if err := json.Unmarshal(data, &assetIndex); err != nil {
-			return meta.AssetIndex{}, fmt.Errorf("read cached asset index: %w", err)
-		}
+		cache.Write(assetIndex)
 	}
 	return assetIndex, nil
 }

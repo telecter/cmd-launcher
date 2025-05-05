@@ -2,8 +2,10 @@ package meta
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
@@ -119,9 +121,9 @@ type AssetObject struct {
 }
 
 func GetVersionManifest() (VersionManifest, error) {
-	cache := JSONCache{Path: "minecraft/version_manifest.json"}
-	var manifest VersionManifest
+	cache := network.JSONCache{Path: filepath.Join(internal.CachesDir, "minecraft", "version_manifest.json")}
 
+	var manifest VersionManifest
 	if err := cache.Read(&manifest); err != nil {
 		if err := network.FetchJSON("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", &manifest); err != nil {
 			return VersionManifest{}, fmt.Errorf("retrieve version manifest: %w", err)
@@ -138,7 +140,9 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	}
 	for _, v := range manifest.Versions {
 		if v.ID == id {
-			cache := JSONCache{Path: fmt.Sprintf("minecraft/%s.json", v.ID)}
+			cache := network.JSONCache{
+				Path: filepath.Join(internal.CachesDir, "minecraft", fmt.Sprintf("%s.json", v.ID)),
+			}
 			var versionMeta VersionMeta
 			if err := cache.Read(&versionMeta); err != nil {
 				if err := network.FetchJSON(v.URL, &versionMeta); err != nil {
@@ -146,6 +150,18 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 				}
 				cache.Write(versionMeta)
 			}
+			versionMeta.Libraries = append(versionMeta.Libraries, Library{
+				Name: "com.mojang:minecraft:" + versionMeta.ID,
+				Downloads: struct {
+					Artifact Artifact "json:\"artifact\""
+				}{
+					Artifact: Artifact{
+						Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
+						Sha1: versionMeta.Downloads.Client.Sha1,
+						Size: versionMeta.Downloads.Client.Size,
+						URL:  versionMeta.Downloads.Client.URL,
+					},
+				}})
 			return versionMeta, nil
 		}
 	}

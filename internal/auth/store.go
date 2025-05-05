@@ -1,11 +1,12 @@
 package auth
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 type AuthStoreData struct {
@@ -13,29 +14,23 @@ type AuthStoreData struct {
 }
 
 func GetRefreshToken() string {
-	data, err := os.ReadFile(internal.AccountDataCache)
-	if err != nil {
-		return ""
-	}
-
+	cache := network.JSONCache{Path: internal.AccountDataCache}
 	var store AuthStoreData
-	if err := json.Unmarshal(data, &store); err != nil {
+	if err := cache.Read(&store); err != nil {
 		return ""
 	}
 	return store.Refresh
 }
 func SetRefreshToken(token string) error {
-	data, _ := json.Marshal(AuthStoreData{
-		Refresh: token,
-	})
-	if err := os.WriteFile(internal.AccountDataCache, data, 0644); err != nil {
+	cache := network.JSONCache{Path: internal.AccountDataCache}
+	if err := cache.Write(AuthStoreData{Refresh: token}); err != nil {
 		return err
 	}
 	return nil
 }
 
 func Logout() error {
-	if err := os.Remove(internal.AccountDataCache); os.IsNotExist(err) {
+	if err := os.Remove(internal.AccountDataCache); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("already logged out")
 	} else if err != nil {
 		return fmt.Errorf("remove account store: %w", err)
@@ -44,6 +39,5 @@ func Logout() error {
 }
 
 func IsLoggedIn() bool {
-	refresh := GetRefreshToken()
-	return refresh != ""
+	return GetRefreshToken() != ""
 }

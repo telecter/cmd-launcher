@@ -2,7 +2,6 @@ package launcher
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,16 +28,9 @@ type LaunchOptions struct {
 
 func run(path string, args []string) error {
 	cmd := exec.Command(path, args...)
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
-
-	go func() {
-		io.Copy(os.Stdout, stdout)
-	}()
-	go func() {
-		io.Copy(os.Stderr, stderr)
-	}()
-
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
@@ -63,19 +55,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 	var javaArgs []string
 	mainClass := versionMeta.MainClass
 
-	libraries := append(versionMeta.Libraries, meta.Library{
-		Name: "com.mojang:minecraft:" + versionMeta.ID,
-		Downloads: struct {
-			Artifact meta.Artifact "json:\"artifact\""
-		}{
-			Artifact: meta.Artifact{
-				Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
-				Sha1: versionMeta.Downloads.Client.Sha1,
-				Size: versionMeta.Downloads.Client.Size,
-				URL:  versionMeta.Downloads.Client.URL,
-			},
-		},
-	})
+	libraries := versionMeta.Libraries
 
 	if instance.Loader == LoaderFabric {
 		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID)
@@ -91,8 +71,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 		return err
 	}
 
-	allLibraries := append(installed, required...)
-	libraryPaths := getRuntimeLibraryPaths(allLibraries)
+	libraryPaths := getRuntimeLibraryPaths(append(installed, required...))
 
 	if instance.Loader == LoaderFabric {
 		for i, path := range libraryPaths {

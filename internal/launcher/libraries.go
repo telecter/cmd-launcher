@@ -130,6 +130,7 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 }
 
 func getRuntimeLibraryPaths(libraries []RuntimeLibrary) (paths []string) {
+
 	for _, library := range libraries {
 		path := filepath.Join(internal.LibrariesDir, library.GetArtifact().Path)
 		paths = append(paths, path)
