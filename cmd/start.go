@@ -14,13 +14,28 @@ var Start = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",
-			Usage:   "Sets your username to the provided value (launches game in offline mode)",
+			Usage:   "Set your username to the provided value (launches game in offline mode)",
 			Aliases: []string{"u"},
 		},
 		&cli.StringFlag{
 			Name:    "server",
-			Usage:   "Joins a server immediately upon starting the game.",
+			Usage:   "Join a server immediately upon starting the game.",
 			Aliases: []string{"s"},
+		},
+		&cli.BoolFlag{
+			Name:  "demo",
+			Usage: "Start the game in demo mode",
+			Value: false,
+		},
+		&cli.BoolFlag{
+			Name:  "disable-mp",
+			Usage: "Disable multiplayer",
+			Value: false,
+		},
+		&cli.BoolFlag{
+			Name:  "disable-chat",
+			Usage: "Disable chat",
+			Value: false,
 		},
 	},
 	Arguments: []cli.Argument{
@@ -39,6 +54,9 @@ var Start = &cli.Command{
 			LoginData: auth.MinecraftLoginData{
 				Username: c.String("username"),
 			},
+			Demo:               c.Bool("demo"),
+			DisableMultiplayer: c.Bool("disable-mp"),
+			DisableChat:        c.Bool("disable-chat"),
 		},
 		); err != nil {
 			return cli.Exit(err, 1)

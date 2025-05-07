@@ -32,7 +32,7 @@ var app = cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:  "clear-caches",
-			Usage: "Clears all caches. Use this flag to see new updates and metadata.",
+			Usage: "Clear all caches. Use this flag to see new updates and metadata.",
 			Value: false,
 			Action: func(ctx context.Context, c *cli.Command, b bool) error {
 				if err := os.RemoveAll(internal.CachesDir); err != nil {

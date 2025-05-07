@@ -20,9 +20,12 @@ const (
 )
 
 type LaunchOptions struct {
-	QuickPlayServer string
-	LoginData       auth.MinecraftLoginData
-	OfflineMode     bool
+	QuickPlayServer    string
+	LoginData          auth.MinecraftLoginData
+	OfflineMode        bool
+	Demo               bool
+	DisableMultiplayer bool
+	DisableChat        bool
 }
 
 func run(path string, args []string) error {
@@ -121,6 +124,15 @@ func Launch(instanceId string, options LaunchOptions) error {
 	}
 	if options.LoginData.UUID != "" {
 		gameArgs = append(gameArgs, "--uuid", options.LoginData.UUID)
+	}
+	if options.Demo {
+		gameArgs = append(gameArgs, "--demo")
+	}
+	if options.DisableChat {
+		gameArgs = append(gameArgs, "--disableChat")
+	}
+	if options.DisableMultiplayer {
+		gameArgs = append(gameArgs, "--disableMultiplayer")
 	}
 	os.Chdir(instance.Dir)
 	return run(instance.Config.JavaExecutablePath, append(javaArgs, gameArgs...))
