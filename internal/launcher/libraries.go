@@ -67,7 +67,7 @@ func (library RuntimeLibrary) IsInstalled() bool {
 }
 func (library RuntimeLibrary) Install() error {
 	artifact := library.Artifact()
-	err := network.DownloadFile(artifact.URL, filepath.Join(internal.LibrariesDir, artifact.Path))
+	err := network.DownloadFile(artifact.URL, library.RuntimePath())
 	if err != nil {
 		return fmt.Errorf("download artifact '%s': %w", artifact.Path, err)
 	}
@@ -77,23 +77,23 @@ func (library RuntimeLibrary) RuntimePath() string {
 	return filepath.Join(internal.LibrariesDir, library.Artifact().Path)
 }
 
-func fetchLibraryFromMaven(name string, path string) (RuntimeLibrary, error) {
-	url := fmt.Sprintf("https://repo1.maven.org/maven2/%s", path)
-	checksumCachePath := filepath.Join(internal.CachesDir, filepath.Base(path)+".sha1")
-	var checksum []byte
-	checksum, err := os.ReadFile(checksumCachePath)
+func fetchMavenLibraryMeta(name string, path string) RuntimeLibrary {
+	url := fmt.Sprintf("https://repo.maven.apache.org/maven2/%s", path)
+	sumPath := filepath.Join(internal.LibrariesDir, filepath.Dir(path), filepath.Base(path)+".sha1")
+	var sum []byte
+	sum, err := os.ReadFile(sumPath)
 	if err != nil {
-		resp, err := http.Get(fmt.Sprintf("%s.sha1", url))
-		if err != nil {
-			return RuntimeLibrary{}, fmt.Errorf("get Maven library checksum: %w", err)
-		}
-		defer resp.Body.Close()
-		checksum, _ = io.ReadAll(resp.Body)
-		if err := os.WriteFile(checksumCachePath, checksum, 0644); err != nil {
-			return RuntimeLibrary{}, fmt.Errorf("cache Maven library checksum: %w", err)
+		resp, err := http.Get(url + ".sha1")
+		if err == nil {
+			defer resp.Body.Close()
+			sum, _ = io.ReadAll(resp.Body)
+
+			os.MkdirAll(filepath.Dir(sumPath), 0755)
+			os.WriteFile(sumPath, sum, 0644)
+		} else {
+			sum = []byte{}
 		}
 	}
-
 	return RuntimeLibrary{meta.Library{
 		Name: name,
 		Downloads: struct {
@@ -102,10 +102,10 @@ func fetchLibraryFromMaven(name string, path string) (RuntimeLibrary, error) {
 			Artifact: meta.Artifact{
 				Path: path,
 				URL:  url,
-				Sha1: string(checksum),
+				Sha1: string(sum),
 			},
 		},
-	}}, nil
+	}}
 }
 
 func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, required []RuntimeLibrary) {
@@ -114,7 +114,7 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 		if library.ShouldBeInstalled() {
 			if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && strings.HasPrefix(library.Name, "org.lwjgl") {
 				path := strings.ReplaceAll(library.Downloads.Artifact.Path, "linux", "linux-arm64")
-				library, _ = fetchLibraryFromMaven(library.Name, path)
+				library = fetchMavenLibraryMeta(library.Name, path)
 			}
 			if library.IsInstalled() {
 				installed = append(installed, library)

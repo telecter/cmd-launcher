@@ -72,8 +72,6 @@ func authenticateMSA(code string, refresh bool) (msaAuthResult, error) {
 	var result msaAuthResult
 	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
 	if err := network.CheckResponse(resp, err); err != nil {
-		a, _ := io.ReadAll(resp.Body)
-		fmt.Println(string(a))
 		return msaAuthResult{}, err
 	}
 	defer resp.Body.Close()

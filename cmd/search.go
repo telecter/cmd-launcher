@@ -66,7 +66,7 @@ var instances = &cli.Command{
 		t := table.NewWriter()
 		t.SetStyle(table.StyleLight)
 		t.SetOutputMirror(os.Stdout)
-		t.AppendHeader(table.Row{"#", "Name", "Version", "Flags"})
+		t.AppendHeader(table.Row{"#", "Name", "Version", "Type"})
 		t.AppendRows(rows)
 		t.Render()
 		return nil
