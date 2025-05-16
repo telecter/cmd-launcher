@@ -17,6 +17,7 @@ import (
 const (
 	LoaderVanilla string = "vanilla"
 	LoaderFabric  string = "fabric"
+	LoaderQuilt   string = "quilt"
 )
 
 type LaunchOptions struct {
@@ -67,10 +68,18 @@ func Launch(instanceId string, options LaunchOptions) error {
 		}
 	}
 
-	if instance.Loader == LoaderFabric {
-		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID)
-		if err != nil {
-			return err
+	if instance.Loader == LoaderFabric || instance.Loader == LoaderQuilt {
+		var fabricMeta meta.FabricMeta
+		if instance.Loader == LoaderFabric {
+			fabricMeta, err = meta.GetFabricMeta(versionMeta.ID)
+			if err != nil {
+				return err
+			}
+		} else if instance.Loader == LoaderQuilt {
+			fabricMeta, err = meta.GetQuiltMeta(versionMeta.ID)
+			if err != nil {
+				return err
+			}
 		}
 		libraries = append(libraries, fabricMeta.Libraries...)
 		javaArgs = append(javaArgs, fabricMeta.Arguments.Jvm...)

@@ -50,7 +50,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
-	if options.Loader != LoaderFabric && options.Loader != LoaderVanilla {
+	if options.Loader != LoaderFabric && options.Loader != LoaderVanilla && options.Loader != LoaderQuilt {
 		return Instance{}, fmt.Errorf("invalid mod loader")
 	}
 

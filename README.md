@@ -34,7 +34,7 @@ Run the `help` subcommand to get the usage information.
 ### Creating an instance
 
 To create a new instance, use the `create` subcommand.  
-You can use the `--loader, -l` flag to set the mod loader (only fabric at the moment.)  
+You can use the `--loader, -l` flag to set the mod loader. Only Fabric and Quilt are supported at the moment. 
 
 Use the `--version, -v` flag to set the game version. If no value is supplied, the latest release is used. Acceptable values also include `release` or `snapshot` for the latest of either.
 ```sh

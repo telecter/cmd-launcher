@@ -56,3 +56,33 @@ func GetFabricMeta(gameVersion string) (FabricMeta, error) {
 
 	return meta, nil
 }
+
+func GetQuiltMeta(gameVersion string) (FabricMeta, error) {
+	versionsCache := network.JSONCache{
+		Path: filepath.Join(internal.CachesDir, "quilt", fmt.Sprintf("%s-versions.json", gameVersion)),
+	}
+	profileCache := network.JSONCache{
+		Path: filepath.Join(internal.CachesDir, "quilt", fmt.Sprintf("%s-profile.json", gameVersion)),
+	}
+
+	var list FabricVersionList
+	err := versionsCache.Read(&list)
+	if err != nil {
+		err = network.FetchJSON(fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s", gameVersion), &list)
+		if err != nil {
+			return FabricMeta{}, fmt.Errorf("retrieve Quilt versions: %w", err)
+		}
+		versionsCache.Write(list)
+	}
+
+	var meta FabricMeta
+	if err := profileCache.Read(&meta); err != nil {
+		err := network.FetchJSON(fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json", gameVersion, list[0].Loader.Version), &meta)
+		if err != nil {
+			return FabricMeta{}, fmt.Errorf("retrieve metadata for Quilt version %s: %w", list[0].Loader.Version, err)
+		}
+		profileCache.Write(meta)
+	}
+
+	return meta, nil
+}
