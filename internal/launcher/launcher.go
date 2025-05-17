@@ -29,8 +29,17 @@ type LaunchOptions struct {
 	DisableChat        bool
 }
 
-func run(path string, args []string) error {
-	cmd := exec.Command(path, args...)
+func run(java string, mainClass string, javaArgs []string, gameArgs []string) error {
+	info, err := os.Stat(java)
+	if err != nil {
+		return fmt.Errorf("check Java executable: %w", err)
+	}
+	if info.Mode()&0111 == 0 || info.IsDir() {
+		return fmt.Errorf("check Java executable: file is not an executable")
+	}
+	javaArgs = append(javaArgs, mainClass)
+	args := append(javaArgs, gameArgs...)
+	cmd := exec.Command(java, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -144,5 +153,5 @@ func Launch(instanceId string, options LaunchOptions) error {
 		gameArgs = append(gameArgs, "--disableMultiplayer")
 	}
 	os.Chdir(instance.Dir)
-	return run(instance.Config.JavaExecutablePath, append(javaArgs, gameArgs...))
+	return run(instance.Config.JavaExecutablePath, mainClass, javaArgs, gameArgs)
 }
