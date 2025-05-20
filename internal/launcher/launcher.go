@@ -28,18 +28,30 @@ type LaunchOptions struct {
 	DisableMultiplayer bool
 	DisableChat        bool
 }
+type runOptions struct {
+	javaPath  string
+	mainClass string
+	classpath []string
+	javaArgs  []string
+	gameArgs  []string
+}
 
-func run(java string, mainClass string, javaArgs []string, gameArgs []string) error {
-	info, err := os.Stat(java)
+func run(options runOptions) error {
+	info, err := os.Stat(options.javaPath)
 	if err != nil {
 		return fmt.Errorf("check Java executable: %w", err)
 	}
 	if info.Mode()&0111 == 0 || info.IsDir() {
 		return fmt.Errorf("check Java executable: file is not an executable")
 	}
-	javaArgs = append(javaArgs, mainClass)
-	args := append(javaArgs, gameArgs...)
-	cmd := exec.Command(java, args...)
+
+	separator := ":"
+	if runtime.GOOS == "windows" {
+		separator = ";"
+	}
+	javaArgs := append(options.javaArgs, "-cp", strings.Join(options.classpath, separator), options.mainClass)
+
+	cmd := exec.Command(options.javaPath, append(javaArgs, options.gameArgs...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -111,9 +123,6 @@ func Launch(instanceId string, options LaunchOptions) error {
 		return err
 	}
 
-	javaArgs = append(javaArgs, "-cp")
-	javaArgs = append(javaArgs, strings.Join(libraryPaths, ":"))
-
 	if runtime.GOOS == "darwin" {
 		javaArgs = append(javaArgs, "-XstartOnFirstThread")
 	}
@@ -123,7 +132,6 @@ func Launch(instanceId string, options LaunchOptions) error {
 	if instance.Config.MaxMemory != 0 {
 		javaArgs = append(javaArgs, fmt.Sprintf("-Xmx%dm", instance.Config.MaxMemory))
 	}
-	javaArgs = append(javaArgs, mainClass)
 
 	gameArgs := []string{
 		"--username", options.LoginData.Username,
@@ -153,5 +161,11 @@ func Launch(instanceId string, options LaunchOptions) error {
 		gameArgs = append(gameArgs, "--disableMultiplayer")
 	}
 	os.Chdir(instance.Dir)
-	return run(instance.Config.JavaExecutablePath, mainClass, javaArgs, gameArgs)
+	return run(runOptions{
+		javaPath:  instance.Config.JavaExecutablePath,
+		mainClass: mainClass,
+		classpath: libraryPaths,
+		javaArgs:  javaArgs,
+		gameArgs:  gameArgs,
+	})
 }
