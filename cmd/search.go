@@ -54,7 +54,7 @@ var instances = &cli.Command{
 	Action: func(ctx context.Context, c *cli.Command) error {
 		instances, err := launcher.GetAllInstances()
 		if err != nil {
-			return cli.Exit(fmt.Errorf("failed to get all instances: %w", err), 1)
+			return fmt.Errorf("failed to get all instances: %w", err)
 		}
 
 		var rows []table.Row

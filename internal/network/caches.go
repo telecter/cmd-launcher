@@ -2,17 +2,19 @@ package network
 
 import (
 	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
 )
 
-type JSONCache struct {
+type JSONCache[T any] struct {
 	Path string
+	URL  string
 }
 
-func (cache JSONCache) Read(v any) error {
+func (cache JSONCache[T]) Read(v *T) error {
 	data, err := os.ReadFile(cache.Path)
 	if err != nil {
 		return err
@@ -23,27 +25,24 @@ func (cache JSONCache) Read(v any) error {
 	}
 	return nil
 }
-func (cache JSONCache) Write(v any) error {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return fmt.Errorf("marshal data: %w", err)
+func (cache JSONCache[T]) UpdateAndRead(v *T) error {
+	if err := DownloadFile(cache.URL, cache.Path); err != nil {
+		return fmt.Errorf("update cache: %w", err)
 	}
-
-	if err := os.MkdirAll(filepath.Dir(cache.Path), 0755); err != nil {
-		return fmt.Errorf("create directory for cache: %w", err)
-	}
-
-	if err := os.WriteFile(cache.Path, data, 0644); err != nil {
-		return fmt.Errorf("write cache: %w", err)
+	if err := cache.Read(v); err != nil {
+		return fmt.Errorf("read cache: %w", err)
 	}
 	return nil
 }
-
-func (cache JSONCache) Sha1Sum() (string, error) {
-	data, err := os.ReadFile(cache.Path)
+func (cache JSONCache[T]) Sha1() (string, error) {
+	f, err := os.Open(cache.Path)
 	if err != nil {
-		return "", fmt.Errorf("read cache: %w", err)
+		return "", err
 	}
-	sum := sha1.Sum(data)
-	return string(sum[:]), nil
+	defer f.Close()
+	h := sha1.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

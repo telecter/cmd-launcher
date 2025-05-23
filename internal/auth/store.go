@@ -1,12 +1,12 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
 	"github.com/telecter/cmd-launcher/internal"
-	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 type AuthStoreData struct {
@@ -14,19 +14,19 @@ type AuthStoreData struct {
 }
 
 func GetRefreshToken() string {
-	cache := network.JSONCache{Path: internal.AccountDataCache}
+	cache, err := os.ReadFile(internal.AccountDataCache)
+	if err != nil {
+		return ""
+	}
+
 	var store AuthStoreData
-	if err := cache.Read(&store); err != nil {
+	if err := json.Unmarshal(cache, &store); err != nil {
 		return ""
 	}
 	return store.Refresh
 }
 func SetRefreshToken(token string) error {
-	cache := network.JSONCache{Path: internal.AccountDataCache}
-	if err := cache.Write(AuthStoreData{Refresh: token}); err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(internal.AccountDataCache, []byte(token), 0644)
 }
 
 func Logout() error {

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/telecter/cmd-launcher/internal/auth"
@@ -13,7 +14,7 @@ var login = &cli.Command{
 	Usage: "Log out from account",
 	Action: func(ctx context.Context, c *cli.Command) error {
 		if err := auth.Logout(); err != nil {
-			return cli.Exit(err, 1)
+			return err
 		}
 		log.Println("Logged out")
 		return nil
@@ -24,11 +25,11 @@ var logout = &cli.Command{
 	Usage: "Log in to an account",
 	Action: func(ctx context.Context, c *cli.Command) error {
 		if auth.IsLoggedIn() {
-			return cli.Exit("already logged in", 0)
+			return fmt.Errorf("already logged in")
 		}
 		_, err := auth.LoginWithMicrosoft()
 		if err != nil {
-			return cli.Exit(err, 1)
+			return err
 		}
 		log.Println("Logged in")
 		return nil

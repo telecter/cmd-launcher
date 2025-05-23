@@ -41,7 +41,7 @@ var Create = &cli.Command{
 			Loader:      c.String("loader"),
 		})
 		if err != nil {
-			return cli.Exit(fmt.Errorf("failed to create instance: %w", err), 1)
+			return fmt.Errorf("failed to create instance: %w", err)
 		}
 		log.Printf("Created instance '%s' with Minecraft %s %s\n", inst.Name, inst.GameVersion, inst.Loader)
 		return nil

@@ -45,14 +45,16 @@ func downloadAssets(index meta.AssetIndex) error {
 }
 
 func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
-	cache := network.JSONCache{Path: filepath.Join(internal.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json")}
+	cache := network.JSONCache[meta.AssetIndex]{
+		Path: filepath.Join(internal.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),
+		URL:  versionMeta.AssetIndex.URL,
+	}
 
 	var assetIndex meta.AssetIndex
 	if err := cache.Read(&assetIndex); err != nil {
-		if err := network.FetchJSON(versionMeta.AssetIndex.URL, &assetIndex); err != nil {
+		if err := cache.UpdateAndRead(&assetIndex); err != nil {
 			return meta.AssetIndex{}, fmt.Errorf("fetch asset index: %w", err)
 		}
-		cache.Write(assetIndex)
 	}
 	return assetIndex, nil
 }

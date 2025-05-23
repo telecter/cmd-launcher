@@ -27,61 +27,60 @@ type FabricMeta struct {
 	Libraries []Library
 }
 
-func GetFabricMeta(gameVersion string) (FabricMeta, error) {
-	versionsCache := network.JSONCache{
-		Path: filepath.Join(internal.CachesDir, "fabric", fmt.Sprintf("%s-versions.json", gameVersion)),
+func GetFabricVersions(gameVersion string) (FabricVersionList, error) {
+	cache := network.JSONCache[FabricVersionList]{
+		Path: filepath.Join(internal.CachesDir, "fabric", gameVersion+"-versions.json"),
+		URL:  fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s", gameVersion),
 	}
-	profileCache := network.JSONCache{
-		Path: filepath.Join(internal.CachesDir, "fabric", fmt.Sprintf("%s-profile.json", gameVersion)),
-	}
-
-	var list FabricVersionList
-	err := versionsCache.Read(&list)
-	if err != nil {
-		err = network.FetchJSON(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s", gameVersion), &list)
-		if err != nil {
-			return FabricMeta{}, fmt.Errorf("retrieve Fabric versions: %w", err)
+	var versions FabricVersionList
+	if err := cache.UpdateAndRead(&versions); err != nil {
+		if err := cache.Read(&versions); err != nil {
+			return FabricVersionList{}, fmt.Errorf("retrieve Fabric versions: %w", err)
 		}
-		versionsCache.Write(list)
 	}
 
+	return versions, nil
+}
+
+func GetQuiltVersions(gameVersion string) (FabricVersionList, error) {
+	cache := network.JSONCache[FabricVersionList]{
+		Path: filepath.Join(internal.CachesDir, "quilt", gameVersion+"-versions.json"),
+		URL:  fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s", gameVersion),
+	}
+	var versions FabricVersionList
+	if err := cache.UpdateAndRead(&versions); err != nil {
+		if err := cache.Read(&versions); err != nil {
+			return FabricVersionList{}, fmt.Errorf("retrieve Quilt versions: %w", err)
+		}
+	}
+
+	return versions, nil
+}
+
+func GetFabricMeta(gameVersion string, loaderVersion string) (FabricMeta, error) {
+	cache := network.JSONCache[FabricMeta]{
+		Path: filepath.Join(internal.CachesDir, "fabric", loaderVersion+"-"+gameVersion+".json"),
+		URL:  fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json", gameVersion, loaderVersion),
+	}
 	var meta FabricMeta
-	if err := profileCache.Read(&meta); err != nil {
-		err := network.FetchJSON(fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json", gameVersion, list[0].Loader.Version), &meta)
-		if err != nil {
-			return FabricMeta{}, fmt.Errorf("retrieve metadata for Fabric version %s: %w", list[0].Loader.Version, err)
+	if err := cache.Read(&meta); err != nil {
+		if err := cache.UpdateAndRead(&meta); err != nil {
+			return FabricMeta{}, fmt.Errorf("retrieve metadata for Fabric version %s: %w", loaderVersion, err)
 		}
-		profileCache.Write(meta)
 	}
-
 	return meta, nil
 }
 
-func GetQuiltMeta(gameVersion string) (FabricMeta, error) {
-	versionsCache := network.JSONCache{
-		Path: filepath.Join(internal.CachesDir, "quilt", fmt.Sprintf("%s-versions.json", gameVersion)),
+func GetQuiltMeta(gameVersion string, loaderVersion string) (FabricMeta, error) {
+	cache := network.JSONCache[FabricMeta]{
+		Path: filepath.Join(internal.CachesDir, "quilt", loaderVersion+"-"+gameVersion+".json"),
+		URL:  fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json", gameVersion, loaderVersion),
 	}
-	profileCache := network.JSONCache{
-		Path: filepath.Join(internal.CachesDir, "quilt", fmt.Sprintf("%s-profile.json", gameVersion)),
-	}
-
-	var list FabricVersionList
-	err := versionsCache.Read(&list)
-	if err != nil {
-		err = network.FetchJSON(fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s", gameVersion), &list)
-		if err != nil {
-			return FabricMeta{}, fmt.Errorf("retrieve Quilt versions: %w", err)
-		}
-		versionsCache.Write(list)
-	}
-
 	var meta FabricMeta
-	if err := profileCache.Read(&meta); err != nil {
-		err := network.FetchJSON(fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json", gameVersion, list[0].Loader.Version), &meta)
-		if err != nil {
-			return FabricMeta{}, fmt.Errorf("retrieve metadata for Quilt version %s: %w", list[0].Loader.Version, err)
+	if err := cache.Read(&meta); err != nil {
+		if err := cache.UpdateAndRead(&meta); err != nil {
+			return FabricMeta{}, fmt.Errorf("retrieve metadata for Quilt version %s: %w", loaderVersion, err)
 		}
-		profileCache.Write(meta)
 	}
 
 	return meta, nil

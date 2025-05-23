@@ -23,7 +23,7 @@ var Delete = &cli.Command{
 		}
 		inst, err := launcher.GetInstance(c.StringArg("id"))
 		if err != nil {
-			return cli.Exit(err, 1)
+			return err
 		}
 		var input string
 		fmt.Printf("Are you sure you want to delete '%s'?\nIt will be gone forever (a long time!) [y/n] ", inst.Name)
@@ -31,7 +31,7 @@ var Delete = &cli.Command{
 
 		if input == "y" {
 			if err := launcher.DeleteInstance(c.StringArg("id")); err != nil {
-				return cli.Exit(fmt.Errorf("failed to remove instance: %w", err), 1)
+				return fmt.Errorf("failed to remove instance: %w", err)
 			}
 			log.Printf("Deleted instance '%s'\n", inst.Name)
 		} else {

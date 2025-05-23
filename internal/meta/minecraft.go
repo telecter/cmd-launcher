@@ -79,11 +79,11 @@ type VersionMeta struct {
 			Type string `json:"type"`
 		} `json:"client"`
 	} `json:"logging"`
-	MainClass              string    `json:"mainClass"`
-	MinimumLauncherVersion int       `json:"minimumLauncherVersion"`
-	ReleaseTime            time.Time `json:"releaseTime"`
-	Time                   time.Time `json:"time"`
-	Type                   string    `json:"type"`
+	MainClass              string `json:"mainClass"`
+	MinimumLauncherVersion int    `json:"minimumLauncherVersion"`
+	ReleaseTime            string `json:"releaseTime"`
+	Time                   string `json:"time"`
+	Type                   string `json:"type"`
 }
 type Artifact struct {
 	Path string `json:"path"`
@@ -95,16 +95,11 @@ type Library struct {
 	Downloads struct {
 		Artifact Artifact `json:"artifact"`
 	} `json:"downloads"`
-	Name    string `json:"name"`
-	Natives struct {
-		Linux   string `json:"linux"`
-		MacOS   string `json:"macos"`
-		Windows string `json:"windows"`
-	}
+	Name string `json:"name"`
 	// these fields are present in Fabric libraries that don't contain a 'downloads' field
-	URL   string `json:"url"`
-	Sha1  string `json:"sha1"`
-	Size  int    `json:"size"`
+	URL   string `json:"url,omitempty"`
+	Sha1  string `json:"sha1,omitempty"`
+	Size  int    `json:"size,omitempty"`
 	Rules []struct {
 		Action string `json:"action"`
 		Os     struct {
@@ -121,14 +116,17 @@ type AssetObject struct {
 }
 
 func GetVersionManifest() (VersionManifest, error) {
-	cache := network.JSONCache{Path: filepath.Join(internal.CachesDir, "minecraft", "version_manifest.json")}
+	cache := network.JSONCache[VersionManifest]{
+		Path: filepath.Join(internal.CachesDir, "minecraft", "version_manifest.json"),
+		URL:  "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+	}
 
 	var manifest VersionManifest
-	if err := cache.Read(&manifest); err != nil {
-		if err := network.FetchJSON("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", &manifest); err != nil {
+
+	if err := cache.UpdateAndRead(&manifest); err != nil {
+		if err := cache.Read(&manifest); err != nil {
 			return VersionManifest{}, fmt.Errorf("retrieve version manifest: %w", err)
 		}
-		cache.Write(manifest)
 	}
 	return manifest, nil
 }
@@ -140,15 +138,23 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	}
 	for _, v := range manifest.Versions {
 		if v.ID == id {
-			cache := network.JSONCache{
-				Path: filepath.Join(internal.CachesDir, "minecraft", fmt.Sprintf("%s.json", v.ID)),
+			cache := network.JSONCache[VersionMeta]{
+				Path: filepath.Join(internal.CachesDir, "minecraft", v.ID+".json"),
+				URL:  v.URL,
 			}
+			download := true
+
 			var versionMeta VersionMeta
-			if err := cache.Read(&versionMeta); err != nil {
-				if err := network.FetchJSON(v.URL, &versionMeta); err != nil {
+			if err := cache.Read(&versionMeta); err == nil {
+				sum, _ := cache.Sha1()
+				if sum == v.Sha1 {
+					download = false
+				}
+			}
+			if download {
+				if err := cache.UpdateAndRead(&versionMeta); err != nil {
 					return VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
 				}
-				cache.Write(versionMeta)
 			}
 			versionMeta.Libraries = append(versionMeta.Libraries, Library{
 				Name: "com.mojang:minecraft:" + versionMeta.ID,

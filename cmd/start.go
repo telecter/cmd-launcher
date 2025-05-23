@@ -59,7 +59,7 @@ var Start = &cli.Command{
 			DisableChat:        c.Bool("disable-chat"),
 		},
 		); err != nil {
-			return cli.Exit(err, 1)
+			return err
 		}
 		return nil
 	},
