@@ -90,6 +90,3 @@ The `search` subcommand can search for Minecraft versions or instances that you 
 ```bash
 cmd-launcher search <versions|instances> [query]
 ```
-
-### Caching
-Because the launcher tries to use cached metadata when possible, you may need to include the `--clear-caches` flag once to get it to download new metadata.
