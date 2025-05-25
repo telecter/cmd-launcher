@@ -5,20 +5,26 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/schollz/progressbar/v3"
 	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/telecter/cmd-launcher/internal/meta"
 )
 
+type Loader string
+
 const (
-	LoaderVanilla string = "vanilla"
-	LoaderFabric  string = "fabric"
-	LoaderQuilt   string = "quilt"
+	LoaderVanilla Loader = "vanilla"
+	LoaderFabric  Loader = "fabric"
+	LoaderQuilt   Loader = "quilt"
 )
+
+func (loader Loader) String() string {
+	return string(loader)
+}
 
 type LaunchOptions struct {
 	QuickPlayServer    string
@@ -59,7 +65,7 @@ func run(options runOptions) error {
 }
 
 func Launch(instanceId string, options LaunchOptions) error {
-	instance, err := GetInstance(instanceId)
+	inst, err := GetInstance(instanceId)
 	if err != nil {
 		return err
 	}
@@ -71,7 +77,7 @@ func Launch(instanceId string, options LaunchOptions) error {
 		options.LoginData = loginData
 	}
 
-	versionMeta, err := meta.GetVersionMeta(instance.GameVersion)
+	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
 	if err != nil {
 		return err
 	}
@@ -79,79 +85,79 @@ func Launch(instanceId string, options LaunchOptions) error {
 	var javaArgs []string
 	mainClass := versionMeta.MainClass
 
-	libraries := versionMeta.Libraries
-	if instance.Loader == LoaderFabric {
-		for i, library := range libraries {
-			if strings.Contains(library.Name, "org.ow2.asm:asm:") {
-				libraries = slices.Delete(libraries, i, i+1)
-				break
-			}
-		}
-	}
+	libraries := fixLibraries(versionMeta.Libraries, inst.Loader)
 
-	if instance.Loader == LoaderFabric || instance.Loader == LoaderQuilt {
+	if inst.Loader == LoaderFabric || inst.Loader == LoaderQuilt {
+		var fabricLoader meta.FabricLoader
+		switch inst.Loader {
+		case LoaderFabric:
+			fabricLoader = meta.FabricLoaderStandard
+		case LoaderQuilt:
+			fabricLoader = meta.FabricLoaderQuilt
+		}
 		var fabricMeta meta.FabricMeta
-		if instance.Loader == LoaderFabric {
-			fabricVersions, err := meta.GetFabricVersions(versionMeta.ID)
-			if err != nil {
-				return err
-			}
-			fabricMeta, err = meta.GetFabricMeta(versionMeta.ID, fabricVersions[0].Loader.Version)
-			if err != nil {
-				return err
-			}
-		} else if instance.Loader == LoaderQuilt {
-			quiltVersions, err := meta.GetQuiltVersions(versionMeta.ID)
-			if err != nil {
-				return err
-			}
-			fabricMeta, err = meta.GetQuiltMeta(versionMeta.ID, quiltVersions[0].Loader.Version)
-			if err != nil {
-				return err
-			}
+		fabricVersions, err := meta.GetFabricVersions(versionMeta.ID, fabricLoader)
+		if err != nil {
+			return err
+		}
+		fabricMeta, err = meta.GetFabricMeta(versionMeta.ID, fabricVersions[0].Loader.Version, fabricLoader)
+		if err != nil {
+			return err
 		}
 		libraries = append(libraries, fabricMeta.Libraries...)
 		javaArgs = append(javaArgs, fabricMeta.Arguments.Jvm...)
 		mainClass = fabricMeta.MainClass
 	}
-	installed, required := filterLibraries(libraries)
-	if err := installLibraries(required); err != nil {
-		return err
-	}
+	installedLibs, requiredLibs := filterLibraries(append(libraries, getClientLibrary(versionMeta)))
 
-	libraryPaths := getRuntimeLibraryPaths(append(installed, required...))
+	if len(requiredLibs) > 0 {
+		bar := progressbar.Default(int64(len(requiredLibs)), "Installing libraries")
+		for _, library := range requiredLibs {
+			if err := library.Install(); err != nil {
+				return fmt.Errorf("download library '%s': %w", library.Name, err)
+			}
+			bar.Add(1)
+		}
+	}
 
 	assetIndex, err := downloadAssetIndex(versionMeta)
 	if err != nil {
 		return fmt.Errorf("fetch asset index: %w", err)
 	}
 
-	requiredAssets := getRequiredAssets(assetIndex)
-	if err := downloadAssets(requiredAssets); err != nil {
-		return err
+	requiredAssets := filterAssets(assetIndex)
+
+	if len(requiredAssets.Objects) > 0 {
+		bar := progressbar.Default(int64(len(requiredAssets.Objects)), "Downloading assets")
+		for _, asset := range requiredAssets.Objects {
+			if err := downloadAsset(asset); err != nil {
+				return err
+			}
+			bar.Add(1)
+		}
 	}
 
 	if runtime.GOOS == "darwin" {
 		javaArgs = append(javaArgs, "-XstartOnFirstThread")
 	}
-	if instance.Config.MinMemory != 0 {
-		javaArgs = append(javaArgs, fmt.Sprintf("-Xms%dm", instance.Config.MinMemory))
+	if inst.Config.MinMemory != 0 {
+		javaArgs = append(javaArgs, fmt.Sprintf("-Xms%dm", inst.Config.MinMemory))
 	}
-	if instance.Config.MaxMemory != 0 {
-		javaArgs = append(javaArgs, fmt.Sprintf("-Xmx%dm", instance.Config.MaxMemory))
+	if inst.Config.MaxMemory != 0 {
+		javaArgs = append(javaArgs, fmt.Sprintf("-Xmx%dm", inst.Config.MaxMemory))
 	}
 
 	gameArgs := []string{
 		"--username", options.LoginData.Username,
 		"--accessToken", options.LoginData.Token,
 		"--userType", "msa",
-		"--gameDir", instance.Dir,
+		"--gameDir", inst.Dir,
 		"--assetsDir", internal.AssetsDir,
 		"--assetIndex", versionMeta.AssetIndex.ID,
 		"--version", versionMeta.ID,
 		"--versionType", versionMeta.Type,
-		"--width", strconv.Itoa(instance.Config.WindowResolution.Width),
-		"--height", strconv.Itoa(instance.Config.WindowResolution.Height),
+		"--width", strconv.Itoa(inst.Config.WindowResolution.Width),
+		"--height", strconv.Itoa(inst.Config.WindowResolution.Height),
 	}
 	if options.QuickPlayServer != "" {
 		gameArgs = append(gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
@@ -168,11 +174,16 @@ func Launch(instanceId string, options LaunchOptions) error {
 	if options.DisableMultiplayer {
 		gameArgs = append(gameArgs, "--disableMultiplayer")
 	}
-	os.Chdir(instance.Dir)
+
+	var classpath []string
+	for _, library := range append(installedLibs, requiredLibs...) {
+		classpath = append(classpath, library.RuntimePath())
+	}
+	os.Chdir(inst.Dir)
 	return run(runOptions{
-		javaPath:  instance.Config.JavaExecutablePath,
+		javaPath:  inst.Config.JavaExecutablePath,
 		mainClass: mainClass,
-		classpath: libraryPaths,
+		classpath: classpath,
 		javaArgs:  javaArgs,
 		gameArgs:  gameArgs,
 	})

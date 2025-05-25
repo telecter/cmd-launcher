@@ -24,7 +24,7 @@ var versions = &cli.Command{
 	Action: func(ctx context.Context, c *cli.Command) error {
 		manifest, err := meta.GetVersionManifest()
 		if err != nil {
-			return cli.Exit(fmt.Errorf("failed to search for versions: %w", err), 1)
+			return fmt.Errorf("search for versions: %w", err)
 		}
 
 		var rows []table.Row
@@ -54,7 +54,7 @@ var instances = &cli.Command{
 	Action: func(ctx context.Context, c *cli.Command) error {
 		instances, err := launcher.GetAllInstances()
 		if err != nil {
-			return fmt.Errorf("failed to get all instances: %w", err)
+			return fmt.Errorf("get all instances: %w", err)
 		}
 
 		var rows []table.Row

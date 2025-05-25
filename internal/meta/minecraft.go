@@ -79,11 +79,11 @@ type VersionMeta struct {
 			Type string `json:"type"`
 		} `json:"client"`
 	} `json:"logging"`
-	MainClass              string `json:"mainClass"`
-	MinimumLauncherVersion int    `json:"minimumLauncherVersion"`
-	ReleaseTime            string `json:"releaseTime"`
-	Time                   string `json:"time"`
-	Type                   string `json:"type"`
+	MainClass              string    `json:"mainClass"`
+	MinimumLauncherVersion int       `json:"minimumLauncherVersion"`
+	ReleaseTime            time.Time `json:"releaseTime"`
+	Time                   time.Time `json:"time"`
+	Type                   string    `json:"type"`
 }
 type Artifact struct {
 	Path string `json:"path"`
@@ -115,10 +115,13 @@ type AssetObject struct {
 	Size int    `json:"size"`
 }
 
+const VERSION_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+const MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
+
 func GetVersionManifest() (VersionManifest, error) {
 	cache := network.JSONCache[VersionManifest]{
 		Path: filepath.Join(internal.CachesDir, "minecraft", "version_manifest.json"),
-		URL:  "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+		URL:  VERSION_MANIFEST_URL,
 	}
 
 	var manifest VersionManifest
@@ -156,18 +159,6 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 					return VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
 				}
 			}
-			versionMeta.Libraries = append(versionMeta.Libraries, Library{
-				Name: "com.mojang:minecraft:" + versionMeta.ID,
-				Downloads: struct {
-					Artifact Artifact "json:\"artifact\""
-				}{
-					Artifact: Artifact{
-						Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
-						Sha1: versionMeta.Downloads.Client.Sha1,
-						Size: versionMeta.Downloads.Client.Size,
-						URL:  versionMeta.Downloads.Client.URL,
-					},
-				}})
 			return versionMeta, nil
 		}
 	}

@@ -35,10 +35,23 @@ var Create = &cli.Command{
 		if c.StringArg("id") == "" {
 			cli.ShowSubcommandHelpAndExit(c, 1)
 		}
+
+		var loader launcher.Loader
+		switch c.String("loader") {
+		case launcher.LoaderFabric.String():
+			loader = launcher.LoaderFabric
+		case launcher.LoaderQuilt.String():
+			loader = launcher.LoaderQuilt
+		case launcher.LoaderVanilla.String():
+			loader = launcher.LoaderVanilla
+		default:
+			return fmt.Errorf("invalid mod loader")
+		}
+
 		inst, err := launcher.CreateInstance(launcher.InstanceOptions{
 			GameVersion: c.String("version"),
 			Name:        c.StringArg("id"),
-			Loader:      c.String("loader"),
+			Loader:      loader,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create instance: %w", err)

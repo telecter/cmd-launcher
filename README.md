@@ -13,7 +13,6 @@ A minimal command line Minecraft launcher.
   - [Authentication](#authentication)
   - [Instance Configuration](#instance-configuration)
   - [Search](#search)
-  - [Caching](#caching)
 
 ## Installation
 Make sure you have [Go](https://go.dev) installed.

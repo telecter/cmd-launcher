@@ -7,13 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/schollz/progressbar/v3"
 	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
-func getRequiredAssets(index meta.AssetIndex) meta.AssetIndex {
+func filterAssets(index meta.AssetIndex) meta.AssetIndex {
 	var assets meta.AssetIndex
 	assets.Objects = make(map[string]meta.AssetObject)
 	for i, object := range index.Objects {
@@ -29,17 +28,10 @@ func getRequiredAssets(index meta.AssetIndex) meta.AssetIndex {
 	return assets
 }
 
-func downloadAssets(index meta.AssetIndex) error {
-	if len(index.Objects) < 1 {
-		return nil
-	}
-	bar := progressbar.Default(int64(len(index.Objects)), "Downloading assets")
-	for name, asset := range index.Objects {
-		url := fmt.Sprintf("https://resources.download.minecraft.net/%s/%s", asset.Hash[:2], asset.Hash)
-		if err := network.DownloadFile(url, filepath.Join(internal.AssetsDir, "objects", asset.Hash[:2], asset.Hash)); err != nil {
-			return fmt.Errorf("download asset '%s': %w", name, err)
-		}
-		bar.Add(1)
+func downloadAsset(asset meta.AssetObject) error {
+	url := fmt.Sprintf(meta.MINECRAFT_RESOURCES_URL, asset.Hash[:2], asset.Hash)
+	if err := network.DownloadFile(url, filepath.Join(internal.AssetsDir, "objects", asset.Hash[:2], asset.Hash)); err != nil {
+		return fmt.Errorf("download asset: %w", err)
 	}
 	return nil
 }
@@ -49,9 +41,16 @@ func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
 		Path: filepath.Join(internal.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),
 		URL:  versionMeta.AssetIndex.URL,
 	}
+	download := true
 
 	var assetIndex meta.AssetIndex
-	if err := cache.Read(&assetIndex); err != nil {
+	if err := cache.Read(&assetIndex); err == nil {
+		sum, _ := cache.Sha1()
+		if sum == versionMeta.AssetIndex.Sha1 {
+			download = false
+		}
+	}
+	if download {
 		if err := cache.UpdateAndRead(&assetIndex); err != nil {
 			return meta.AssetIndex{}, fmt.Errorf("fetch asset index: %w", err)
 		}

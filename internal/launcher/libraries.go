@@ -4,14 +4,12 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
-	"github.com/schollz/progressbar/v3"
 	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/internal/network"
@@ -24,6 +22,7 @@ type RuntimeLibrary struct {
 func (library RuntimeLibrary) IsFabric() bool {
 	return library.URL != ""
 }
+
 func (library RuntimeLibrary) Artifact() meta.Artifact {
 	if !library.IsFabric() {
 		return library.Downloads.Artifact
@@ -39,6 +38,7 @@ func (library RuntimeLibrary) Artifact() meta.Artifact {
 		Size: library.Size,
 	}
 }
+
 func (library RuntimeLibrary) ShouldBeInstalled() bool {
 	install := true
 	if len(library.Rules) > 0 {
@@ -52,6 +52,7 @@ func (library RuntimeLibrary) ShouldBeInstalled() bool {
 	}
 	return install
 }
+
 func (library RuntimeLibrary) IsInstalled() bool {
 	artifact := library.Artifact()
 	data, err := os.ReadFile(filepath.Join(internal.LibrariesDir, artifact.Path))
@@ -65,6 +66,7 @@ func (library RuntimeLibrary) IsInstalled() bool {
 	sum := sha1.Sum(data)
 	return artifact.Sha1 == hex.EncodeToString(sum[:])
 }
+
 func (library RuntimeLibrary) Install() error {
 	artifact := library.Artifact()
 	err := network.DownloadFile(artifact.URL, library.RuntimePath())
@@ -73,39 +75,9 @@ func (library RuntimeLibrary) Install() error {
 	}
 	return nil
 }
+
 func (library RuntimeLibrary) RuntimePath() string {
 	return filepath.Join(internal.LibrariesDir, library.Artifact().Path)
-}
-
-func fetchMavenLibraryMeta(name string, path string) RuntimeLibrary {
-	url := fmt.Sprintf("https://repo.maven.apache.org/maven2/%s", path)
-	sumPath := filepath.Join(internal.LibrariesDir, filepath.Dir(path), filepath.Base(path)+".sha1")
-	var sum []byte
-	sum, err := os.ReadFile(sumPath)
-	if err != nil {
-		resp, err := http.Get(url + ".sha1")
-		if err == nil {
-			defer resp.Body.Close()
-			sum, _ = io.ReadAll(resp.Body)
-
-			os.MkdirAll(filepath.Dir(sumPath), 0755)
-			os.WriteFile(sumPath, sum, 0644)
-		} else {
-			sum = []byte{}
-		}
-	}
-	return RuntimeLibrary{meta.Library{
-		Name: name,
-		Downloads: struct {
-			Artifact meta.Artifact "json:\"artifact\""
-		}{
-			Artifact: meta.Artifact{
-				Path: path,
-				URL:  url,
-				Sha1: string(sum),
-			},
-		},
-	}}
 }
 
 func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, required []RuntimeLibrary) {
@@ -114,7 +86,7 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 		if library.ShouldBeInstalled() {
 			if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && strings.HasPrefix(library.Name, "org.lwjgl") {
 				path := strings.ReplaceAll(library.Downloads.Artifact.Path, "linux", "linux-arm64")
-				library = fetchMavenLibraryMeta(library.Name, path)
+				library = RuntimeLibrary{meta.GetMavenLibrary(library.Name, path)}
 			}
 			if library.IsInstalled() {
 				installed = append(installed, library)
@@ -126,24 +98,29 @@ func filterLibraries(libraries []meta.Library) (installed []RuntimeLibrary, requ
 	return installed, required
 }
 
-func getRuntimeLibraryPaths(libraries []RuntimeLibrary) (paths []string) {
-	for _, library := range libraries {
-		paths = append(paths, library.RuntimePath())
-	}
-	return paths
+func getClientLibrary(versionMeta meta.VersionMeta) meta.Library {
+	return meta.Library{
+		Name: "com.mojang:minecraft:" + versionMeta.ID,
+		Downloads: struct {
+			Artifact meta.Artifact "json:\"artifact\""
+		}{
+			Artifact: meta.Artifact{
+				Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
+				Sha1: versionMeta.Downloads.Client.Sha1,
+				Size: versionMeta.Downloads.Client.Size,
+				URL:  versionMeta.Downloads.Client.URL,
+			},
+		}}
 }
 
-func installLibraries(libraries []RuntimeLibrary) error {
-	if len(libraries) < 1 {
-		return nil
-	}
-	bar := progressbar.Default(int64(len(libraries)), "Installing libraries")
-	for _, library := range libraries {
-		if err := library.Install(); err != nil {
-			return fmt.Errorf("download library '%s': %w", library.Name, err)
+func fixLibraries(libraries []meta.Library, loader Loader) []meta.Library {
+	if loader == LoaderFabric {
+		for i, library := range libraries {
+			if strings.Contains(library.Name, "org.ow2.asm:asm:") {
+				libraries = slices.Delete(libraries, i, i+1)
+				break
+			}
 		}
-		bar.Add(1)
 	}
-
-	return nil
+	return libraries
 }

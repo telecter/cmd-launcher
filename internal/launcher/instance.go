@@ -14,13 +14,13 @@ import (
 type InstanceOptions struct {
 	GameVersion string
 	Name        string
-	Loader      string
+	Loader      Loader
 }
 type Instance struct {
 	Dir         string         `json:"dir"`
 	GameVersion string         `json:"game_version"`
 	Name        string         `json:"name"`
-	Loader      string         `json:"mod_loader"`
+	Loader      Loader         `json:"mod_loader"`
 	Config      InstanceConfig `json:"config"`
 }
 type InstanceConfig struct {
@@ -49,9 +49,6 @@ var defaultConfig = InstanceConfig{
 func CreateInstance(options InstanceOptions) (Instance, error) {
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
-	}
-	if options.Loader != LoaderFabric && options.Loader != LoaderVanilla && options.Loader != LoaderQuilt {
-		return Instance{}, fmt.Errorf("invalid mod loader")
 	}
 
 	if options.GameVersion == "release" || options.GameVersion == "snapshot" {
@@ -137,8 +134,6 @@ func GetAllInstances() ([]Instance, error) {
 }
 
 func IsInstanceExist(id string) bool {
-	if _, err := GetInstance(id); err != nil {
-		return false
-	}
-	return true
+	_, err := GetInstance(id)
+	return err == nil
 }
