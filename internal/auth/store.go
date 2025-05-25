@@ -26,7 +26,8 @@ func GetRefreshToken() string {
 	return store.Refresh
 }
 func SetRefreshToken(token string) error {
-	return os.WriteFile(internal.AccountDataCache, []byte(token), 0644)
+	data, _ := json.Marshal(AuthStoreData{Refresh: token})
+	return os.WriteFile(internal.AccountDataCache, data, 0644)
 }
 
 func Logout() error {
