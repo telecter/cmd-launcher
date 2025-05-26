@@ -19,12 +19,8 @@ type RuntimeLibrary struct {
 	meta.Library
 }
 
-func (library RuntimeLibrary) IsFabric() bool {
-	return library.URL != ""
-}
-
 func (library RuntimeLibrary) Artifact() meta.Artifact {
-	if !library.IsFabric() {
+	if library.URL == "" {
 		return library.Downloads.Artifact
 	}
 	identifier := strings.Split(library.Name, ":")
@@ -33,24 +29,19 @@ func (library RuntimeLibrary) Artifact() meta.Artifact {
 
 	return meta.Artifact{
 		Path: path,
-		URL:  strings.Join([]string{library.URL, path}, "/"),
+		URL:  library.URL + "/" + path,
 		Sha1: library.Sha1,
 		Size: library.Size,
 	}
 }
 
 func (library RuntimeLibrary) ShouldBeInstalled() bool {
-	install := true
 	if len(library.Rules) > 0 {
-		install = false
 		rule := library.Rules[0]
-		os := rule.Os.Name
-		os = strings.ReplaceAll(os, "osx", "darwin")
-		if os == runtime.GOOS && rule.Action == "allow" {
-			install = true
-		}
+		os := strings.ReplaceAll(rule.Os.Name, "osx", "darwin")
+		return os == runtime.GOOS && rule.Action == "allow"
 	}
-	return install
+	return true
 }
 
 func (library RuntimeLibrary) IsInstalled() bool {

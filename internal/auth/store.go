@@ -26,7 +26,7 @@ func GetRefreshToken() string {
 	return store.Refresh
 }
 func SetRefreshToken(token string) error {
-	data, _ := json.Marshal(AuthStoreData{Refresh: token})
+	data, _ := json.MarshalIndent(AuthStoreData{Refresh: token}, "", "    ")
 	return os.WriteFile(internal.AccountDataCache, data, 0644)
 }
 

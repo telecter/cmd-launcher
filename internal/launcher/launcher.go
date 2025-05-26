@@ -64,11 +64,11 @@ func run(options runOptions) error {
 	return cmd.Run()
 }
 
-func Launch(instanceId string, options LaunchOptions) error {
-	inst, err := GetInstance(instanceId)
-	if err != nil {
-		return err
+func Launch(inst Instance, options LaunchOptions) error {
+	runOptions := runOptions{
+		javaPath: inst.Config.JavaExecutablePath,
 	}
+
 	if !options.OfflineMode {
 		loginData, err := auth.LoginWithMicrosoft()
 		if err != nil {
@@ -76,14 +76,12 @@ func Launch(instanceId string, options LaunchOptions) error {
 		}
 		options.LoginData = loginData
 	}
-
 	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
 	if err != nil {
 		return err
 	}
 
-	var javaArgs []string
-	mainClass := versionMeta.MainClass
+	runOptions.mainClass = versionMeta.MainClass
 
 	libraries := fixLibraries(versionMeta.Libraries, inst.Loader)
 
@@ -95,18 +93,13 @@ func Launch(instanceId string, options LaunchOptions) error {
 		case LoaderQuilt:
 			fabricLoader = meta.FabricLoaderQuilt
 		}
-		var fabricMeta meta.FabricMeta
-		fabricVersions, err := meta.GetFabricVersions(versionMeta.ID, fabricLoader)
-		if err != nil {
-			return err
-		}
-		fabricMeta, err = meta.GetFabricMeta(versionMeta.ID, fabricVersions[0].Loader.Version, fabricLoader)
+		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID, inst.LoaderVersion, fabricLoader)
 		if err != nil {
 			return err
 		}
 		libraries = append(libraries, fabricMeta.Libraries...)
-		javaArgs = append(javaArgs, fabricMeta.Arguments.Jvm...)
-		mainClass = fabricMeta.MainClass
+		runOptions.javaArgs = append(runOptions.javaArgs, fabricMeta.Arguments.Jvm...)
+		runOptions.mainClass = fabricMeta.MainClass
 	}
 	installedLibs, requiredLibs := filterLibraries(append(libraries, getClientLibrary(versionMeta)))
 
@@ -138,16 +131,16 @@ func Launch(instanceId string, options LaunchOptions) error {
 	}
 
 	if runtime.GOOS == "darwin" {
-		javaArgs = append(javaArgs, "-XstartOnFirstThread")
+		runOptions.javaArgs = append(runOptions.javaArgs, "-XstartOnFirstThread")
 	}
 	if inst.Config.MinMemory != 0 {
-		javaArgs = append(javaArgs, fmt.Sprintf("-Xms%dm", inst.Config.MinMemory))
+		runOptions.javaArgs = append(runOptions.javaArgs, fmt.Sprintf("-Xms%dm", inst.Config.MinMemory))
 	}
 	if inst.Config.MaxMemory != 0 {
-		javaArgs = append(javaArgs, fmt.Sprintf("-Xmx%dm", inst.Config.MaxMemory))
+		runOptions.javaArgs = append(runOptions.javaArgs, fmt.Sprintf("-Xmx%dm", inst.Config.MaxMemory))
 	}
 
-	gameArgs := []string{
+	runOptions.gameArgs = []string{
 		"--username", options.LoginData.Username,
 		"--accessToken", options.LoginData.Token,
 		"--userType", "msa",
@@ -160,31 +153,24 @@ func Launch(instanceId string, options LaunchOptions) error {
 		"--height", strconv.Itoa(inst.Config.WindowResolution.Height),
 	}
 	if options.QuickPlayServer != "" {
-		gameArgs = append(gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
+		runOptions.gameArgs = append(runOptions.gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
 	}
 	if options.LoginData.UUID != "" {
-		gameArgs = append(gameArgs, "--uuid", options.LoginData.UUID)
+		runOptions.gameArgs = append(runOptions.gameArgs, "--uuid", options.LoginData.UUID)
 	}
 	if options.Demo {
-		gameArgs = append(gameArgs, "--demo")
+		runOptions.gameArgs = append(runOptions.gameArgs, "--demo")
 	}
 	if options.DisableChat {
-		gameArgs = append(gameArgs, "--disableChat")
+		runOptions.gameArgs = append(runOptions.gameArgs, "--disableChat")
 	}
 	if options.DisableMultiplayer {
-		gameArgs = append(gameArgs, "--disableMultiplayer")
+		runOptions.gameArgs = append(runOptions.gameArgs, "--disableMultiplayer")
 	}
 
-	var classpath []string
 	for _, library := range append(installedLibs, requiredLibs...) {
-		classpath = append(classpath, library.RuntimePath())
+		runOptions.classpath = append(runOptions.classpath, library.RuntimePath())
 	}
 	os.Chdir(inst.Dir)
-	return run(runOptions{
-		javaPath:  inst.Config.JavaExecutablePath,
-		mainClass: mainClass,
-		classpath: classpath,
-		javaArgs:  javaArgs,
-		gameArgs:  gameArgs,
-	})
+	return run(runOptions)
 }

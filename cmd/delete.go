@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v3"
@@ -33,9 +32,9 @@ var Delete = &cli.Command{
 			if err := launcher.DeleteInstance(c.StringArg("id")); err != nil {
 				return fmt.Errorf("failed to remove instance: %w", err)
 			}
-			log.Printf("Deleted instance '%s'\n", inst.Name)
+			fmt.Printf("Deleted instance '%s'\n", inst.Name)
 		} else {
-			log.Println("Operation aborted.")
+			fmt.Println("Operation aborted.")
 		}
 		return nil
 	},

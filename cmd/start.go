@@ -48,7 +48,11 @@ var Start = &cli.Command{
 			cli.ShowSubcommandHelpAndExit(c, 1)
 		}
 
-		if err := launcher.Launch(c.StringArg("id"), launcher.LaunchOptions{
+		inst, err := launcher.GetInstance(c.StringArg("id"))
+		if err != nil {
+			return err
+		}
+		if err := launcher.Launch(inst, launcher.LaunchOptions{
 			QuickPlayServer: c.String("server"),
 			OfflineMode:     c.String("username") != "",
 			LoginData: auth.MinecraftLoginData{

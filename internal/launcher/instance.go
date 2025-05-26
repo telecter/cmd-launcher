@@ -17,11 +17,12 @@ type InstanceOptions struct {
 	Loader      Loader
 }
 type Instance struct {
-	Dir         string         `json:"dir"`
-	GameVersion string         `json:"game_version"`
-	Name        string         `json:"name"`
-	Loader      Loader         `json:"mod_loader"`
-	Config      InstanceConfig `json:"config"`
+	Dir           string         `json:"dir"`
+	GameVersion   string         `json:"game_version"`
+	Name          string         `json:"name"`
+	Loader        Loader         `json:"mod_loader"`
+	LoaderVersion string         `json:"mod_loader_version,omitempty"`
+	Config        InstanceConfig `json:"config"`
 }
 type InstanceConfig struct {
 	WindowResolution struct {
@@ -67,24 +68,42 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		return Instance{}, err
 	}
 
+	var loaderVersion string
+	if options.Loader == LoaderFabric || options.Loader == LoaderQuilt {
+		var fabricLoader meta.FabricLoader
+		switch options.Loader {
+		case LoaderFabric:
+			fabricLoader = meta.FabricLoaderStandard
+		case LoaderQuilt:
+			fabricLoader = meta.FabricLoaderQuilt
+		}
+		fabricVersions, err := meta.GetFabricVersions(fabricLoader)
+		if err != nil {
+			return Instance{}, err
+		}
+		loaderVersion = fabricVersions[0].Version
+	}
+
 	dir := filepath.Join(internal.InstancesDir, options.Name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return Instance{}, fmt.Errorf("create instance directory: %w", err)
 	}
 
 	inst := Instance{
-		Dir:         dir,
-		GameVersion: options.GameVersion,
-		Loader:      options.Loader,
-		Name:        options.Name,
-		Config:      defaultConfig,
+		Dir:           dir,
+		GameVersion:   options.GameVersion,
+		Loader:        options.Loader,
+		LoaderVersion: loaderVersion,
+		Name:          options.Name,
+		Config:        defaultConfig,
 	}
 
-	data, _ := json.Marshal(inst)
+	data, _ := json.MarshalIndent(inst, "", "    ")
 	os.WriteFile(filepath.Join(dir, "instance.json"), data, 0644)
 
 	return inst, nil
 }
+
 func DeleteInstance(id string) error {
 	inst, err := GetInstance(id)
 	if err != nil {

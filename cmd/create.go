@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/urfave/cli/v3"
@@ -56,7 +55,10 @@ var Create = &cli.Command{
 		if err != nil {
 			return fmt.Errorf("failed to create instance: %w", err)
 		}
-		log.Printf("Created instance '%s' with Minecraft %s %s\n", inst.Name, inst.GameVersion, inst.Loader)
+		fmt.Printf("Created instance '%s' with Minecraft %s ", inst.Name, inst.GameVersion)
+		if inst.Loader != launcher.LoaderVanilla {
+			fmt.Printf("(%s %s)\n", inst.Loader, inst.LoaderVersion)
+		}
 		return nil
 	},
 }

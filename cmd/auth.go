@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/urfave/cli/v3"
@@ -16,7 +15,7 @@ var login = &cli.Command{
 		if err := auth.Logout(); err != nil {
 			return err
 		}
-		log.Println("Logged out")
+		fmt.Println("Logged out")
 		return nil
 	},
 }
@@ -31,7 +30,7 @@ var logout = &cli.Command{
 		if err != nil {
 			return err
 		}
-		log.Println("Logged in")
+		fmt.Println("Logged in")
 		return nil
 	},
 }
