@@ -1,83 +1,69 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/telecter/cmd-launcher/internal/meta"
-	"github.com/urfave/cli/v3"
 )
 
-var versions = &cli.Command{
-	Name:  "versions",
-	Usage: "Search for Minecraft versions",
-	Arguments: []cli.Argument{
-		&cli.StringArg{
-			Name: "version",
-		},
-	},
-	Action: func(ctx context.Context, c *cli.Command) error {
-		manifest, err := meta.GetVersionManifest()
-		if err != nil {
-			return fmt.Errorf("search for versions: %w", err)
-		}
-
-		var rows []table.Row
-		for i, version := range manifest.Versions {
-			if strings.Contains(version.ID, c.StringArg("version")) {
-				rows = append(rows, table.Row{i, version.ID, version.Type, version.ReleaseTime.Format(time.UnixDate)})
-			}
-		}
-		t := table.NewWriter()
-		t.SetStyle(table.StyleLight)
-		t.SetOutputMirror(os.Stdout)
-		t.AppendHeader(table.Row{"#", "Version", "Type", "Release Date"})
-		t.AppendRows(rows)
-		t.Render()
-		return nil
-	},
+type Search struct {
+	Query string `arg:"" name:"query" help:"Search query" optional:""`
+	Kind  string `name:"kind" help:"What to search for" short:"k" enum:"instances,versions,fabric,quilt" default:"instances"`
 }
 
-var instances = &cli.Command{
-	Name:  "instances",
-	Usage: "Search for an instance",
-	Arguments: []cli.Argument{
-		&cli.StringArg{
-			Name: "instance",
-		},
-	},
-	Action: func(ctx context.Context, c *cli.Command) error {
+func (c *Search) Run(ctx *kong.Context) error {
+	var rows []table.Row
+	var header table.Row
+
+	switch c.Kind {
+	case "instances":
+		header = table.Row{"#", "Name", "Version", "Type"}
 		instances, err := launcher.GetAllInstances()
 		if err != nil {
 			return fmt.Errorf("get all instances: %w", err)
 		}
-
-		var rows []table.Row
 		for i, instance := range instances {
-			if strings.Contains(instance.Name, c.StringArg("instance")) {
+			if strings.Contains(instance.Name, c.Query) {
 				rows = append(rows, table.Row{i, instance.Name, instance.GameVersion, instance.Loader})
 			}
 		}
-		t := table.NewWriter()
-		t.SetStyle(table.StyleLight)
-		t.SetOutputMirror(os.Stdout)
-		t.AppendHeader(table.Row{"#", "Name", "Version", "Type"})
-		t.AppendRows(rows)
-		t.Render()
-		return nil
-	},
-}
+	case "versions":
+		header = table.Row{"#", "Version", "Type", "Release Date"}
+		manifest, err := meta.GetVersionManifest()
+		if err != nil {
+			return fmt.Errorf("search for versions: %w", err)
+		}
+		for i, version := range manifest.Versions {
+			if strings.Contains(version.ID, c.Query) {
+				rows = append(rows, table.Row{i, version.ID, version.Type, version.ReleaseTime.Format(time.UnixDate)})
+			}
+		}
+	case "fabric", "quilt":
+		header = table.Row{"#", "Version"}
+		fabricLoader := meta.FabricLoaderStandard
+		if c.Kind == "quilt" {
+			fabricLoader = meta.FabricLoaderQuilt
+		}
+		versions, err := meta.GetFabricVersions(fabricLoader)
+		if err != nil {
+			return fmt.Errorf("search for versions: %w", err)
+		}
 
-var Search = &cli.Command{
-	Name:  "search",
-	Usage: "Search versions and instances",
-	Commands: []*cli.Command{
-		versions,
-		instances,
-	},
+		for i, version := range versions {
+			rows = append(rows, table.Row{i, version.Version})
+		}
+	}
+	t := table.NewWriter()
+	t.SetStyle(table.StyleLight)
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(header)
+	t.AppendRows(rows)
+	t.Render()
+	return nil
 }

@@ -1,45 +1,39 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/cmd"
 	"github.com/telecter/cmd-launcher/internal"
-	"github.com/urfave/cli/v3"
 )
 
-var home, _ = os.UserHomeDir()
+type CLI struct {
+	Start  cmd.Start  `cmd:"" help:"Start the specified instance"`
+	Auth   cmd.Auth   `cmd:"" help:"Manage account authentication"`
+	Create cmd.Create `cmd:"" help:"Create a new Minecraft instance"`
+	Search cmd.Search `cmd:"" help:"Search versions and instances"`
+	Delete cmd.Delete `cmd:"" help:"Delete a Minecraft instance"`
+	Dir    string     `name:"dir" help:"Root directory to use for launcher"`
+}
 
-var app = cli.Command{
-	Name:  "cmd-launcher",
-	Usage: "A minimal command line Minecraft launcher.",
-	Commands: []*cli.Command{
-		cmd.Start,
-		cmd.Auth,
-		cmd.Create,
-		cmd.Delete,
-		cmd.Search,
-	},
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:  "dir",
-			Usage: "Root directory to use for launcher",
-			Value: filepath.Join(home, ".minecraft"),
-		},
-	},
-	Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-		internal.SetDirsFromRoot(c.String("dir"))
-		return nil, nil
-	},
-	ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {
-		log.Fatalln(fmt.Errorf("error: %w", err))
-	},
+func (c *CLI) AfterApply() error {
+	if c.Dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("get user home directory: %w", err)
+		}
+		c.Dir = filepath.Join(home, ".minecraft")
+	}
+	internal.SetDirsFromRoot(c.Dir)
+	return nil
 }
 
 func main() {
-	app.Run(context.Background(), os.Args)
+	ctx := kong.Parse(&CLI{}, kong.UsageOnError())
+	err := ctx.Run()
+
+	ctx.FatalIfErrorf(err)
 }

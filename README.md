@@ -28,7 +28,7 @@ go install github.com/telecter/cmd-launcher@main
 
 
 ## Usage
-Run the `help` subcommand to get the usage information.
+Use the `--help` flag to get the usage information.
 
 ### Creating an instance
 
@@ -72,6 +72,7 @@ Currently configurable values are:
   "game_version": "1.21.5",
   "name": "CoolInstance",
   "mod_loader": "fabric",
+  "mod_loader_version": "0.16.14",
   "config": {
     "window_resolution": {
       "width": 1708,
@@ -84,8 +85,8 @@ Currently configurable values are:
 }
 ```
 ### Search
-The `search` subcommand can search for Minecraft versions or instances that you have.
+The `search` subcommand can search for Minecraft versions or instances that you have. While it defaults to searching for installed instances, it can also search for game, fabric, and quilt versions.
 
 ```bash
-cmd-launcher search <versions|instances> [query]
+cmd-launcher search [<query>] [--kind {instances, versions, fabric, quilt}]
 ```

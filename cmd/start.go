@@ -1,70 +1,37 @@
 package cmd
 
 import (
-	"context"
-
+	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/telecter/cmd-launcher/internal/launcher"
-	"github.com/urfave/cli/v3"
 )
 
-var Start = &cli.Command{
-	Name:  "start",
-	Usage: "Start the specified instance",
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "username",
-			Usage:   "Set your username to the provided value (launches game in offline mode)",
-			Aliases: []string{"u"},
-		},
-		&cli.StringFlag{
-			Name:    "server",
-			Usage:   "Join a server immediately upon starting the game.",
-			Aliases: []string{"s"},
-		},
-		&cli.BoolFlag{
-			Name:  "demo",
-			Usage: "Start the game in demo mode",
-			Value: false,
-		},
-		&cli.BoolFlag{
-			Name:  "disable-mp",
-			Usage: "Disable multiplayer",
-			Value: false,
-		},
-		&cli.BoolFlag{
-			Name:  "disable-chat",
-			Usage: "Disable chat",
-			Value: false,
-		},
-	},
-	Arguments: []cli.Argument{
-		&cli.StringArg{
-			Name: "id",
-		},
-	},
-	Action: func(ctx context.Context, c *cli.Command) error {
-		if c.StringArg("id") == "" {
-			cli.ShowSubcommandHelpAndExit(c, 1)
-		}
+type Start struct {
+	ID          string `arg:"" name:"id" help:"Instance to launch"`
+	Username    string `name:"username" help:"Set your username to the provided value (launches game in offline mode)" short:"u"`
+	Server      string `name:"server" help:"Join a server immediately upon starting the game" short:"s"`
+	Demo        bool   `name:"demo" help:"Start the game in demo mode"`
+	DisableMP   bool   `name:"disable-mp" help:"Disable multiplayer"`
+	DisableChat bool   `name:"disable-chat" help:"Disable chat"`
+}
 
-		inst, err := launcher.GetInstance(c.StringArg("id"))
-		if err != nil {
-			return err
-		}
-		if err := launcher.Launch(inst, launcher.LaunchOptions{
-			QuickPlayServer: c.String("server"),
-			OfflineMode:     c.String("username") != "",
-			LoginData: auth.MinecraftLoginData{
-				Username: c.String("username"),
-			},
-			Demo:               c.Bool("demo"),
-			DisableMultiplayer: c.Bool("disable-mp"),
-			DisableChat:        c.Bool("disable-chat"),
+func (c *Start) Run(ctx *kong.Context) error {
+	inst, err := launcher.GetInstance(c.ID)
+	if err != nil {
+		return err
+	}
+	if err := launcher.Launch(inst, launcher.LaunchOptions{
+		QuickPlayServer: c.Server,
+		OfflineMode:     c.Username != "",
+		LoginData: auth.MinecraftLoginData{
+			Username: c.Username,
 		},
-		); err != nil {
-			return err
-		}
-		return nil
+		Demo:               c.Demo,
+		DisableMultiplayer: c.DisableMP,
+		DisableChat:        c.DisableChat,
 	},
+	); err != nil {
+		return err
+	}
+	return nil
 }
