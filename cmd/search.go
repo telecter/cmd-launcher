@@ -56,7 +56,9 @@ func (c *Search) Run(ctx *kong.Context) error {
 		}
 
 		for i, version := range versions {
-			rows = append(rows, table.Row{i, version.Version})
+			if strings.Contains(version.Version, c.Query) {
+				rows = append(rows, table.Row{i, version.Version})
+			}
 		}
 	}
 	t := table.NewWriter()

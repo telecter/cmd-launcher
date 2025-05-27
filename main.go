@@ -32,7 +32,7 @@ func (c *CLI) AfterApply() error {
 }
 
 func main() {
-	ctx := kong.Parse(&CLI{}, kong.UsageOnError())
+	ctx := kong.Parse(&CLI{}, kong.UsageOnError(), kong.Description("A minimal command line Minecraft launcher."))
 	err := ctx.Run()
 
 	ctx.FatalIfErrorf(err)
