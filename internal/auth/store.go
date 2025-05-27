@@ -2,43 +2,65 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/telecter/cmd-launcher/internal"
 )
 
-type AuthStoreData struct {
-	Refresh string `json:"refresh"`
+type msaAuthStore struct {
+	AccessToken  string    `json:"access_token"`
+	Expires      time.Time `json:"expires"`
+	RefreshToken string    `json:"refresh_token"`
+}
+type xblAuthStore struct {
+	Userhash string    `json:"uhs"`
+	Token    string    `json:"token"`
+	Expires  time.Time `json:"expires"`
+}
+type xstsAuthStore struct {
+	Token   string    `json:"token"`
+	Expires time.Time `json:"expires"`
+}
+type minecraftAuthStore struct {
+	AccessToken string    `json:"access_token"`
+	Expires     time.Time `json:"expires"`
+}
+type AuthStore struct {
+	MSA       msaAuthStore       `json:"msa"`
+	XBL       xblAuthStore       `json:"xbl"`
+	XSTS      xstsAuthStore      `json:"xsts"`
+	Minecraft minecraftAuthStore `json:"minecraft"`
 }
 
-func GetRefreshToken() string {
+func GetStore() (AuthStore, error) {
 	cache, err := os.ReadFile(internal.AccountDataCache)
 	if err != nil {
-		return ""
+		return AuthStore{}, fmt.Errorf("open auth store: %w", err)
 	}
 
-	var store AuthStoreData
+	var store AuthStore
 	if err := json.Unmarshal(cache, &store); err != nil {
-		return ""
+		return AuthStore{}, fmt.Errorf("read auth store data: %w", err)
 	}
-	return store.Refresh
+	return store, nil
 }
-func SetRefreshToken(token string) error {
-	data, _ := json.MarshalIndent(AuthStoreData{Refresh: token}, "", "    ")
+
+func SetStore(store AuthStore) error {
+	data, _ := json.MarshalIndent(store, "", "    ")
 	return os.WriteFile(internal.AccountDataCache, data, 0644)
 }
 
 func Logout() error {
-	if err := os.Remove(internal.AccountDataCache); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("already logged out")
-	} else if err != nil {
-		return fmt.Errorf("remove account store: %w", err)
-	}
-	return nil
+	data, _ := json.MarshalIndent(AuthStore{}, "", "    ")
+	return os.WriteFile(internal.AccountDataCache, data, 0644)
 }
 
 func IsLoggedIn() bool {
-	return GetRefreshToken() != ""
+	store, err := GetStore()
+	if err != nil {
+		return false
+	}
+	return store.MSA.RefreshToken != ""
 }

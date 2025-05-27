@@ -21,11 +21,13 @@ func FetchJSON(url string, v any) error {
 
 func DownloadFile(url string, dest string) error {
 	resp, err := http.Get(url)
-	if err := CheckResponse(resp, err); err != nil {
+	if err != nil {
+		return err
+	}
+	if err := CheckResponse(resp); err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-
 	if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
 		return fmt.Errorf("create directory for file '%s': %w", dest, err)
 	}
@@ -38,10 +40,7 @@ func DownloadFile(url string, dest string) error {
 	return nil
 }
 
-func CheckResponse(resp *http.Response, err error) error {
-	if err != nil {
-		return err
-	}
+func CheckResponse(resp *http.Response) error {
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
 		return fmt.Errorf("%s %s (%s)", resp.Request.Method, resp.Request.URL, resp.Status)
 	}

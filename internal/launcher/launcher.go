@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -28,7 +29,7 @@ func (loader Loader) String() string {
 
 type LaunchOptions struct {
 	QuickPlayServer    string
-	LoginData          auth.MinecraftLoginData
+	LoginData          auth.LoginSession
 	OfflineMode        bool
 	Demo               bool
 	DisableMultiplayer bool
@@ -75,6 +76,7 @@ func Launch(inst Instance, options LaunchOptions) error {
 			return fmt.Errorf("login with Microsoft: %w", err)
 		}
 		options.LoginData = loginData
+		log.Println("Authenticated successfully")
 	}
 	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
 	if err != nil {

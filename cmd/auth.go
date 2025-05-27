@@ -13,11 +13,11 @@ func (c *Login) Run(ctx *kong.Context) error {
 	if auth.IsLoggedIn() {
 		return fmt.Errorf("already logged in")
 	}
-	_, err := auth.LoginWithMicrosoft()
+	session, err := auth.LoginWithMicrosoft()
 	if err != nil {
 		return err
 	}
-	fmt.Println("Logged in")
+	fmt.Printf("Logged in as %s\n", session.Username)
 	return nil
 }
 

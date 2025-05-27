@@ -23,7 +23,7 @@ func (c *Start) Run(ctx *kong.Context) error {
 	if err := launcher.Launch(inst, launcher.LaunchOptions{
 		QuickPlayServer: c.Server,
 		OfflineMode:     c.Username != "",
-		LoginData: auth.MinecraftLoginData{
+		LoginData: auth.LoginSession{
 			Username: c.Username,
 		},
 		Demo:               c.Demo,
