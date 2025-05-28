@@ -25,7 +25,7 @@ func DownloadFile(url string, dest string) error {
 		return err
 	}
 	if err := CheckResponse(resp); err != nil {
-		return err
+		return fmt.Errorf("retrieve file contents: %w", err)
 	}
 	defer resp.Body.Close()
 	if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {

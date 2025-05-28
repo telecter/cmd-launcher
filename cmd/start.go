@@ -20,17 +20,17 @@ func (c *Start) Run(ctx *kong.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := launcher.Launch(inst, launcher.LaunchOptions{
-		QuickPlayServer: c.Server,
-		OfflineMode:     c.Username != "",
-		LoginData: auth.LoginSession{
+	err = launcher.Launch(inst, launcher.LaunchOptions{
+		LoginSession: auth.LoginSession{
 			Username: c.Username,
+			IsOnline: c.Username == "",
 		},
+		QuickPlayServer:    c.Server,
 		Demo:               c.Demo,
 		DisableMultiplayer: c.DisableMP,
 		DisableChat:        c.DisableChat,
-	},
-	); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 	return nil

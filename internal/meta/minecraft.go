@@ -128,7 +128,7 @@ func GetVersionManifest() (VersionManifest, error) {
 
 	if err := cache.UpdateAndRead(&manifest); err != nil {
 		if err := cache.Read(&manifest); err != nil {
-			return VersionManifest{}, fmt.Errorf("retrieve version manifest: %w", err)
+			return VersionManifest{}, err
 		}
 	}
 	return manifest, nil
@@ -137,7 +137,7 @@ func GetVersionManifest() (VersionManifest, error) {
 func GetVersionMeta(id string) (VersionMeta, error) {
 	manifest, err := GetVersionManifest()
 	if err != nil {
-		return VersionMeta{}, err
+		return VersionMeta{}, fmt.Errorf("retrieve version manifest: %w", err)
 	}
 	for _, v := range manifest.Versions {
 		if v.ID == id {
@@ -156,7 +156,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 			}
 			if download {
 				if err := cache.UpdateAndRead(&versionMeta); err != nil {
-					return VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
+					return VersionMeta{}, err
 				}
 			}
 			return versionMeta, nil

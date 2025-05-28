@@ -37,12 +37,12 @@ type AuthStore struct {
 func GetStore() (AuthStore, error) {
 	cache, err := os.ReadFile(internal.AccountDataCache)
 	if err != nil {
-		return AuthStore{}, fmt.Errorf("open auth store: %w", err)
+		return AuthStore{}, fmt.Errorf("read auth store: %w", err)
 	}
 
 	var store AuthStore
 	if err := json.Unmarshal(cache, &store); err != nil {
-		return AuthStore{}, fmt.Errorf("read auth store data: %w", err)
+		return AuthStore{}, fmt.Errorf("parse auth store: %w", err)
 	}
 	return store, nil
 }

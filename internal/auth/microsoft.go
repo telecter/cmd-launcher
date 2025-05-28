@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -196,7 +195,7 @@ func authenticateXSTS(xblToken string) (xstsAuthStore, error) {
 
 	if err := network.CheckResponse(resp); err != nil {
 		if data.XErr != 0 {
-			return xstsAuthStore{}, fmt.Errorf("XSTS error %d", data.XErr)
+			return xstsAuthStore{}, fmt.Errorf("got error %d", data.XErr)
 		}
 		return xstsAuthStore{}, err
 	}
@@ -265,29 +264,21 @@ type LoginSession struct {
 	Token    string
 	UUID     string
 	Username string
+	IsOnline bool
 }
 
-func LoginWithMicrosoft() (LoginSession, error) {
+func AuthenticateSession() (LoginSession, error) {
 	var err error
 
 	store, _ := GetStore()
 	now := time.Now()
 	if store.MSA.AccessToken == "" || store.MSA.Expires.Before(now) {
-		if store.MSA.RefreshToken != "" {
-			store.MSA, err = authenticateMSA(store.MSA.RefreshToken, true)
-			if err != nil {
-				return LoginSession{}, fmt.Errorf("re-authenticate with MSA: %w", err)
-			}
-		} else {
-			log.Println("No refresh token found, opening browser for authentication...")
-			code, err := getMSACodeInteractive()
-			if err != nil {
-				return LoginSession{}, fmt.Errorf("retrieve Microsoft authentication code: %w", err)
-			}
-			store.MSA, err = authenticateMSA(code, false)
-			if err != nil {
-				return LoginSession{}, fmt.Errorf("authenticate with MSA: %w", err)
-			}
+		if store.MSA.RefreshToken == "" {
+			return LoginSession{}, fmt.Errorf("no active account found")
+		}
+		store.MSA, err = authenticateMSA(store.MSA.RefreshToken, true)
+		if err != nil {
+			return LoginSession{}, fmt.Errorf("authenticate with MSA: %w", err)
 		}
 	}
 
@@ -323,5 +314,26 @@ func LoginWithMicrosoft() (LoginSession, error) {
 		Username: profile.Name,
 		UUID:     profile.ID,
 		Token:    store.Minecraft.AccessToken,
+		IsOnline: true,
 	}, nil
+}
+
+func LoginMicrosoftInteractive() (LoginSession, error) {
+	var store AuthStore
+	code, err := getMSACodeInteractive()
+	if err != nil {
+		return LoginSession{}, fmt.Errorf("")
+	}
+	store.MSA, err = authenticateMSA(code, false)
+	if err != nil {
+		return LoginSession{}, fmt.Errorf("authenticate with MSA: %w", err)
+	}
+	if err := SetStore(store); err != nil {
+		return LoginSession{}, fmt.Errorf("set account store: %w", err)
+	}
+	session, err := AuthenticateSession()
+	if err != nil {
+		return LoginSession{}, fmt.Errorf("authenticate session: %w", err)
+	}
+	return session, nil
 }

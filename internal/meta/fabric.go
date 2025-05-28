@@ -58,7 +58,7 @@ func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 	var versions FabricVersionList
 	if err := cache.UpdateAndRead(&versions); err != nil {
 		if err := cache.Read(&versions); err != nil {
-			return FabricVersionList{}, fmt.Errorf("retrieve %s versions: %w", fabricLoader, err)
+			return FabricVersionList{}, err
 		}
 	}
 

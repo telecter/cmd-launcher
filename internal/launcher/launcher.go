@@ -28,9 +28,8 @@ func (loader Loader) String() string {
 }
 
 type LaunchOptions struct {
+	LoginSession       auth.LoginSession
 	QuickPlayServer    string
-	LoginData          auth.LoginSession
-	OfflineMode        bool
 	Demo               bool
 	DisableMultiplayer bool
 	DisableChat        bool
@@ -46,10 +45,10 @@ type runOptions struct {
 func run(options runOptions) error {
 	info, err := os.Stat(options.javaPath)
 	if err != nil {
-		return fmt.Errorf("check Java executable: %w", err)
+		return fmt.Errorf("java executable does not exist")
 	}
 	if info.Mode()&0111 == 0 || info.IsDir() {
-		return fmt.Errorf("check Java executable: file is not an executable")
+		return fmt.Errorf("java binary is not executable")
 	}
 
 	separator := ":"
@@ -70,17 +69,17 @@ func Launch(inst Instance, options LaunchOptions) error {
 		javaPath: inst.Config.JavaExecutablePath,
 	}
 
-	if !options.OfflineMode {
-		loginData, err := auth.LoginWithMicrosoft()
+	if options.LoginSession.IsOnline {
+		session, err := auth.AuthenticateSession()
 		if err != nil {
-			return fmt.Errorf("login with Microsoft: %w", err)
+			return fmt.Errorf("authenticate session: %w", err)
 		}
-		options.LoginData = loginData
+		options.LoginSession = session
 		log.Println("Authenticated successfully")
 	}
 	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("fetch version metadata: %w", err)
 	}
 
 	runOptions.mainClass = versionMeta.MainClass
@@ -124,9 +123,9 @@ func Launch(inst Instance, options LaunchOptions) error {
 
 	if len(requiredAssets.Objects) > 0 {
 		bar := progressbar.Default(int64(len(requiredAssets.Objects)), "Downloading assets")
-		for _, asset := range requiredAssets.Objects {
+		for name, asset := range requiredAssets.Objects {
 			if err := downloadAsset(asset); err != nil {
-				return err
+				return fmt.Errorf("download asset '%s': %w", name, err)
 			}
 			bar.Add(1)
 		}
@@ -143,8 +142,8 @@ func Launch(inst Instance, options LaunchOptions) error {
 	}
 
 	runOptions.gameArgs = []string{
-		"--username", options.LoginData.Username,
-		"--accessToken", options.LoginData.Token,
+		"--username", options.LoginSession.Username,
+		"--accessToken", options.LoginSession.Token,
 		"--userType", "msa",
 		"--gameDir", inst.Dir,
 		"--assetsDir", internal.AssetsDir,
@@ -157,8 +156,8 @@ func Launch(inst Instance, options LaunchOptions) error {
 	if options.QuickPlayServer != "" {
 		runOptions.gameArgs = append(runOptions.gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
 	}
-	if options.LoginData.UUID != "" {
-		runOptions.gameArgs = append(runOptions.gameArgs, "--uuid", options.LoginData.UUID)
+	if options.LoginSession.UUID != "" {
+		runOptions.gameArgs = append(runOptions.gameArgs, "--uuid", options.LoginSession.UUID)
 	}
 	if options.Demo {
 		runOptions.gameArgs = append(runOptions.gameArgs, "--demo")

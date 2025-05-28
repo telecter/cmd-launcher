@@ -30,7 +30,7 @@ func (c *Create) Run(ctx *kong.Context) error {
 		Loader:      loader,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create instance: %w", err)
+		return fmt.Errorf("create instance: %w", err)
 	}
 	fmt.Printf("Created instance '%s' with Minecraft %s ", inst.Name, inst.GameVersion)
 	if inst.Loader != launcher.LoaderVanilla {

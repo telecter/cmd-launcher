@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/internal/auth"
@@ -13,9 +14,10 @@ func (c *Login) Run(ctx *kong.Context) error {
 	if auth.IsLoggedIn() {
 		return fmt.Errorf("already logged in")
 	}
-	session, err := auth.LoginWithMicrosoft()
+	log.Println("Opening browser for authentication...")
+	session, err := auth.LoginMicrosoftInteractive()
 	if err != nil {
-		return err
+		return fmt.Errorf("add account: %w", err)
 	}
 	fmt.Printf("Logged in as %s\n", session.Username)
 	return nil
@@ -27,7 +29,7 @@ func (c *Logout) Run(ctx *kong.Context) error {
 	if err := auth.Logout(); err != nil {
 		return err
 	}
-	fmt.Println("Logged out")
+	fmt.Println("Logged out from account")
 	return nil
 }
 

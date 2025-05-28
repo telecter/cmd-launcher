@@ -37,7 +37,7 @@ func (c *Search) Run(ctx *kong.Context) error {
 		header = table.Row{"#", "Version", "Type", "Release Date"}
 		manifest, err := meta.GetVersionManifest()
 		if err != nil {
-			return fmt.Errorf("search for versions: %w", err)
+			return fmt.Errorf("retrieve version manifest: %w", err)
 		}
 		for i, version := range manifest.Versions {
 			if strings.Contains(version.ID, c.Query) {
@@ -52,7 +52,7 @@ func (c *Search) Run(ctx *kong.Context) error {
 		}
 		versions, err := meta.GetFabricVersions(fabricLoader)
 		if err != nil {
-			return fmt.Errorf("search for versions: %w", err)
+			return fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
 		}
 
 		for i, version := range versions {

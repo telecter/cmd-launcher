@@ -22,7 +22,7 @@ func (c *Delete) Run(ctx *kong.Context) error {
 
 	if input == "y" {
 		if err := launcher.DeleteInstance(c.ID); err != nil {
-			return fmt.Errorf("failed to remove instance: %w", err)
+			return fmt.Errorf("remove instance: %w", err)
 		}
 		fmt.Printf("Deleted instance '%s'\n", inst.Name)
 	} else {

@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 )
@@ -27,10 +26,10 @@ func (cache JSONCache[T]) Read(v *T) error {
 }
 func (cache JSONCache[T]) UpdateAndRead(v *T) error {
 	if err := DownloadFile(cache.URL, cache.Path); err != nil {
-		return fmt.Errorf("update cache: %w", err)
+		return err
 	}
 	if err := cache.Read(v); err != nil {
-		return fmt.Errorf("read cache: %w", err)
+		return err
 	}
 	return nil
 }

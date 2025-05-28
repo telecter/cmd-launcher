@@ -79,7 +79,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		}
 		fabricVersions, err := meta.GetFabricVersions(fabricLoader)
 		if err != nil {
-			return Instance{}, err
+			return Instance{}, fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
 		}
 		loaderVersion = fabricVersions[0].Version
 	}
@@ -117,16 +117,15 @@ func DeleteInstance(id string) error {
 
 func GetInstance(id string) (Instance, error) {
 	dir := filepath.Join(internal.InstancesDir, id)
-	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
-		return Instance{}, errors.New("instance does not exist")
-	}
 	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
-	if err != nil {
+	if errors.Is(err, os.ErrNotExist) {
+		return Instance{}, fmt.Errorf("instance does not exist")
+	} else if err != nil {
 		return Instance{}, fmt.Errorf("read instance metadata: %w", err)
 	}
 	var inst Instance
 	if err := json.Unmarshal(data, &inst); err != nil {
-		return Instance{}, fmt.Errorf("instance metadata is invalid: %w", err)
+		return Instance{}, fmt.Errorf("parse instance metadata: %w", err)
 	}
 	return inst, nil
 }

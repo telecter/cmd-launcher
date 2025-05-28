@@ -31,7 +31,7 @@ func filterAssets(index meta.AssetIndex) meta.AssetIndex {
 func downloadAsset(asset meta.AssetObject) error {
 	url := fmt.Sprintf(meta.MINECRAFT_RESOURCES_URL, asset.Hash[:2], asset.Hash)
 	if err := network.DownloadFile(url, filepath.Join(internal.AssetsDir, "objects", asset.Hash[:2], asset.Hash)); err != nil {
-		return fmt.Errorf("download asset: %w", err)
+		return err
 	}
 	return nil
 }
@@ -52,7 +52,7 @@ func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
 	}
 	if download {
 		if err := cache.UpdateAndRead(&assetIndex); err != nil {
-			return meta.AssetIndex{}, fmt.Errorf("fetch asset index: %w", err)
+			return meta.AssetIndex{}, err
 		}
 	}
 	return assetIndex, nil
