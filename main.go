@@ -27,7 +27,9 @@ func (c *CLI) AfterApply() error {
 		}
 		c.Dir = filepath.Join(home, ".minecraft")
 	}
-	internal.SetDirsFromRoot(c.Dir)
+	if err := internal.SetDirs(c.Dir); err != nil {
+		return err
+	}
 	return nil
 }
 

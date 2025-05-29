@@ -12,28 +12,44 @@ import (
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
-func filterAssets(index meta.AssetIndex) meta.AssetIndex {
-	var assets meta.AssetIndex
-	assets.Objects = make(map[string]meta.AssetObject)
-	for i, object := range index.Objects {
-		data, err := os.ReadFile(filepath.Join(internal.AssetsDir, "objects", object.Hash[:2], object.Hash))
-		if err != nil {
-			assets.Objects[i] = object
-		}
-		sum := sha1.Sum(data)
-		if object.Hash != hex.EncodeToString(sum[:]) {
-			assets.Objects[i] = object
-		}
-	}
-	return assets
+type Asset struct {
+	meta.AssetObject
+	URL         string
+	RuntimePath string
 }
 
-func downloadAsset(asset meta.AssetObject) error {
-	url := fmt.Sprintf(meta.MINECRAFT_RESOURCES_URL, asset.Hash[:2], asset.Hash)
-	if err := network.DownloadFile(url, filepath.Join(internal.AssetsDir, "objects", asset.Hash[:2], asset.Hash)); err != nil {
-		return err
+func NewAsset(object meta.AssetObject) Asset {
+	return Asset{
+		URL:         fmt.Sprintf(meta.MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash),
+		RuntimePath: filepath.Join(internal.AssetsDir, "objects", object.Hash[:2], object.Hash),
+		AssetObject: object,
 	}
-	return nil
+}
+
+func (asset Asset) IsDownloaded() bool {
+	data, err := os.ReadFile(asset.RuntimePath)
+	if err != nil {
+		return false
+	}
+	sum := sha1.Sum(data)
+	return asset.Hash == hex.EncodeToString(sum[:])
+}
+
+func (asset Asset) DownloadEntry() network.DownloadEntry {
+	return network.DownloadEntry{
+		URL:      asset.URL,
+		Filename: asset.RuntimePath,
+	}
+}
+
+func filterAssets(index meta.AssetIndex) (required []Asset) {
+	for _, object := range index.Objects {
+		asset := NewAsset(object)
+		if !asset.IsDownloaded() {
+			required = append(required, asset)
+		}
+	}
+	return required
 }
 
 func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {

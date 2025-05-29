@@ -53,8 +53,7 @@ func SetStore(store AuthStore) error {
 }
 
 func Logout() error {
-	data, _ := json.MarshalIndent(AuthStore{}, "", "    ")
-	return os.WriteFile(internal.AccountDataCache, data, 0644)
+	return SetStore(AuthStore{})
 }
 
 func IsLoggedIn() bool {

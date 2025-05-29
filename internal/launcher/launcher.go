@@ -13,6 +13,7 @@ import (
 	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/telecter/cmd-launcher/internal/meta"
+	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 type Loader string
@@ -104,28 +105,27 @@ func Launch(inst Instance, options LaunchOptions) error {
 	}
 	installedLibs, requiredLibs := filterLibraries(append(libraries, getClientLibrary(versionMeta)))
 
-	if len(requiredLibs) > 0 {
-		bar := progressbar.Default(int64(len(requiredLibs)), "Installing libraries")
-		for _, library := range requiredLibs {
-			if err := library.Install(); err != nil {
-				return fmt.Errorf("download library '%s': %w", library.Name, err)
-			}
-			bar.Add(1)
-		}
+	var downloads []network.DownloadEntry
+
+	for _, library := range requiredLibs {
+		downloads = append(downloads, library.DownloadEntry())
 	}
 
 	assetIndex, err := downloadAssetIndex(versionMeta)
 	if err != nil {
 		return fmt.Errorf("fetch asset index: %w", err)
 	}
-
 	requiredAssets := filterAssets(assetIndex)
+	for _, asset := range requiredAssets {
+		downloads = append(downloads, asset.DownloadEntry())
+	}
 
-	if len(requiredAssets.Objects) > 0 {
-		bar := progressbar.Default(int64(len(requiredAssets.Objects)), "Downloading assets")
-		for name, asset := range requiredAssets.Objects {
-			if err := downloadAsset(asset); err != nil {
-				return fmt.Errorf("download asset '%s': %w", name, err)
+	if len(downloads) > 0 {
+		bar := progressbar.Default(int64(len(downloads)), "Downloading files")
+		results := network.StartDownloadEntries(downloads)
+		for err := range results {
+			if err != nil {
+				return fmt.Errorf("download files: %w", err)
 			}
 			bar.Add(1)
 		}
@@ -170,7 +170,7 @@ func Launch(inst Instance, options LaunchOptions) error {
 	}
 
 	for _, library := range append(installedLibs, requiredLibs...) {
-		runOptions.classpath = append(runOptions.classpath, library.RuntimePath())
+		runOptions.classpath = append(runOptions.classpath, library.RuntimePath)
 	}
 	os.Chdir(inst.Dir)
 	return run(runOptions)

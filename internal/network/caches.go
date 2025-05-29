@@ -25,7 +25,10 @@ func (cache JSONCache[T]) Read(v *T) error {
 	return nil
 }
 func (cache JSONCache[T]) UpdateAndRead(v *T) error {
-	if err := DownloadFile(cache.URL, cache.Path); err != nil {
+	if err := DownloadFile(DownloadEntry{
+		URL:      cache.URL,
+		Filename: cache.Path,
+	}); err != nil {
 		return err
 	}
 	if err := cache.Read(v); err != nil {

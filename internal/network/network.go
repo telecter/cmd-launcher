@@ -7,7 +7,15 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync"
 )
+
+const MAX_CONCURRENT_DOWNLOADS = 6
+
+type DownloadEntry struct {
+	URL      string
+	Filename string
+}
 
 func FetchJSON(url string, v any) error {
 	resp, err := http.Get(url)
@@ -19,25 +27,47 @@ func FetchJSON(url string, v any) error {
 	return json.Unmarshal(data, v)
 }
 
-func DownloadFile(url string, dest string) error {
-	resp, err := http.Get(url)
+func DownloadFile(entry DownloadEntry) error {
+	resp, err := http.Get(entry.URL)
 	if err != nil {
 		return err
 	}
 	if err := CheckResponse(resp); err != nil {
-		return fmt.Errorf("retrieve file contents: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
-	if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
-		return fmt.Errorf("create directory for file '%s': %w", dest, err)
+	if err := os.MkdirAll(path.Dir(entry.Filename), 0755); err != nil {
+		return fmt.Errorf("create directory for file '%s': %w", entry.Filename, err)
 	}
-	out, err := os.Create(dest)
+	out, err := os.Create(entry.Filename)
 	if err != nil {
-		return fmt.Errorf("create file '%s': %w", dest, err)
+		return fmt.Errorf("create file '%s': %w", entry.Filename, err)
 	}
 	defer out.Close()
 	io.Copy(out, resp.Body)
 	return nil
+}
+
+func StartDownloadEntries(entries []DownloadEntry) chan error {
+	var wg sync.WaitGroup
+	results := make(chan error)
+	d := make(chan struct{}, MAX_CONCURRENT_DOWNLOADS)
+	for _, entry := range entries {
+		wg.Add(1)
+		go func(entry DownloadEntry) {
+			defer wg.Done()
+
+			d <- struct{}{}
+			err := DownloadFile(entry)
+			<-d
+			results <- err
+		}(entry)
+	}
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+	return results
 }
 
 func CheckResponse(resp *http.Response) error {
