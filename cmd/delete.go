@@ -20,13 +20,13 @@ func (c *Delete) Run(ctx *kong.Context) error {
 	fmt.Printf("Are you sure you want to delete '%s'?\nIt will be gone forever (a long time!) [y/n] ", inst.Name)
 	fmt.Scanln(&input)
 
-	if input == "y" {
+	if input == "y" || input == "Y" {
 		if err := launcher.DeleteInstance(c.ID); err != nil {
 			return fmt.Errorf("remove instance: %w", err)
 		}
 		fmt.Printf("Deleted instance '%s'\n", inst.Name)
 	} else {
-		fmt.Println("Operation aborted.")
+		fmt.Println("Operation aborted")
 	}
 	return nil
 }

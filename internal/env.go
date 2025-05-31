@@ -11,7 +11,7 @@ var LibrariesDir string
 var InstancesDir string
 var CachesDir string
 var AssetsDir string
-var AccountDataCache string
+var AuthStorePath string
 
 func SetDirs(rootDir string) error {
 	RootDir = rootDir
@@ -19,7 +19,7 @@ func SetDirs(rootDir string) error {
 	LibrariesDir = filepath.Join(RootDir, "libraries")
 	CachesDir = filepath.Join(RootDir, "caches")
 	AssetsDir = filepath.Join(RootDir, "assets")
-	AccountDataCache = filepath.Join(RootDir, "account.json")
+	AuthStorePath = filepath.Join(RootDir, "account.json")
 
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
 		return fmt.Errorf("create root directory: %w", err)

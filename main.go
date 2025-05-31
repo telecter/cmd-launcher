@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/cmd"
 	"github.com/telecter/cmd-launcher/internal"
+	"github.com/telecter/cmd-launcher/internal/auth"
 )
 
 type CLI struct {
@@ -30,6 +32,18 @@ func (c *CLI) AfterApply() error {
 	if err := internal.SetDirs(c.Dir); err != nil {
 		return err
 	}
+
+	cache, err := os.ReadFile(internal.AuthStorePath)
+	if err != nil {
+		return fmt.Errorf("read auth store: %w", err)
+	}
+
+	var store auth.AuthStore
+	if err := json.Unmarshal(cache, &store); err != nil {
+		return fmt.Errorf("parse auth store: %w", err)
+	}
+	auth.Store = store
+
 	return nil
 }
 

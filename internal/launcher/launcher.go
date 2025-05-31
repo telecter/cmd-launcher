@@ -2,7 +2,6 @@ package launcher
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -71,12 +70,11 @@ func Launch(inst Instance, options LaunchOptions) error {
 	}
 
 	if options.LoginSession.IsOnline {
-		session, err := auth.AuthenticateSession()
+		session, err := auth.Authenticate()
 		if err != nil {
 			return fmt.Errorf("authenticate session: %w", err)
 		}
 		options.LoginSession = session
-		log.Println("Authenticated successfully")
 	}
 	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
 	if err != nil {

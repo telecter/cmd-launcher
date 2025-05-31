@@ -51,7 +51,7 @@ cmd-launcher start CoolInstance
 ```
 
 ### Authentication
-If you want to play the game in online mode, you will need to add a Microsoft account. To do this, use the `auth login` command. As part of Microsoft's OAuth2 flow, the default web browser will be opened to complete the authentication. The launcher will automatically attempt to start the game in online mode if there is an account present.
+If you want to play the game in online mode, you will need to add a Microsoft account. To do this, use the `auth login` command. As part of Microsoft's OAuth2 flow, the default web browser will be opened to complete the authentication. This can be avoided with the `--no-browser` flag. The launcher will automatically attempt to start the game in online mode if there is an account present.
 
 
 To play in offline mode, just pass the `-u, --username <username>` flag to the `start` command

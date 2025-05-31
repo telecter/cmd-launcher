@@ -2,22 +2,39 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/internal/auth"
 )
 
-type Login struct{}
+type Login struct {
+	NoBrowser bool `name:"no-browser" help:"Use device code instead of browser for authentication"`
+}
 
 func (c *Login) Run(ctx *kong.Context) error {
-	if auth.IsLoggedIn() {
-		return fmt.Errorf("already logged in")
-	}
-	log.Println("Opening browser for authentication...")
-	session, err := auth.LoginMicrosoftInteractive()
+	var session auth.LoginSession
+
+	session, err := auth.Authenticate()
 	if err != nil {
-		return fmt.Errorf("add account: %w", err)
+		if c.NoBrowser {
+			resp, err := auth.FetchDeviceCode()
+			if err != nil {
+				return fmt.Errorf("fetch device code: %w", err)
+			}
+			fmt.Printf("Use the code %s at %s to sign in\n", resp.UserCode, resp.VerificationURI)
+			fmt.Println("Waiting for authentication....")
+			session, err = auth.AuthenticateWithCode(resp)
+			if err != nil {
+				return fmt.Errorf("add account: %w", err)
+			}
+		} else {
+			fmt.Println("Opening browser for authentication...")
+			var err error
+			session, err = auth.AuthenticateWithBrowser()
+			if err != nil {
+				return fmt.Errorf("add account: %w", err)
+			}
+		}
 	}
 	fmt.Printf("Logged in as %s\n", session.Username)
 	return nil
@@ -26,9 +43,7 @@ func (c *Login) Run(ctx *kong.Context) error {
 type Logout struct{}
 
 func (c *Logout) Run(ctx *kong.Context) error {
-	if err := auth.Logout(); err != nil {
-		return err
-	}
+	auth.Store.Clear()
 	fmt.Println("Logged out from account")
 	return nil
 }
