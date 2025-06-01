@@ -28,12 +28,14 @@ func (loader Loader) String() string {
 }
 
 type LaunchOptions struct {
-	LoginSession       auth.LoginSession
+	Session            auth.Session
+	Config             InstanceConfig
 	QuickPlayServer    string
 	Demo               bool
 	DisableMultiplayer bool
 	DisableChat        bool
 }
+
 type runOptions struct {
 	javaPath  string
 	mainClass string
@@ -66,16 +68,17 @@ func run(options runOptions) error {
 
 func Launch(inst Instance, options LaunchOptions) error {
 	runOptions := runOptions{
-		javaPath: inst.Config.JavaExecutablePath,
+		javaPath: options.Config.Java,
 	}
 
-	if options.LoginSession.IsOnline {
+	if (options.Session == auth.Session{}) {
 		session, err := auth.Authenticate()
 		if err != nil {
 			return fmt.Errorf("authenticate session: %w", err)
 		}
-		options.LoginSession = session
+		options.Session = session
 	}
+
 	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
 	if err != nil {
 		return fmt.Errorf("fetch version metadata: %w", err)
@@ -132,30 +135,29 @@ func Launch(inst Instance, options LaunchOptions) error {
 	if runtime.GOOS == "darwin" {
 		runOptions.javaArgs = append(runOptions.javaArgs, "-XstartOnFirstThread")
 	}
-	if inst.Config.MinMemory != 0 {
-		runOptions.javaArgs = append(runOptions.javaArgs, fmt.Sprintf("-Xms%dm", inst.Config.MinMemory))
+	if options.Config.MinMemory != 0 {
+		runOptions.javaArgs = append(runOptions.javaArgs, fmt.Sprintf("-Xms%dm", options.Config.MinMemory))
 	}
-	if inst.Config.MaxMemory != 0 {
-		runOptions.javaArgs = append(runOptions.javaArgs, fmt.Sprintf("-Xmx%dm", inst.Config.MaxMemory))
+	if options.Config.MaxMemory != 0 {
+		runOptions.javaArgs = append(runOptions.javaArgs, fmt.Sprintf("-Xmx%dm", options.Config.MaxMemory))
 	}
-
 	runOptions.gameArgs = []string{
-		"--username", options.LoginSession.Username,
-		"--accessToken", options.LoginSession.Token,
+		"--username", options.Session.Username,
+		"--accessToken", options.Session.AccessToken,
 		"--userType", "msa",
 		"--gameDir", inst.Dir,
 		"--assetsDir", internal.AssetsDir,
 		"--assetIndex", versionMeta.AssetIndex.ID,
 		"--version", versionMeta.ID,
 		"--versionType", versionMeta.Type,
-		"--width", strconv.Itoa(inst.Config.WindowResolution.Width),
-		"--height", strconv.Itoa(inst.Config.WindowResolution.Height),
+		"--width", strconv.Itoa(options.Config.WindowResolution.Width),
+		"--height", strconv.Itoa(options.Config.WindowResolution.Height),
 	}
 	if options.QuickPlayServer != "" {
 		runOptions.gameArgs = append(runOptions.gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
 	}
-	if options.LoginSession.UUID != "" {
-		runOptions.gameArgs = append(runOptions.gameArgs, "--uuid", options.LoginSession.UUID)
+	if options.Session.UUID != "" {
+		runOptions.gameArgs = append(runOptions.gameArgs, "--uuid", options.Session.UUID)
 	}
 	if options.Demo {
 		runOptions.gameArgs = append(runOptions.gameArgs, "--demo")

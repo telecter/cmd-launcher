@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ type CLI struct {
 	Create cmd.Create `cmd:"" help:"Create a new Minecraft instance"`
 	Search cmd.Search `cmd:"" help:"Search versions and instances"`
 	Delete cmd.Delete `cmd:"" help:"Delete a Minecraft instance"`
-	Dir    string     `name:"dir" help:"Root directory to use for launcher"`
+	Dir    string     `name:"dir" help:"Root directory to use for launcher" type:"path" placeholder:"PATH"`
 }
 
 func (c *CLI) AfterApply() error {
@@ -33,19 +32,9 @@ func (c *CLI) AfterApply() error {
 		return err
 	}
 
-	cache, err := os.ReadFile(internal.AuthStorePath)
-	if err != nil {
-		if _, err := os.Create(internal.AuthStorePath); err != nil {
-			return fmt.Errorf("create auth store: %w", err)
-		}
-		cache = []byte{}
+	if err := auth.ReadFromCache(); err != nil {
+		return fmt.Errorf("read auth store: %w", err)
 	}
-
-	var store auth.AuthStore
-	if err := json.Unmarshal(cache, &store); err != nil {
-		store = auth.AuthStore{}
-	}
-	auth.Store = store
 
 	return nil
 }

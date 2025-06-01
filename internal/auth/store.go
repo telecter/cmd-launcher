@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -116,11 +117,28 @@ type AuthStore struct {
 	Minecraft minecraftAuthStore `json:"minecraft"`
 }
 
-func (store *AuthStore) Write() error {
+func (store *AuthStore) WriteToCache() error {
 	data, _ := json.MarshalIndent(store, "", "    ")
 	return os.WriteFile(internal.AuthStorePath, data, 0644)
 }
 func (store *AuthStore) Clear() error {
 	store = &AuthStore{}
-	return store.Write()
+	return store.WriteToCache()
+}
+
+func ReadFromCache() error {
+	cache, err := os.ReadFile(internal.AuthStorePath)
+	if err != nil {
+		if _, err := os.Create(internal.AuthStorePath); err != nil {
+			return fmt.Errorf("create auth store: %w", err)
+		}
+		cache = []byte{}
+	}
+
+	var store AuthStore
+	if err := json.Unmarshal(cache, &store); err != nil {
+		store = AuthStore{}
+	}
+	Store = store
+	return nil
 }

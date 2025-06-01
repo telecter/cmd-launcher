@@ -12,7 +12,7 @@ type Login struct {
 }
 
 func (c *Login) Run(ctx *kong.Context) error {
-	var session auth.LoginSession
+	var session auth.Session
 
 	session, err := auth.Authenticate()
 	if err != nil {

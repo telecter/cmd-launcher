@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"dario.cat/mergo"
 	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/internal/auth"
 	"github.com/telecter/cmd-launcher/internal/launcher"
@@ -13,6 +14,11 @@ type Start struct {
 	Demo        bool   `name:"demo" help:"Start the game in demo mode"`
 	DisableMP   bool   `name:"disable-mp" help:"Disable multiplayer"`
 	DisableChat bool   `name:"disable-chat" help:"Disable chat"`
+	Width       int    `name:"width" help:"Game window width" group:"Configuration Overrides"`
+	Height      int    `name:"height" help:"Game window height" group:"Configuration Overrides" `
+	JVM         string `name:"jvm" help:"Path to the JVM to use" group:"Configuration Overrides" type:"path" placeholder:"PATH"`
+	MinMemory   int    `name:"min-memory" help:"Minimum memory" group:"Configuration Overrides" placeholder:"MB"`
+	MaxMemory   int    `name:"max-memory" help:"Maximum memory" group:"Configuration Overrides" placeholder:"MB"`
 }
 
 func (c *Start) Run(ctx *kong.Context) error {
@@ -20,17 +26,33 @@ func (c *Start) Run(ctx *kong.Context) error {
 	if err != nil {
 		return err
 	}
-	err = launcher.Launch(inst, launcher.LaunchOptions{
-		LoginSession: auth.LoginSession{
-			Username: c.Username,
-			IsOnline: c.Username == "",
+
+	config := inst.Config
+	override := launcher.InstanceConfig{
+		WindowResolution: struct {
+			Width  int "json:\"width\""
+			Height int "json:\"height\""
+		}{
+			Width:  c.Width,
+			Height: c.Height,
 		},
+		Java:      c.JVM,
+		MinMemory: c.MinMemory,
+		MaxMemory: c.MaxMemory,
+	}
+	mergo.Merge(&config, override, mergo.WithOverride)
+	options := launcher.LaunchOptions{
+		Session: auth.Session{
+			Username: c.Username,
+		},
+		Config:             config,
 		QuickPlayServer:    c.Server,
 		Demo:               c.Demo,
 		DisableMultiplayer: c.DisableMP,
 		DisableChat:        c.DisableChat,
-	})
-	if err != nil {
+	}
+
+	if err := launcher.Launch(inst, options); err != nil {
 		return err
 	}
 	return nil

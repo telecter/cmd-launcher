@@ -17,9 +17,9 @@ type InstanceOptions struct {
 	Loader      Loader
 }
 type Instance struct {
-	Dir           string         `json:"dir"`
+	Dir           string         `json:"-"`
+	Name          string         `json:"-"`
 	GameVersion   string         `json:"game_version"`
-	Name          string         `json:"name"`
 	Loader        Loader         `json:"mod_loader"`
 	LoaderVersion string         `json:"mod_loader_version,omitempty"`
 	Config        InstanceConfig `json:"config"`
@@ -28,10 +28,10 @@ type InstanceConfig struct {
 	WindowResolution struct {
 		Width  int `json:"width"`
 		Height int `json:"height"`
-	} `json:"window_resolution"`
-	JavaExecutablePath string `json:"java_location"`
-	MinMemory          int    `json:"min_memory"`
-	MaxMemory          int    `json:"max_memory"`
+	} `json:"resolution"`
+	Java      string `json:"java"`
+	MinMemory int    `json:"min_memory"`
+	MaxMemory int    `json:"max_memory"`
 }
 
 var defaultConfig = InstanceConfig{
@@ -42,9 +42,9 @@ var defaultConfig = InstanceConfig{
 		Width:  1708,
 		Height: 960,
 	},
-	JavaExecutablePath: "/usr/bin/java",
-	MinMemory:          512,
-	MaxMemory:          4096,
+	Java:      "/usr/bin/java",
+	MinMemory: 512,
+	MaxMemory: 4096,
 }
 
 func CreateInstance(options InstanceOptions) (Instance, error) {
@@ -91,20 +91,22 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 
 	inst := Instance{
 		Dir:           dir,
+		Name:          options.Name,
 		GameVersion:   options.GameVersion,
 		Loader:        options.Loader,
 		LoaderVersion: loaderVersion,
-		Name:          options.Name,
 		Config:        defaultConfig,
 	}
 
 	data, _ := json.MarshalIndent(inst, "", "    ")
-	os.WriteFile(filepath.Join(dir, "instance.json"), data, 0644)
+	if err := os.WriteFile(filepath.Join(dir, "instance.json"), data, 0644); err != nil {
+		return Instance{}, fmt.Errorf("write instant metadata: %w", err)
+	}
 
 	return inst, nil
 }
 
-func DeleteInstance(id string) error {
+func RemoveInstance(id string) error {
 	inst, err := GetInstance(id)
 	if err != nil {
 		return err
@@ -127,6 +129,8 @@ func GetInstance(id string) (Instance, error) {
 	if err := json.Unmarshal(data, &inst); err != nil {
 		return Instance{}, fmt.Errorf("parse instance metadata: %w", err)
 	}
+	inst.Dir = dir
+	inst.Name = id
 	return inst, nil
 }
 

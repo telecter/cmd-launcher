@@ -32,19 +32,19 @@ Use the `--help` flag to get the usage information.
 
 ### Creating an instance
 
-To create a new instance, use the `create` subcommand.  
+To create a new instance, use the `create` command.  
 You can use the `--loader, -l` flag to set the mod loader. Only Fabric and Quilt are supported at the moment. 
 
 Use the `--version, -v` flag to set the game version. If no value is supplied, the latest release is used. Acceptable values also include `release` or `snapshot` for the latest of either.
 ```sh
 cmd-launcher create -v 1.21.5 -l fabric CoolInstance
 ```
-If you want to delete an instance, use the `delete` subcommand.
+If you want to delete an instance, use the `delete` command.
 > [!IMPORTANT]
 > This launcher has not been tested for versions < 1.19. It may not work, but I am working on fixing these issues.
 
 ### Starting the Game
-To start Minecraft, simply run the `start` subcommand followed by the instance ID.
+To start Minecraft, simply run the `start` command followed by the instance ID.
 
 ```bash
 cmd-launcher start CoolInstance
@@ -67,27 +67,27 @@ Currently configurable values are:
 * Java Executable Path
 * Minimum and maximum memory
 
+These values can be overriden when starting the game via command line flags in the `start` command.
+
 **Example `instance.json` file**
 ```json
 {
-  "dir": "<path of instance directory>",
   "game_version": "1.21.5",
-  "name": "CoolInstance",
   "mod_loader": "fabric",
   "mod_loader_version": "0.16.14",
   "config": {
-    "window_resolution": {
+    "resolution": {
       "width": 1708,
       "height": 960
     },
-    "java_location": "/usr/bin/java",
+    "java": "/usr/bin/java",
     "min_memory": 512,
     "max_memory": 4096
   }
 }
 ```
 ### Search
-The `search` subcommand can search for Minecraft versions or instances that you have. While it defaults to searching for installed instances, it can also search for game, fabric, and quilt versions.
+The `search` command can search for Minecraft versions or instances that you have. While it defaults to searching for installed instances, it can also search for game, Fabric, and Quilt versions.
 
 ```bash
 cmd-launcher search [<query>] [--kind {instances, versions, fabric, quilt}]

@@ -3,6 +3,7 @@ module github.com/telecter/cmd-launcher
 go 1.24.2
 
 require (
+	dario.cat/mergo v1.0.2
 	github.com/alecthomas/kong v1.11.0
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c

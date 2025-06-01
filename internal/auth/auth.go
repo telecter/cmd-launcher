@@ -22,11 +22,10 @@ var (
 	redirectURL = "http://localhost:8000/signin"
 )
 
-type LoginSession struct {
-	Token    string
-	UUID     string
-	Username string
-	IsOnline bool
+type Session struct {
+	UUID        string
+	Username    string
+	AccessToken string
 }
 
 type msa struct{}
@@ -210,42 +209,41 @@ func (minecraft) authenticate(xstsToken string, userhash string) (minecraftRespo
 	}
 	return data, profile, nil
 }
-func Authenticate() (LoginSession, error) {
+func Authenticate() (Session, error) {
 	if Store.MSA.RefreshToken == "" {
-		return LoginSession{}, fmt.Errorf("no account found")
+		return Session{}, fmt.Errorf("no account found")
 	}
 	if !Store.MSA.isValid() {
 		if err := Store.MSA.refresh(); err != nil {
-			return LoginSession{}, fmt.Errorf("authenticate with MSA: %w", err)
+			return Session{}, fmt.Errorf("authenticate with MSA: %w", err)
 		}
 	}
 	if !Store.XBL.isValid() {
 		if err := Store.XBL.refresh(); err != nil {
-			return LoginSession{}, fmt.Errorf("authenticate with XBL: %w", err)
+			return Session{}, fmt.Errorf("authenticate with XBL: %w", err)
 		}
 	}
 	if !Store.XSTS.isValid() {
 		if err := Store.XSTS.refresh(); err != nil {
-			return LoginSession{}, fmt.Errorf("authenticate with XSTS: %w", err)
+			return Session{}, fmt.Errorf("authenticate with XSTS: %w", err)
 		}
 	}
 	if !Store.Minecraft.isValid() {
 		if err := Store.Minecraft.refresh(); err != nil {
-			return LoginSession{}, fmt.Errorf("authenticate with Minecraft: %w", err)
+			return Session{}, fmt.Errorf("authenticate with Minecraft: %w", err)
 		}
 	}
-	if err := Store.Write(); err != nil {
-		return LoginSession{}, fmt.Errorf("write auth store: %w", err)
+	if err := Store.WriteToCache(); err != nil {
+		return Session{}, fmt.Errorf("write auth store: %w", err)
 	}
-	return LoginSession{
-		Username: Store.Minecraft.Username,
-		UUID:     Store.Minecraft.UUID,
-		Token:    Store.Minecraft.AccessToken,
-		IsOnline: true,
+	return Session{
+		Username:    Store.Minecraft.Username,
+		UUID:        Store.Minecraft.UUID,
+		AccessToken: Store.Minecraft.AccessToken,
 	}, nil
 }
 
-func AuthenticateWithBrowser() (LoginSession, error) {
+func AuthenticateWithBrowser() (Session, error) {
 	query := url.Values{
 		"client_id":     {clientID},
 		"response_type": {"code"},
@@ -257,7 +255,7 @@ func AuthenticateWithBrowser() (LoginSession, error) {
 	loc.RawQuery = query.Encode()
 
 	if err := browser.OpenURL(loc.String()); err != nil {
-		return LoginSession{}, fmt.Errorf("open browser: %w", err)
+		return Session{}, fmt.Errorf("open browser: %w", err)
 	}
 
 	var code string
@@ -277,7 +275,7 @@ func AuthenticateWithBrowser() (LoginSession, error) {
 	})
 	server.ListenAndServe()
 	if err != nil {
-		return LoginSession{}, err
+		return Session{}, err
 	}
 
 	resp, err := MSA.authenticate(url.Values{
@@ -288,7 +286,7 @@ func AuthenticateWithBrowser() (LoginSession, error) {
 		"code":         {code},
 	})
 	if err != nil {
-		return LoginSession{}, fmt.Errorf("authenticate with MSA: %w", err)
+		return Session{}, fmt.Errorf("authenticate with MSA: %w", err)
 	}
 	Store.MSA.write(resp)
 
@@ -324,7 +322,7 @@ func FetchDeviceCode() (deviceCodeResponse, error) {
 	return data, nil
 }
 
-func AuthenticateWithCode(codeResp deviceCodeResponse) (LoginSession, error) {
+func AuthenticateWithCode(codeResp deviceCodeResponse) (Session, error) {
 	for {
 		resp, err := MSA.authenticate(url.Values{
 			"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
@@ -332,7 +330,7 @@ func AuthenticateWithCode(codeResp deviceCodeResponse) (LoginSession, error) {
 			"device_code": {codeResp.DeviceCode},
 		})
 		if err != nil {
-			return LoginSession{}, fmt.Errorf("authenticate with MSA: %w", err)
+			return Session{}, fmt.Errorf("authenticate with MSA: %w", err)
 		}
 		if resp.Error == "authorization_pending" {
 			time.Sleep(time.Second * time.Duration(codeResp.Interval))
@@ -341,7 +339,7 @@ func AuthenticateWithCode(codeResp deviceCodeResponse) (LoginSession, error) {
 			Store.MSA.write(resp)
 			break
 		} else {
-			return LoginSession{}, errors.New(resp.Error)
+			return Session{}, errors.New(resp.Error)
 		}
 	}
 	return Authenticate()
