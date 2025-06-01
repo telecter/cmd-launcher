@@ -18,7 +18,7 @@ type msaAuthStore struct {
 }
 
 func (store *msaAuthStore) isValid() bool {
-	return store.AccessToken != "" || store.Expires.After(time.Now())
+	return store.AccessToken != "" && store.Expires.After(time.Now())
 }
 func (store *msaAuthStore) refresh() error {
 	resp, err := MSA.authenticate(url.Values{
@@ -47,7 +47,7 @@ type xblAuthStore struct {
 }
 
 func (store *xblAuthStore) isValid() bool {
-	return store.Token != "" || store.Userhash != "" || store.Expires.After(time.Now())
+	return store.Token != "" && store.Userhash != "" && store.Expires.After(time.Now())
 }
 func (store *xblAuthStore) refresh() error {
 	resp, err := XBL.authenticate(Store.MSA.AccessToken)
@@ -69,7 +69,7 @@ type xstsAuthStore struct {
 }
 
 func (store *xstsAuthStore) isValid() bool {
-	return store.Token != "" || store.Expires.After(time.Now())
+	return store.Token != "" && store.Expires.After(time.Now())
 }
 func (store *xstsAuthStore) refresh() error {
 	resp, err := XSTS.authenticate(Store.XBL.Token)
@@ -92,7 +92,7 @@ type minecraftAuthStore struct {
 }
 
 func (store *minecraftAuthStore) isValid() bool {
-	return store.AccessToken != "" || store.Expires.After(time.Now())
+	return store.AccessToken != "" && store.Expires.After(time.Now())
 }
 func (store *minecraftAuthStore) refresh() error {
 	resp, profile, err := Minecraft.authenticate(Store.XSTS.Token, Store.XBL.Userhash)
