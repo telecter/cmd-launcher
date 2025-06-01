@@ -35,12 +35,15 @@ func (c *CLI) AfterApply() error {
 
 	cache, err := os.ReadFile(internal.AuthStorePath)
 	if err != nil {
-		return fmt.Errorf("read auth store: %w", err)
+		if _, err := os.Create(internal.AuthStorePath); err != nil {
+			return fmt.Errorf("create auth store: %w", err)
+		}
+		cache = []byte{}
 	}
 
 	var store auth.AuthStore
 	if err := json.Unmarshal(cache, &store); err != nil {
-		return fmt.Errorf("parse auth store: %w", err)
+		store = auth.AuthStore{}
 	}
 	auth.Store = store
 
