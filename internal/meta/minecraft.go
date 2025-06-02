@@ -118,6 +118,7 @@ type AssetObject struct {
 const VERSION_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 const MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
 
+// GetVersionManifest retrieves the Mojang version manifest which lists all game versions.
 func GetVersionManifest() (VersionManifest, error) {
 	cache := network.JSONCache[VersionManifest]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "version_manifest.json"),
@@ -134,6 +135,7 @@ func GetVersionManifest() (VersionManifest, error) {
 	return manifest, nil
 }
 
+// GetVersionMeta retrieves the version metadata for a specified version from the version manifest.
 func GetVersionMeta(id string) (VersionMeta, error) {
 	manifest, err := GetVersionManifest()
 	if err != nil {

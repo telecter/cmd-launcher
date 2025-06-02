@@ -16,6 +16,8 @@ type InstanceOptions struct {
 	Name        string
 	Loader      Loader
 }
+
+// An Instance represents a full installation of Minecraft and its information.
 type Instance struct {
 	Dir           string         `json:"-"`
 	Name          string         `json:"-"`
@@ -24,6 +26,8 @@ type Instance struct {
 	LoaderVersion string         `json:"mod_loader_version,omitempty"`
 	Config        InstanceConfig `json:"config"`
 }
+
+// InstanceConfig represents the configurable values of an Instance.
 type InstanceConfig struct {
 	WindowResolution struct {
 		Width  int `json:"width"`
@@ -47,7 +51,7 @@ var defaultConfig = InstanceConfig{
 	MaxMemory: 4096,
 }
 
-// Create a new instance with the specified options.
+// CreateInstance creates a new instance with the specified options.
 func CreateInstance(options InstanceOptions) (Instance, error) {
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
@@ -107,7 +111,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 	return inst, nil
 }
 
-// Remove an instance.
+// RemoveInstance removes the instance with the specified ID.
 func RemoveInstance(id string) error {
 	inst, err := GetInstance(id)
 	if err != nil {
@@ -119,7 +123,7 @@ func RemoveInstance(id string) error {
 	return nil
 }
 
-// Retrieve an instance.
+// GetInstance retrieves the instance with the specified ID.
 func GetInstance(id string) (Instance, error) {
 	dir := filepath.Join(env.InstancesDir, id)
 	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
@@ -137,7 +141,7 @@ func GetInstance(id string) (Instance, error) {
 	return inst, nil
 }
 
-// Retrieve all instances.
+// GetAllInstances retrieves all valid instances within env.InstancesDir.
 func GetAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(env.InstancesDir)
 	if errors.Is(err, os.ErrNotExist) {
@@ -159,7 +163,7 @@ func GetAllInstances() ([]Instance, error) {
 	return insts, nil
 }
 
-// Check whether instance exists.
+// IsInstanceExist reports whether an instance with the specified ID exists.
 func IsInstanceExist(id string) bool {
 	_, err := GetInstance(id)
 	return err == nil

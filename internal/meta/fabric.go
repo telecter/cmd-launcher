@@ -29,11 +29,12 @@ type FabricMeta struct {
 	Libraries []Library
 }
 
+// FabricLoader represents a variant of the Fabric mod loader.
 type FabricLoader string
 
 const (
-	FabricLoaderStandard FabricLoader = "fabric"
-	FabricLoaderQuilt    FabricLoader = "quilt"
+	FabricLoaderStandard FabricLoader = "fabric" // FabricMC - https://fabricmc.net
+	FabricLoaderQuilt    FabricLoader = "quilt"  // Quilt - https://quiltmc.org
 )
 
 func (fabricLoader FabricLoader) String() string {
@@ -45,6 +46,7 @@ const FABRIC_PROFILES_URL = "https://meta.fabricmc.net/v2/versions/loader/%s/%s/
 const QUILT_VERSIONS_URL = "https://meta.quiltmc.org/v3/versions/loader"
 const QUILT_PROFILES_URL = "https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json"
 
+// GetFabricVersions retrieves a list of all versions of the specified Fabric variant.
 func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 	cache := network.JSONCache[FabricVersionList]{
 		Path: filepath.Join(env.CachesDir, fabricLoader.String(), "versions.json"),
@@ -65,6 +67,7 @@ func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 	return versions, nil
 }
 
+// GetFabricMeta retrieves the launcher metadata for a loader version and game version of the specified Fabric variant.
 func GetFabricMeta(gameVersion string, loaderVersion string, fabricLoader FabricLoader) (FabricMeta, error) {
 	cache := network.JSONCache[FabricMeta]{
 		Path: filepath.Join(env.CachesDir, fabricLoader.String(), loaderVersion+"-"+gameVersion+".json"),

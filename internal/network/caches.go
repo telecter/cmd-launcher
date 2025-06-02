@@ -13,6 +13,7 @@ type JSONCache[T any] struct {
 	URL  string
 }
 
+// Read reads the contents of the cache into v.
 func (cache JSONCache[T]) Read(v *T) error {
 	data, err := os.ReadFile(cache.Path)
 	if err != nil {
@@ -24,6 +25,8 @@ func (cache JSONCache[T]) Read(v *T) error {
 	}
 	return nil
 }
+
+// UpdateAndRead updates the cache with data from cache.URL and reads the contents of the cache into v.
 func (cache JSONCache[T]) UpdateAndRead(v *T) error {
 	if err := DownloadFile(DownloadEntry{
 		URL:      cache.URL,
@@ -36,6 +39,8 @@ func (cache JSONCache[T]) UpdateAndRead(v *T) error {
 	}
 	return nil
 }
+
+// Sha1 returns the SHA1 checksum of the cache
 func (cache JSONCache[T]) Sha1() (string, error) {
 	f, err := os.Open(cache.Path)
 	if err != nil {

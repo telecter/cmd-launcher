@@ -16,15 +16,10 @@ import (
 )
 
 var (
-	// Client ID of the launcher. You probably should not use this, as it will make it difficult to later set up your own redirect URL.
-	ClientID = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
-	// Redirect URL of the launcher. If you have your own client, you will need your own redirect URL.
-	RedirectURL = "http://localhost:8000/signin"
-	scope       = "XboxLive.SignIn,offline_access"
-	scopeSpaced = "XboxLive.signin offline_access"
+	scope = "XboxLive.signin offline_access"
 )
 
-// All required auth information to launch Minecraft.
+// A Session holds the necessary information to start Minecraft authenticated.
 type Session struct {
 	UUID        string
 	Username    string
@@ -212,12 +207,14 @@ func (minecraft) authenticate(xstsToken string, userhash string) (minecraftRespo
 	}
 	return data, profile, nil
 }
-func Authenticate() (Session, error) {
+
+// Authenticate authenticates with all necessary endpoints, or cached data if available and returns a Session.
+func Authenticate(clientID string) (Session, error) {
 	if Store.MSA.RefreshToken == "" {
 		return Session{}, fmt.Errorf("no account found")
 	}
 	if !Store.MSA.isValid() {
-		if err := Store.MSA.refresh(); err != nil {
+		if err := Store.MSA.refresh(clientID); err != nil {
 			return Session{}, fmt.Errorf("authenticate with MSA: %w", err)
 		}
 	}
@@ -246,12 +243,12 @@ func Authenticate() (Session, error) {
 	}, nil
 }
 
-// Return the URL for the user to navigate to for the OAuth2 Code flow.
-func GetBrowserAuthURL(clientID string, redirectURL string) *url.URL {
+// GetBrowserAuthURL returns the URL for the user to navigate to for the OAuth2 Code flow.
+func GetBrowserAuthURL(clientID string, redirectURL *url.URL) *url.URL {
 	query := url.Values{
 		"client_id":     {clientID},
 		"response_type": {"code"},
-		"redirect_uri":  {redirectURL},
+		"redirect_uri":  {redirectURL.String()},
 		"scope":         {scope},
 		"response_mode": {"query"},
 	}
@@ -260,14 +257,19 @@ func GetBrowserAuthURL(clientID string, redirectURL string) *url.URL {
 	return loc
 }
 
-// Authenticate using the OAuth2 Code flow.
+// AuthenticateWithRedirect authenticates using the OAuth2 Code flow.
 //
 // This function blocks until a response has been recieved on the local authentication server.
-func AuthenticateWithRedirect(clientID string, redirectURL string) (Session, error) {
+func AuthenticateWithRedirect(clientID string, redirectURL *url.URL) (Session, error) {
 	var code string
 	var err error
-	server := &http.Server{Addr: ":8000", Handler: nil}
-	http.HandleFunc("/signin", func(w http.ResponseWriter, req *http.Request) {
+
+	port := redirectURL.Port()
+	if port == "" {
+		return Session{}, fmt.Errorf("redirect URL must have port specified")
+	}
+	server := &http.Server{Addr: ":" + port, Handler: nil}
+	http.HandleFunc(redirectURL.Path, func(w http.ResponseWriter, req *http.Request) {
 		params := req.URL.Query()
 
 		if params.Get("error") != "" {
@@ -287,7 +289,7 @@ func AuthenticateWithRedirect(clientID string, redirectURL string) (Session, err
 	resp, err := MSA.authenticate(url.Values{
 		"client_id":    {clientID},
 		"scope":        {scope},
-		"redirect_uri": {redirectURL},
+		"redirect_uri": {redirectURL.String()},
 		"grant_type":   {"authorization_code"},
 		"code":         {code},
 	})
@@ -296,7 +298,7 @@ func AuthenticateWithRedirect(clientID string, redirectURL string) (Session, err
 	}
 	Store.MSA.write(resp)
 
-	return Authenticate()
+	return Authenticate(clientID)
 }
 
 type deviceCodeResponse struct {
@@ -308,12 +310,12 @@ type deviceCodeResponse struct {
 	Message         string `json:"message"`
 }
 
-// Fetch a device code that can be used to authenticate the user.
+// FetchDevicesCode retrieves a device code that can be used to authenticate the user.
 // Used in the OAuth2 Device Code flow.
 func FetchDeviceCode(clientID string) (deviceCodeResponse, error) {
 	params := url.Values{
 		"client_id": {clientID},
-		"scope":     {scopeSpaced},
+		"scope":     {scope},
 	}
 	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
 	if err != nil {
@@ -330,7 +332,7 @@ func FetchDeviceCode(clientID string) (deviceCodeResponse, error) {
 	return data, nil
 }
 
-// Authenticate with a device code.
+// AuthenticateWithCode authenticates with a device code.
 //
 // This function blocks until the user has been authenticated, or another error has occurred.
 func AuthenticateWithCode(clientID string, codeResp deviceCodeResponse) (Session, error) {
@@ -353,5 +355,5 @@ func AuthenticateWithCode(clientID string, codeResp deviceCodeResponse) (Session
 			return Session{}, errors.New(resp.Error)
 		}
 	}
-	return Authenticate()
+	return Authenticate(clientID)
 }

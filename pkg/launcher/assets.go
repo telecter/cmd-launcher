@@ -12,12 +12,14 @@ import (
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
+// An asset is a runtime representation of a game asset.
 type asset struct {
 	meta.AssetObject
 	URL         string
 	RuntimePath string
 }
 
+// newAsset creates an asset from a meta.AssetObject.
 func newAsset(object meta.AssetObject) asset {
 	return asset{
 		URL:         fmt.Sprintf(meta.MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash),
@@ -26,6 +28,7 @@ func newAsset(object meta.AssetObject) asset {
 	}
 }
 
+// isDownloaded reports whether asset exists and has a valid checksum.
 func (asset asset) isDownloaded() bool {
 	data, err := os.ReadFile(asset.RuntimePath)
 	if err != nil {
@@ -35,6 +38,7 @@ func (asset asset) isDownloaded() bool {
 	return asset.Hash == hex.EncodeToString(sum[:])
 }
 
+// downloadEntry returns a DownloadEntry to fetch asset.
 func (asset asset) downloadEntry() network.DownloadEntry {
 	return network.DownloadEntry{
 		URL:      asset.URL,
@@ -42,6 +46,7 @@ func (asset asset) downloadEntry() network.DownloadEntry {
 	}
 }
 
+// filterAssets takes index, transforms its objects to assets and returns the ones that are not downloaded.
 func filterAssets(index meta.AssetIndex) (required []asset) {
 	for _, object := range index.Objects {
 		asset := newAsset(object)
@@ -52,6 +57,7 @@ func filterAssets(index meta.AssetIndex) (required []asset) {
 	return required
 }
 
+// downloadAssetIndex retrieves the asset index for the specified version.
 func downloadAssetIndex(versionMeta meta.VersionMeta) (meta.AssetIndex, error) {
 	cache := network.JSONCache[meta.AssetIndex]{
 		Path: filepath.Join(env.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),

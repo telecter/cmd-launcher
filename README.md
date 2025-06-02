@@ -14,6 +14,8 @@ A minimal command line Minecraft launcher.
   - [Instance Configuration](#instance-configuration)
   - [Search](#search)
 
+[API Documentation](docs/API.md)
+
 ## Installation
 Make sure you have [Go](https://go.dev) installed.
 

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"time"
 
 	"dario.cat/mergo"
@@ -23,15 +22,6 @@ func (watcher watcher) Handle(event any) {
 		watcher.DownloadProgressBar.ChangeMax(e.Total)
 		watcher.DownloadProgressBar.Add(1)
 	}
-}
-
-type runner struct{}
-
-func (runner) Run(cmd *exec.Cmd) error {
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 type Start struct {
@@ -73,7 +63,7 @@ func (c *Start) Run(ctx *kong.Context) error {
 		Username: c.Username,
 	}
 	if c.Username == "" {
-		session, err = auth.Authenticate()
+		session, err = auth.Authenticate(clientID)
 		if err != nil {
 			return fmt.Errorf("authenticate session: %w", err)
 		}
@@ -103,5 +93,5 @@ func (c *Start) Run(ctx *kong.Context) error {
 	if err != nil {
 		return err
 	}
-	return launcher.Launch(launchEnv, runner{})
+	return launcher.Launch(launchEnv, launcher.ConsoleRunner{})
 }

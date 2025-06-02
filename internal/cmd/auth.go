@@ -2,11 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/alecthomas/kong"
 	"github.com/pkg/browser"
 	"github.com/telecter/cmd-launcher/pkg/auth"
 )
+
+const clientID = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
+
+var redirectURL, _ = url.Parse("http://localhost:8000/signin")
 
 type Login struct {
 	NoBrowser bool `name:"no-browser" help:"Use device code instead of browser for authentication"`
@@ -15,27 +20,27 @@ type Login struct {
 func (c *Login) Run(ctx *kong.Context) error {
 	var session auth.Session
 
-	session, err := auth.Authenticate()
+	session, err := auth.Authenticate(clientID)
 	if err != nil {
 		if c.NoBrowser {
-			resp, err := auth.FetchDeviceCode(auth.ClientID)
+			resp, err := auth.FetchDeviceCode(clientID)
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
 			fmt.Printf("Use the code %s at %s to sign in\n", resp.UserCode, resp.VerificationURI)
 			fmt.Println("Waiting for authentication....")
-			session, err = auth.AuthenticateWithCode(auth.ClientID, resp)
+			session, err = auth.AuthenticateWithCode(clientID, resp)
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}
 		} else {
 			fmt.Println("Opening browser for authentication...")
-			url := auth.GetBrowserAuthURL(auth.ClientID, auth.RedirectURL)
+			url := auth.GetBrowserAuthURL(clientID, redirectURL)
 			if err := browser.OpenURL(url.String()); err != nil {
 				return fmt.Errorf("open browser: %w", err)
 			}
 			var err error
-			session, err = auth.AuthenticateWithRedirect(auth.ClientID, auth.RedirectURL)
+			session, err = auth.AuthenticateWithRedirect(clientID, redirectURL)
 
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)

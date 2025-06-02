@@ -10,7 +10,7 @@ import (
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
-// Global authentication store.
+// Store is the global authentication store.
 var Store AuthStore
 
 type msaAuthStore struct {
@@ -22,11 +22,10 @@ type msaAuthStore struct {
 func (store *msaAuthStore) isValid() bool {
 	return store.AccessToken != "" && store.Expires.After(time.Now())
 }
-func (store *msaAuthStore) refresh() error {
+func (store *msaAuthStore) refresh(clientID string) error {
 	resp, err := MSA.authenticate(url.Values{
-		"client_id":     {ClientID},
+		"client_id":     {clientID},
 		"scope":         {scope},
-		"redirect_uri":  {RedirectURL},
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {Store.MSA.RefreshToken},
 	})
@@ -111,7 +110,7 @@ func (store *minecraftAuthStore) write(resp minecraftResponse, profile minecraft
 	store.UUID = profile.ID
 }
 
-// Authentication store which stores necessary information to log in.
+// An AuthStore is an authentication store which stores necessary information to log in.
 type AuthStore struct {
 	MSA       msaAuthStore       `json:"msa"`
 	XBL       xblAuthStore       `json:"xbl"`
@@ -119,19 +118,19 @@ type AuthStore struct {
 	Minecraft minecraftAuthStore `json:"minecraft"`
 }
 
-// Write the AuthStore to the file specified in env.AuthStorePath
+// WriteToCache writes the store to the file specified in env.AuthStorePath
 func (store *AuthStore) WriteToCache() error {
 	data, _ := json.MarshalIndent(store, "", "    ")
 	return os.WriteFile(env.AuthStorePath, data, 0644)
 }
 
-// Clear the AuthStore and write it to the file specified in env.AuthStorePath
+// Clear clears the store and writes it to the file specified in env.AuthStorePath
 func (store *AuthStore) Clear() error {
 	store = &AuthStore{}
 	return store.WriteToCache()
 }
 
-// Read an AuthStore into the global store from the file specified in env.AuthStorePath
+// ReadFromCache reads an AuthStore into the global store from the file specified in env.AuthStorePath
 //
 // This function should be run in order to load the authentication info from the cache. If it is not, the global AuthStore will be blank.
 func ReadFromCache() error {

@@ -15,6 +15,7 @@ import (
 	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
+// Loader represents a game mod loader.
 type Loader string
 
 const (
@@ -36,6 +37,7 @@ type EnvOptions struct {
 	DisableChat        bool
 }
 
+// A launchEnvironment represents the data needed to start the game.
 type launchEnvironment struct {
 	gameDir   string
 	javaPath  string
@@ -45,35 +47,45 @@ type launchEnvironment struct {
 	gameArgs  []string
 }
 
-// A watcher that handles launch events
+// An EventWatcher is a controller that handles game preparation events.
 type EventWatcher interface {
 	Handle(event any)
 }
 
-// Created when all game libraries have been identified and filtered
+// LibrariesResolvedEvent is created when all game libraries have been identified and filtered.
 type LibrariesResolvedEvent struct {
 	Libraries int
 }
 
-// Called when all game assets have been identified and filtered
+// AssetsResolvedEvent is called when all game assets have been identified and filtered.
 type AssetsResolvedEvent struct {
 	Assets int
 }
 
-// Called when a download has progressed
+// DownloadingEvent is called when a download has progressed.
 type DownloadingEvent struct {
 	Completed int
 	Total     int
 }
 
-// A runner which manages the starting of the game
+// A Runner is a controller which manages the starting of the game.
 type Runner interface {
 	Run(cmd *exec.Cmd) error
 }
 
-// Launch a game environment.
+// An ConsoleRunner is an implementation of Runner which logs game output to the console.
+type ConsoleRunner struct{}
+
+func (ConsoleRunner) Run(cmd *exec.Cmd) error {
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+// Launch a launchEnvironment with the specified runner.
 //
-// This function starts the game but does not wait for it to finish.
+// The Java executable is checked and the classpath and command arguments are finalized.
 func Launch(launchEnv launchEnvironment, runner Runner) error {
 	info, err := os.Stat(launchEnv.javaPath)
 	if err != nil {
@@ -94,7 +106,7 @@ func Launch(launchEnv launchEnvironment, runner Runner) error {
 	return runner.Run(cmd)
 }
 
-// Prepare the specified instance to be launched with the provided options.
+// Prepare prepares the specified instance to be launched with the provided options and sends events to watcher.
 func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnvironment, error) {
 	launchEnv := launchEnvironment{
 		javaPath: options.Config.Java,

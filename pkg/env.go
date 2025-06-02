@@ -7,25 +7,19 @@ import (
 	"path/filepath"
 )
 
-// Base launcher directory. Defaults to "$HOME/.minecraft"
-var RootDir string
+var RootDir string // Base launcher directory. Defaults to "$HOME/.minecraft"
 
-// Java libraries directory
-var LibrariesDir string
+var LibrariesDir string // Java libraries directory
 
-// Instances directory
-var InstancesDir string
+var InstancesDir string // Instances directory
 
-// Caches directory, e.g. version metadata, version manifest.
-var CachesDir string
+var CachesDir string // Caches directory, e.g. version metadata, version manifest.
 
-// Game assets directory and asset index
-var AssetsDir string
+var AssetsDir string // Game assets directory and asset index
 
-// Path of the global authentication store
-var AuthStorePath string
+var AuthStorePath string // Path of the global authentication store
 
-// Set all directories from a root directory. These values can also be changed individually.
+// SetDirs sets all directories to defaults from rootDir. These values can also be changed individually.
 // However, they should not be changed between operations, as the launcher will not be able to find necessary files.
 func SetDirs(rootDir string) error {
 	RootDir = rootDir

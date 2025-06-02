@@ -17,6 +17,7 @@ type DownloadEntry struct {
 	Filename string
 }
 
+// FetchJSON fetches url and unmarshals its JSON contents into v
 func FetchJSON(url string, v any) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -27,6 +28,9 @@ func FetchJSON(url string, v any) error {
 	return json.Unmarshal(data, v)
 }
 
+// DownloadFile downloads the specified DownloadEntry and saves it.
+//
+// All parent directories are created in order to create the file.
 func DownloadFile(entry DownloadEntry) error {
 	resp, err := http.Get(entry.URL)
 	if err != nil {
@@ -48,6 +52,7 @@ func DownloadFile(entry DownloadEntry) error {
 	return nil
 }
 
+// StartDownloadEntries runs DownloadFile on each specified DownloadEntry and returns a channel with the download results.
 func StartDownloadEntries(entries []DownloadEntry) chan error {
 	var wg sync.WaitGroup
 	results := make(chan error)
@@ -70,6 +75,7 @@ func StartDownloadEntries(entries []DownloadEntry) chan error {
 	return results
 }
 
+// CheckResponse ensures the status code of an http.Response is successful.
 func CheckResponse(resp *http.Response) error {
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
 		return fmt.Errorf("%s %s (%s)", resp.Request.Method, resp.Request.URL, resp.Status)
