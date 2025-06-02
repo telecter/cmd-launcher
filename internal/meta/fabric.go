@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/network"
+	env "github.com/telecter/cmd-launcher/pkg"
 )
 
 type FabricVersionList []struct {
@@ -47,7 +47,7 @@ const QUILT_PROFILES_URL = "https://meta.quiltmc.org/v3/versions/loader/%s/%s/pr
 
 func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 	cache := network.JSONCache[FabricVersionList]{
-		Path: filepath.Join(internal.CachesDir, fabricLoader.String(), "versions.json"),
+		Path: filepath.Join(env.CachesDir, fabricLoader.String(), "versions.json"),
 	}
 	switch fabricLoader {
 	case FabricLoaderStandard:
@@ -67,7 +67,7 @@ func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 
 func GetFabricMeta(gameVersion string, loaderVersion string, fabricLoader FabricLoader) (FabricMeta, error) {
 	cache := network.JSONCache[FabricMeta]{
-		Path: filepath.Join(internal.CachesDir, fabricLoader.String(), loaderVersion+"-"+gameVersion+".json"),
+		Path: filepath.Join(env.CachesDir, fabricLoader.String(), loaderVersion+"-"+gameVersion+".json"),
 	}
 	switch fabricLoader {
 	case FabricLoaderStandard:

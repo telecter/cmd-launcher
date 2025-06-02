@@ -1,11 +1,38 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"time"
+
 	"dario.cat/mergo"
 	"github.com/alecthomas/kong"
-	"github.com/telecter/cmd-launcher/internal/auth"
-	"github.com/telecter/cmd-launcher/internal/launcher"
+	"github.com/schollz/progressbar/v3"
+	"github.com/telecter/cmd-launcher/pkg/auth"
+	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
+
+type watcher struct {
+	DownloadProgressBar *progressbar.ProgressBar
+}
+
+func (watcher watcher) Handle(event any) {
+	switch e := event.(type) {
+	case launcher.DownloadingEvent:
+		watcher.DownloadProgressBar.ChangeMax(e.Total)
+		watcher.DownloadProgressBar.Add(1)
+	}
+}
+
+type runner struct{}
+
+func (runner) Run(cmd *exec.Cmd) error {
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
 
 type Start struct {
 	ID          string `arg:"" name:"id" help:"Instance to launch"`
@@ -41,10 +68,18 @@ func (c *Start) Run(ctx *kong.Context) error {
 		MaxMemory: c.MaxMemory,
 	}
 	mergo.Merge(&config, override, mergo.WithOverride)
-	options := launcher.LaunchOptions{
-		Session: auth.Session{
-			Username: c.Username,
-		},
+
+	session := auth.Session{
+		Username: c.Username,
+	}
+	if c.Username == "" {
+		session, err = auth.Authenticate()
+		if err != nil {
+			return fmt.Errorf("authenticate session: %w", err)
+		}
+	}
+	options := launcher.EnvOptions{
+		Session:            session,
 		Config:             config,
 		QuickPlayServer:    c.Server,
 		Demo:               c.Demo,
@@ -52,8 +87,21 @@ func (c *Start) Run(ctx *kong.Context) error {
 		DisableChat:        c.DisableChat,
 	}
 
-	if err := launcher.Launch(inst, options); err != nil {
+	launchEnv, err := launcher.Prepare(inst, options, watcher{
+		DownloadProgressBar: progressbar.NewOptions(0,
+			progressbar.OptionSetDescription("Downloading files"),
+			progressbar.OptionSetWriter(os.Stdout),
+			progressbar.OptionThrottle(65*time.Millisecond),
+			progressbar.OptionShowCount(),
+			progressbar.OptionShowIts(),
+			progressbar.OptionOnCompletion(func() {
+				fmt.Print("\n")
+			}),
+			progressbar.OptionFullWidth(),
+		)})
+
+	if err != nil {
 		return err
 	}
-	return nil
+	return launcher.Launch(launchEnv, runner{})
 }

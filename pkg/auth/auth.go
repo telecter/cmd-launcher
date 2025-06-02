@@ -1,3 +1,4 @@
+// Package auth provides functions related to game authentication.
 package auth
 
 import (
@@ -11,17 +12,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/browser"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 var (
-	clientID    = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
+	// Client ID of the launcher. You probably should not use this, as it will make it difficult to later set up your own redirect URL.
+	ClientID = "6a533aa3-afbf-45a4-91bc-8c35a37e35c7"
+	// Redirect URL of the launcher. If you have your own client, you will need your own redirect URL.
+	RedirectURL = "http://localhost:8000/signin"
 	scope       = "XboxLive.SignIn,offline_access"
 	scopeSpaced = "XboxLive.signin offline_access"
-	redirectURL = "http://localhost:8000/signin"
 )
 
+// All required auth information to launch Minecraft.
 type Session struct {
 	UUID        string
 	Username    string
@@ -243,7 +246,8 @@ func Authenticate() (Session, error) {
 	}, nil
 }
 
-func AuthenticateWithBrowser() (Session, error) {
+// Return the URL for the user to navigate to for the OAuth2 Code flow.
+func GetBrowserAuthURL(clientID string, redirectURL string) *url.URL {
 	query := url.Values{
 		"client_id":     {clientID},
 		"response_type": {"code"},
@@ -253,11 +257,13 @@ func AuthenticateWithBrowser() (Session, error) {
 	}
 	loc, _ := url.Parse("https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize")
 	loc.RawQuery = query.Encode()
+	return loc
+}
 
-	if err := browser.OpenURL(loc.String()); err != nil {
-		return Session{}, fmt.Errorf("open browser: %w", err)
-	}
-
+// Authenticate using the OAuth2 Code flow.
+//
+// This function blocks until a response has been recieved on the local authentication server.
+func AuthenticateWithRedirect(clientID string, redirectURL string) (Session, error) {
 	var code string
 	var err error
 	server := &http.Server{Addr: ":8000", Handler: nil}
@@ -268,7 +274,7 @@ func AuthenticateWithBrowser() (Session, error) {
 			fmt.Fprintf(w, "Failed to log in. An error occurred during authentication: %s", params.Get("error_description"))
 			err = fmt.Errorf("get MSA code interactively: %s", params.Get("error_description"))
 		} else {
-			fmt.Fprintf(w, "Logged in! You can close this window and return to the launcher.")
+			fmt.Fprintf(w, "Logged in! You can close this window.")
 		}
 		code = params.Get("code")
 		go server.Shutdown(context.Background())
@@ -302,7 +308,9 @@ type deviceCodeResponse struct {
 	Message         string `json:"message"`
 }
 
-func FetchDeviceCode() (deviceCodeResponse, error) {
+// Fetch a device code that can be used to authenticate the user.
+// Used in the OAuth2 Device Code flow.
+func FetchDeviceCode(clientID string) (deviceCodeResponse, error) {
 	params := url.Values{
 		"client_id": {clientID},
 		"scope":     {scopeSpaced},
@@ -322,7 +330,10 @@ func FetchDeviceCode() (deviceCodeResponse, error) {
 	return data, nil
 }
 
-func AuthenticateWithCode(codeResp deviceCodeResponse) (Session, error) {
+// Authenticate with a device code.
+//
+// This function blocks until the user has been authenticated, or another error has occurred.
+func AuthenticateWithCode(clientID string, codeResp deviceCodeResponse) (Session, error) {
 	for {
 		resp, err := MSA.authenticate(url.Values{
 			"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},

@@ -3,18 +3,20 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/telecter/cmd-launcher/internal/launcher"
 	"github.com/telecter/cmd-launcher/internal/meta"
+	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
 type Search struct {
-	Query string `arg:"" name:"query" help:"Search query" optional:""`
-	Kind  string `name:"kind" help:"What to search for" short:"k" enum:"instances,versions,fabric,quilt" default:"instances"`
+	Query   string `arg:"" name:"query" help:"Search query" optional:""`
+	Kind    string `name:"kind" help:"What to search for" short:"k" enum:"instances,versions,fabric,quilt" default:"instances"`
+	Reverse bool   `name:"reverse" short:"r" help:"Reverse the listing"`
 }
 
 func (c *Search) Run(ctx *kong.Context) error {
@@ -61,6 +63,11 @@ func (c *Search) Run(ctx *kong.Context) error {
 			}
 		}
 	}
+
+	if c.Reverse {
+		slices.Reverse(rows)
+	}
+
 	t := table.NewWriter()
 	t.SetStyle(table.StyleLight)
 	t.SetOutputMirror(os.Stdout)

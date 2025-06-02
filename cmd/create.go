@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/kong"
-	"github.com/telecter/cmd-launcher/internal/launcher"
+	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
 type Create struct {

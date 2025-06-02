@@ -7,14 +7,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal"
+	env "github.com/telecter/cmd-launcher/pkg"
 )
 
 const MAVEN_REPO_URL = "https://repo.maven.apache.org/maven2/%s"
 
 func GetMavenLibrary(name string, path string) Library {
 	url := fmt.Sprintf(MAVEN_REPO_URL, path)
-	sumPath := filepath.Join(internal.LibrariesDir, filepath.Dir(path), filepath.Base(path)+".sha1")
+	sumPath := filepath.Join(env.LibrariesDir, filepath.Dir(path), filepath.Base(path)+".sha1")
 	var sum []byte
 	sum, err := os.ReadFile(sumPath)
 	if err != nil {

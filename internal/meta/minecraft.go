@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/network"
+	env "github.com/telecter/cmd-launcher/pkg"
 )
 
 type VersionManifest struct {
@@ -120,7 +120,7 @@ const MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
 
 func GetVersionManifest() (VersionManifest, error) {
 	cache := network.JSONCache[VersionManifest]{
-		Path: filepath.Join(internal.CachesDir, "minecraft", "version_manifest.json"),
+		Path: filepath.Join(env.CachesDir, "minecraft", "version_manifest.json"),
 		URL:  VERSION_MANIFEST_URL,
 	}
 
@@ -142,7 +142,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 	for _, v := range manifest.Versions {
 		if v.ID == id {
 			cache := network.JSONCache[VersionMeta]{
-				Path: filepath.Join(internal.CachesDir, "minecraft", v.ID+".json"),
+				Path: filepath.Join(env.CachesDir, "minecraft", v.ID+".json"),
 				URL:  v.URL,
 			}
 			download := true

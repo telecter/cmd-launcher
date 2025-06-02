@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/kong"
-	"github.com/telecter/cmd-launcher/internal/auth"
+	"github.com/pkg/browser"
+	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
 type Login struct {
@@ -17,20 +18,25 @@ func (c *Login) Run(ctx *kong.Context) error {
 	session, err := auth.Authenticate()
 	if err != nil {
 		if c.NoBrowser {
-			resp, err := auth.FetchDeviceCode()
+			resp, err := auth.FetchDeviceCode(auth.ClientID)
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
 			fmt.Printf("Use the code %s at %s to sign in\n", resp.UserCode, resp.VerificationURI)
 			fmt.Println("Waiting for authentication....")
-			session, err = auth.AuthenticateWithCode(resp)
+			session, err = auth.AuthenticateWithCode(auth.ClientID, resp)
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}
 		} else {
 			fmt.Println("Opening browser for authentication...")
+			url := auth.GetBrowserAuthURL(auth.ClientID, auth.RedirectURL)
+			if err := browser.OpenURL(url.String()); err != nil {
+				return fmt.Errorf("open browser: %w", err)
+			}
 			var err error
-			session, err = auth.AuthenticateWithBrowser()
+			session, err = auth.AuthenticateWithRedirect(auth.ClientID, auth.RedirectURL)
+
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}

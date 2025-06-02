@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal"
 	"github.com/telecter/cmd-launcher/internal/meta"
+	env "github.com/telecter/cmd-launcher/pkg"
 )
 
 type InstanceOptions struct {
@@ -47,6 +47,7 @@ var defaultConfig = InstanceConfig{
 	MaxMemory: 4096,
 }
 
+// Create a new instance with the specified options.
 func CreateInstance(options InstanceOptions) (Instance, error) {
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
@@ -84,7 +85,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		loaderVersion = fabricVersions[0].Version
 	}
 
-	dir := filepath.Join(internal.InstancesDir, options.Name)
+	dir := filepath.Join(env.InstancesDir, options.Name)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return Instance{}, fmt.Errorf("create instance directory: %w", err)
 	}
@@ -106,6 +107,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 	return inst, nil
 }
 
+// Remove an instance.
 func RemoveInstance(id string) error {
 	inst, err := GetInstance(id)
 	if err != nil {
@@ -117,8 +119,9 @@ func RemoveInstance(id string) error {
 	return nil
 }
 
+// Retrieve an instance.
 func GetInstance(id string) (Instance, error) {
-	dir := filepath.Join(internal.InstancesDir, id)
+	dir := filepath.Join(env.InstancesDir, id)
 	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
 	if errors.Is(err, os.ErrNotExist) {
 		return Instance{}, fmt.Errorf("instance does not exist")
@@ -134,8 +137,9 @@ func GetInstance(id string) (Instance, error) {
 	return inst, nil
 }
 
+// Retrieve all instances.
 func GetAllInstances() ([]Instance, error) {
-	entries, err := os.ReadDir(internal.InstancesDir)
+	entries, err := os.ReadDir(env.InstancesDir)
 	if errors.Is(err, os.ErrNotExist) {
 		return []Instance{}, nil
 	}
@@ -155,6 +159,7 @@ func GetAllInstances() ([]Instance, error) {
 	return insts, nil
 }
 
+// Check whether instance exists.
 func IsInstanceExist(id string) bool {
 	_, err := GetInstance(id)
 	return err == nil

@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/alecthomas/kong"
 	"github.com/telecter/cmd-launcher/cmd"
-	"github.com/telecter/cmd-launcher/internal"
-	"github.com/telecter/cmd-launcher/internal/auth"
+	internal "github.com/telecter/cmd-launcher/pkg"
+	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
 type CLI struct {
@@ -21,21 +19,14 @@ type CLI struct {
 }
 
 func (c *CLI) AfterApply() error {
-	if c.Dir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("get user home directory: %w", err)
+	if c.Dir != "" {
+		if err := internal.SetDirs(c.Dir); err != nil {
+			return err
 		}
-		c.Dir = filepath.Join(home, ".minecraft")
 	}
-	if err := internal.SetDirs(c.Dir); err != nil {
-		return err
-	}
-
 	if err := auth.ReadFromCache(); err != nil {
 		return fmt.Errorf("read auth store: %w", err)
 	}
-
 	return nil
 }
 
