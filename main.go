@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/kong"
-	"github.com/telecter/cmd-launcher/cmd"
-	internal "github.com/telecter/cmd-launcher/pkg"
+	"github.com/telecter/cmd-launcher/internal/cmd"
+	env "github.com/telecter/cmd-launcher/pkg"
 	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
@@ -20,7 +20,7 @@ type CLI struct {
 
 func (c *CLI) AfterApply() error {
 	if c.Dir != "" {
-		if err := internal.SetDirs(c.Dir); err != nil {
+		if err := env.SetDirs(c.Dir); err != nil {
 			return err
 		}
 	}
