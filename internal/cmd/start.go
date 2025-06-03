@@ -63,7 +63,7 @@ func (c *Start) Run(ctx *kong.Context) error {
 		Username: c.Username,
 	}
 	if c.Username == "" {
-		session, err = auth.Authenticate(clientID)
+		session, err = auth.Authenticate()
 		if err != nil {
 			return fmt.Errorf("authenticate session: %w", err)
 		}
