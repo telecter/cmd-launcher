@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 )
 
@@ -40,7 +40,7 @@ func DownloadFile(entry DownloadEntry) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if err := os.MkdirAll(path.Dir(entry.Filename), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(entry.Filename), 0755); err != nil {
 		return fmt.Errorf("create directory for file '%s': %w", entry.Filename, err)
 	}
 	out, err := os.Create(entry.Filename)

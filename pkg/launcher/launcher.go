@@ -83,7 +83,7 @@ func (ConsoleRunner) Run(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-// Launch a launchEnvironment with the specified runner.
+// Launch starts a launchEnvironment with the specified runner.
 //
 // The Java executable is checked and the classpath and command arguments are finalized.
 func Launch(launchEnv launchEnvironment, runner Runner) error {
