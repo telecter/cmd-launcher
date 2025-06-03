@@ -21,7 +21,7 @@ Make sure you have [Go](https://go.dev) installed.
 
 **To install, run:**
 ```bash
-go install github.com/telecter/cmd-launcher@main
+go install github.com/telecter/cmd-launcher@latest
 ```
 ### Building from source
 
