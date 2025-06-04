@@ -8,6 +8,7 @@ import (
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
+// A FabricVersionList is a list of all Fabric loader versions.
 type FabricVersionList []struct {
 	Separator string `json:"separator"`
 	Build     int    `json:"build"`
@@ -15,6 +16,8 @@ type FabricVersionList []struct {
 	Version   string `json:"version"`
 	Stable    bool   `json:"stable"`
 }
+
+// A FabricMeta is metadata of the libraries and other data needed to start a Fabric-modded game.
 type FabricMeta struct {
 	ID           string `json:"id"`
 	InheritsFrom string `json:"inheritsFrom"`
@@ -84,5 +87,15 @@ func GetFabricMeta(gameVersion string, loaderVersion string, fabricLoader Fabric
 			return FabricMeta{}, fmt.Errorf("retrieve metadata for %s version %s: %w", fabricLoader, loaderVersion, err)
 		}
 	}
+	for i, library := range meta.Libraries {
+		path := library.Name.Path()
+		meta.Libraries[i].Artifact = Artifact{
+			Path: path,
+			URL:  library.URL + "/" + path,
+			Sha1: library.Sha1,
+			Size: library.Size,
+		}
+	}
+
 	return meta, nil
 }

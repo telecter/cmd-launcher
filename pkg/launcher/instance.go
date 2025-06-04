@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/telecter/cmd-launcher/internal/meta"
@@ -46,7 +47,6 @@ var defaultConfig = InstanceConfig{
 		Width:  1708,
 		Height: 960,
 	},
-	Java:      "/usr/bin/java",
 	MinMemory: 512,
 	MaxMemory: 4096,
 }
@@ -102,7 +102,10 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		LoaderVersion: loaderVersion,
 		Config:        defaultConfig,
 	}
-
+	java, err := exec.LookPath("java")
+	if err == nil {
+		inst.Config.Java = java
+	}
 	data, _ := json.MarshalIndent(inst, "", "    ")
 	if err := os.WriteFile(filepath.Join(dir, "instance.json"), data, 0644); err != nil {
 		return Instance{}, fmt.Errorf("write instant metadata: %w", err)

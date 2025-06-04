@@ -38,5 +38,8 @@ func (c *Create) Run(ctx *kong.Context) error {
 	} else {
 		fmt.Print("\n")
 	}
+	if inst.Config.Java == "" {
+		fmt.Println("Java could not be found. This means you will need to manually set its path in the instance configuration.")
+	}
 	return nil
 }
