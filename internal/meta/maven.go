@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/telecter/cmd-launcher/internal/network"
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
@@ -68,30 +69,33 @@ func NewLibrarySpecifier(s string) (LibrarySpecifier, error) {
 }
 
 // GetMavenLibrary returns library metadata for the specified name and path in the Maven repository.
-func GetMavenLibrary(specifier LibrarySpecifier) Library {
+func GetMavenLibrary(specifier LibrarySpecifier) (Library, error) {
 	path := specifier.Path()
 	url := fmt.Sprintf(MAVEN_REPO_URL, path)
+
 	sumPath := filepath.Join(env.LibrariesDir, filepath.Dir(path), filepath.Base(path)+".sha1")
 	var sum []byte
 	sum, err := os.ReadFile(sumPath)
+
 	if err != nil {
 		resp, err := http.Get(url + ".sha1")
-		if err == nil {
-			defer resp.Body.Close()
-			sum, _ = io.ReadAll(resp.Body)
-
-			os.MkdirAll(filepath.Dir(sumPath), 0755)
-			os.WriteFile(sumPath, sum, 0644)
-		} else {
-			sum = []byte{}
+		if err != nil {
+			return BaseLibrary{}, err
 		}
+		defer resp.Body.Close()
+		if err := network.CheckResponse(resp); err != nil {
+			return BaseLibrary{}, fmt.Errorf("library checksum could not fetched")
+		}
+		sum, _ = io.ReadAll(resp.Body)
+		os.MkdirAll(filepath.Dir(sumPath), 0755)
+		os.WriteFile(sumPath, sum, 0644)
 	}
-	return Library{
+	return BaseLibrary{
 		Name: specifier,
-		Artifact: Artifact{
+		LibraryArtifact: Artifact{
 			Path: path,
 			URL:  url,
 			Sha1: string(sum),
 		},
-	}
+	}, nil
 }

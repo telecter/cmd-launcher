@@ -43,7 +43,7 @@ cmd-launcher create -v 1.21.5 -l fabric CoolInstance
 ```
 If you want to delete an instance, use the `delete` command.
 > [!IMPORTANT]
-> This launcher has not been tested for versions < 1.19. It may not work, but I am working on fixing these issues.
+> This launcher has not been tested for versions < 1.14. It may not work, but I am working on fixing these issues.
 
 ### Starting the Game
 To start Minecraft, simply run the `start` command followed by the instance ID.

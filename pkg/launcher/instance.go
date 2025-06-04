@@ -87,6 +87,9 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 			return Instance{}, fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
 		}
 		loaderVersion = fabricVersions[0].Version
+		if _, err := meta.GetFabricMeta(options.GameVersion, loaderVersion, fabricLoader); err != nil {
+			return Instance{}, err
+		}
 	}
 
 	dir := filepath.Join(env.InstancesDir, options.Name)

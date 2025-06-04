@@ -29,7 +29,30 @@ type FabricMeta struct {
 		Game []any    `json:"game"`
 		Jvm  []string `json:"jvm"`
 	} `json:"arguments"`
-	Libraries []Library
+	Libraries []FabricLibrary
+}
+
+type FabricLibrary struct {
+	URL  string `json:"url,omitempty"`
+	Sha1 string `json:"sha1,omitempty"`
+	Size int    `json:"size,omitempty"`
+	Name LibrarySpecifier
+}
+
+func (library FabricLibrary) Artifact() Artifact {
+	path := library.Name.Path()
+	return Artifact{
+		Path: path,
+		URL:  library.URL + "/" + path,
+		Sha1: library.Sha1,
+		Size: library.Size,
+	}
+}
+func (library FabricLibrary) ShouldInstall() bool {
+	return true
+}
+func (library FabricLibrary) Specifier() LibrarySpecifier {
+	return library.Name
 }
 
 // FabricLoader represents a variant of the Fabric mod loader.
@@ -87,15 +110,5 @@ func GetFabricMeta(gameVersion string, loaderVersion string, fabricLoader Fabric
 			return FabricMeta{}, fmt.Errorf("retrieve metadata for %s version %s: %w", fabricLoader, loaderVersion, err)
 		}
 	}
-	for i, library := range meta.Libraries {
-		path := library.Name.Path()
-		meta.Libraries[i].Artifact = Artifact{
-			Path: path,
-			URL:  library.URL + "/" + path,
-			Sha1: library.Sha1,
-			Size: library.Size,
-		}
-	}
-
 	return meta, nil
 }

@@ -9,14 +9,18 @@ import (
 	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
-const VERSION = "1.0.0"
-const LICENSE = "Licensed MIT"
-const COPYRIGHT = "Copyright (c) 2024-2025 telecter"
+const (
+	NAME        = "cmd-launcher"
+	DESCRIPTION = "A minimal command line Minecraft launcher."
+	VERSION     = "1.0.0"
+	LICENSE     = "Licensed MIT"
+	COPYRIGHT   = "Copyright (c) 2024-2025 telecter"
+)
 
 type version struct{}
 
 func (version) Run(ctx *kong.Context) error {
-	fmt.Printf("cmd-launcher %s\n%s\n%s\n", VERSION, COPYRIGHT, LICENSE)
+	fmt.Printf("%s %s\n%s\n%s\n%s\n", NAME, VERSION, DESCRIPTION, COPYRIGHT, LICENSE)
 	return nil
 }
 
@@ -43,7 +47,7 @@ func (c *CLI) AfterApply() error {
 }
 
 func main() {
-	ctx := kong.Parse(&CLI{}, kong.UsageOnError(), kong.Description("A minimal command line Minecraft launcher."))
+	ctx := kong.Parse(&CLI{}, kong.UsageOnError(), kong.Name(NAME), kong.Description(DESCRIPTION))
 	err := ctx.Run()
 
 	ctx.FatalIfErrorf(err)

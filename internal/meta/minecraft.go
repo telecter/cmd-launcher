@@ -73,7 +73,7 @@ type VersionMeta struct {
 		Component    string `json:"component"`
 		MajorVersion int    `json:"majorVersion"`
 	} `json:"javaVersion"`
-	Libraries []Library `json:"libraries"`
+	Libraries []MojangLibrary `json:"libraries"`
 	Logging   struct {
 		Client struct {
 			Argument string `json:"argument"`
@@ -94,20 +94,25 @@ type VersionMeta struct {
 }
 
 // Client creates a library from the client JAR download of versionMeta.
-func (versionMeta VersionMeta) Client() Library {
+func (versionMeta VersionMeta) Client() MojangLibrary {
 	specifier, _ := NewLibrarySpecifier("com.mojang:minecraft:" + versionMeta.ID)
-	return Library{
+	return MojangLibrary{
 		Name: specifier,
-		Artifact: Artifact{
-			Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
-			Sha1: versionMeta.Downloads.Client.Sha1,
-			Size: versionMeta.Downloads.Client.Size,
-			URL:  versionMeta.Downloads.Client.URL,
+		Downloads: struct {
+			Artifact    Artifact            "json:\"artifact\""
+			Classifiers map[string]Artifact "json:\"classifiers\""
+		}{
+			Artifact: Artifact{
+				Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
+				Sha1: versionMeta.Downloads.Client.Sha1,
+				Size: versionMeta.Downloads.Client.Size,
+				URL:  versionMeta.Downloads.Client.URL,
+			},
 		},
 	}
 }
 
-// An Artifact is a library JAR file that can be downloaded
+// An Artifact represents a library JAR file that can be downloaded
 type Artifact struct {
 	Path string `json:"path"`
 	Sha1 string `json:"sha1"`
@@ -115,13 +120,38 @@ type Artifact struct {
 	URL  string `json:"url"`
 }
 
-// A Library is metadata of a game library and its artifact(s).
-//
-// It may have varying fields depending on whether it is provided from Mojang, or a Fabric/Quilt library, etc...
-type Library struct {
-	Artifact Artifact
-	Name     LibrarySpecifier `json:"name"`
+func (artifact Artifact) RuntimePath() string {
+	return filepath.Join(env.LibrariesDir, artifact.Path)
+}
+func (artifact Artifact) IsDownloaded() bool {
+	data, err := os.ReadFile(artifact.RuntimePath())
+	if err != nil {
+		return false
+	}
+	// if no checksum is present, still count the artifact as installed as long as the file exists
+	if artifact.Sha1 == "" {
+		return true
+	}
 
+	sum := sha1.Sum(data)
+	return artifact.Sha1 == hex.EncodeToString(sum[:])
+}
+func (artifact Artifact) DownloadEntry() network.DownloadEntry {
+	return network.DownloadEntry{
+		URL:      artifact.URL,
+		Filename: artifact.RuntimePath(),
+	}
+}
+
+// A Library represents metadata of a game library and its artifact(s).
+type Library interface {
+	Artifact() Artifact
+	ShouldInstall() bool
+	Specifier() LibrarySpecifier
+}
+
+type MojangLibrary struct {
+	Name      LibrarySpecifier `json:"name"`
 	Downloads struct {
 		Artifact    Artifact            `json:"artifact"`
 		Classifiers map[string]Artifact `json:"classifiers"`
@@ -133,43 +163,61 @@ type Library struct {
 		} `json:"os"`
 	} `json:"rules,omitempty"` // mojang
 	Natives map[string]string `json:"natives,omitempty"` // old mojang
-
-	URL  string `json:"url,omitempty"`  // fabric
-	Sha1 string `json:"sha1,omitempty"` // fabric
-	Size int    `json:"size,omitempty"` // fabric
 }
 
-// IsInstalled reports whether library exists in its runtimePath and has a valid checksum.
-func (library Library) IsInstalled() bool {
-	data, err := os.ReadFile(library.RuntimePath())
-	if err != nil {
-		return false
-	}
-	// if no checksum is present, still count the artifact as installed as long as the file exists
-	if library.Artifact.Sha1 == "" {
-		return true
-	}
-	sum := sha1.Sum(data)
-	return library.Artifact.Sha1 == hex.EncodeToString(sum[:])
+func (library MojangLibrary) Artifact() Artifact {
+	return library.Downloads.Artifact
 }
-func (library Library) DownloadEntry() network.DownloadEntry {
-	return network.DownloadEntry{
-		URL:      library.Artifact.URL,
-		Filename: library.RuntimePath(),
+func (library MojangLibrary) Classifiers() (natives []Library) {
+	var classifiers []string
+	for os, native := range library.Natives {
+		os = strings.ReplaceAll(os, "osx", "darwin")
+		if os == runtime.GOOS {
+			classifiers = append(classifiers, native)
+		}
 	}
+	for _, classifier := range classifiers {
+		artifact := library.Downloads.Classifiers[classifier]
+		if artifact.URL == "" {
+			continue
+		}
+		specifier := library.Name
+		specifier.Classifier = classifier
+		natives = append(natives, BaseLibrary{
+			LibraryArtifact: artifact,
+			Name:            specifier,
+		})
+	}
+	return natives
+}
+
+func (library MojangLibrary) Specifier() LibrarySpecifier {
+	return library.Name
 }
 
 // ShouldInstall reports whether the Rules field on library allows library to be installed.
-func (library Library) ShouldInstall() bool {
+func (library MojangLibrary) ShouldInstall() bool {
 	if len(library.Rules) > 0 {
 		rule := library.Rules[0]
 		os := strings.ReplaceAll(rule.Os.Name, "osx", "darwin")
-		return os == runtime.GOOS && rule.Action == "allow"
+		return rule.Action == "allow" && (os == runtime.GOOS || os == "")
 	}
 	return true
 }
-func (library Library) RuntimePath() string {
-	return filepath.Join(env.LibrariesDir, library.Artifact.Path)
+
+type BaseLibrary struct {
+	LibraryArtifact Artifact
+	Name            LibrarySpecifier
+}
+
+func (library BaseLibrary) Artifact() Artifact {
+	return library.LibraryArtifact
+}
+func (library BaseLibrary) Specifier() LibrarySpecifier {
+	return library.Name
+}
+func (BaseLibrary) ShouldInstall() bool {
+	return true
 }
 
 // An AssetIndex contains a map of asset objects and their names.
@@ -246,25 +294,6 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 				if err := cache.UpdateAndRead(&versionMeta); err != nil {
 					return VersionMeta{}, err
 				}
-			}
-			for i, library := range versionMeta.Libraries {
-				var classifiers []string
-				for os, classifier := range library.Natives {
-					os = strings.ReplaceAll(os, "osx", "darwin")
-					if os == runtime.GOOS {
-						classifiers = append(classifiers, classifier)
-					}
-				}
-				for _, classifier := range classifiers {
-					artifact := library.Downloads.Classifiers[classifier]
-					specifier := library.Name
-					specifier.Classifier = classifier
-					versionMeta.Libraries = append(versionMeta.Libraries, Library{
-						Artifact: artifact,
-						Name:     specifier,
-					})
-				}
-				versionMeta.Libraries[i].Artifact = library.Downloads.Artifact
 			}
 			return versionMeta, nil
 		}
