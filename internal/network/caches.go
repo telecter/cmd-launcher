@@ -9,8 +9,9 @@ import (
 )
 
 type JSONCache[T any] struct {
-	Path string
-	URL  string
+	Path       string
+	URL        string
+	RemoteSha1 string
 }
 
 // Read reads the contents of the cache into v.
@@ -29,8 +30,9 @@ func (cache JSONCache[T]) Read(v *T) error {
 // UpdateAndRead updates the cache with data from cache.URL and reads the contents of the cache into v.
 func (cache JSONCache[T]) UpdateAndRead(v *T) error {
 	if err := DownloadFile(DownloadEntry{
-		URL:      cache.URL,
-		Filename: cache.Path,
+		URL:  cache.URL,
+		Path: cache.Path,
+		Sha1: cache.RemoteSha1,
 	}); err != nil {
 		return err
 	}

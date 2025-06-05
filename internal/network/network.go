@@ -1,7 +1,8 @@
 package network
 
 import (
-	"encoding/json"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,19 +14,9 @@ import (
 const MAX_CONCURRENT_DOWNLOADS = 6
 
 type DownloadEntry struct {
-	URL      string
-	Filename string
-}
-
-// FetchJSON fetches url and unmarshals its JSON contents into v
-func FetchJSON(url string, v any) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	return json.Unmarshal(data, v)
+	URL  string
+	Path string
+	Sha1 string
 }
 
 // DownloadFile downloads the specified DownloadEntry and saves it.
@@ -40,15 +31,29 @@ func DownloadFile(entry DownloadEntry) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if err := os.MkdirAll(filepath.Dir(entry.Filename), 0755); err != nil {
-		return fmt.Errorf("create directory for file '%s': %w", entry.Filename, err)
+
+	if err := os.MkdirAll(filepath.Dir(entry.Path), 0755); err != nil {
+		return fmt.Errorf("create directory for file '%s': %w", entry.Path, err)
 	}
-	out, err := os.Create(entry.Filename)
+	out, err := os.Create(entry.Path)
 	if err != nil {
-		return fmt.Errorf("create file '%s': %w", entry.Filename, err)
+		return fmt.Errorf("create file '%s': %w", entry.Path, err)
 	}
 	defer out.Close()
-	io.Copy(out, resp.Body)
+
+	hash := sha1.New()
+	tee := io.TeeReader(resp.Body, hash)
+
+	if _, err := io.Copy(out, tee); err != nil {
+		return err
+	}
+
+	if entry.Sha1 != "" {
+		if hex.EncodeToString(hash.Sum(nil)) != entry.Sha1 {
+			return fmt.Errorf("invalid checksum from '%s'", entry.URL)
+		}
+	}
+
 	return nil
 }
 
@@ -75,10 +80,24 @@ func StartDownloadEntries(entries []DownloadEntry) chan error {
 	return results
 }
 
-// CheckResponse ensures the status code of an http.Response is successful.
+type HTTPStatusError struct {
+	URL        string
+	Method     string
+	StatusCode int
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("%s %s (%d)", e.Method, e.URL, e.StatusCode)
+}
+
+// CheckResponse ensures the status code of an http.Response is successful, returning an HTTPStatusError if not.
 func CheckResponse(resp *http.Response) error {
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
-		return fmt.Errorf("%s %s (%s)", resp.Request.Method, resp.Request.URL, resp.Status)
+		return &HTTPStatusError{
+			URL:        resp.Request.URL.String(),
+			Method:     resp.Request.Method,
+			StatusCode: resp.StatusCode,
+		}
 	}
 	return nil
 }

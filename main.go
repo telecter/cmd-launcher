@@ -25,13 +25,12 @@ func (version) Run(ctx *kong.Context) error {
 }
 
 type CLI struct {
-	Start   cmd.Start  `cmd:"" help:"Start the specified instance"`
-	Auth    cmd.Auth   `cmd:"" help:"Manage account authentication"`
-	Create  cmd.Create `cmd:"" help:"Create a new Minecraft instance"`
-	Search  cmd.Search `cmd:"" help:"Search versions and instances"`
-	Delete  cmd.Delete `cmd:"" help:"Delete a Minecraft instance"`
-	Version version    `cmd:"" help:"Display launcher version and about"`
-	Dir     string     `name:"dir" help:"Root directory to use for launcher" type:"path" placeholder:"PATH"`
+	Start    cmd.Start    `cmd:"" help:"Start the specified instance"`
+	Instance cmd.Instance `cmd:"" help:"Manage Minecraft instances" aliases:"inst"`
+	Auth     cmd.Auth     `cmd:"" help:"Manage account authentication"`
+	Search   cmd.Search   `cmd:"" help:"Search versions"`
+	Version  version      `cmd:"" help:"Display launcher version and about"`
+	Dir      string       `name:"dir" help:"Root directory to use for launcher" type:"path" placeholder:"PATH"`
 }
 
 func (c *CLI) AfterApply() error {

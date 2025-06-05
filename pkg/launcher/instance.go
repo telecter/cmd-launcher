@@ -13,19 +13,40 @@ import (
 )
 
 type InstanceOptions struct {
-	GameVersion string
-	Name        string
-	Loader      Loader
+	Name          string
+	GameVersion   string
+	Loader        Loader
+	LoaderVersion string
 }
 
 // An Instance represents a full installation of Minecraft and its information.
 type Instance struct {
-	Dir           string         `json:"-"`
 	Name          string         `json:"-"`
 	GameVersion   string         `json:"game_version"`
 	Loader        Loader         `json:"mod_loader"`
 	LoaderVersion string         `json:"mod_loader_version,omitempty"`
 	Config        InstanceConfig `json:"config"`
+}
+
+// WriteConfig marshals inst and writes it to the instance configuration file. This is used to save the instance configuration.
+//
+// The Name field is ignored, as it is based on the instance's directory.
+func (inst *Instance) WriteConfig() error {
+	data, _ := json.MarshalIndent(*inst, "", "    ")
+	return os.WriteFile(filepath.Join(inst.Dir(), "instance.json"), data, 0644)
+}
+
+func (inst *Instance) Dir() string {
+	return filepath.Join(env.InstancesDir, inst.Name)
+}
+
+// Rename renames instance to the specified new name
+func (inst *Instance) Rename(new string) error {
+	if err := os.Rename(inst.Dir(), filepath.Join(env.InstancesDir, new)); err != nil {
+		return err
+	}
+	inst.Name = new
+	return nil
 }
 
 // InstanceConfig represents the configurable values of an Instance.
@@ -73,7 +94,6 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		return Instance{}, err
 	}
 
-	var loaderVersion string
 	if options.Loader == LoaderFabric || options.Loader == LoaderQuilt {
 		var fabricLoader meta.FabricLoader
 		switch options.Loader {
@@ -82,36 +102,38 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		case LoaderQuilt:
 			fabricLoader = meta.FabricLoaderQuilt
 		}
-		fabricVersions, err := meta.GetFabricVersions(fabricLoader)
-		if err != nil {
-			return Instance{}, fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
+		if options.LoaderVersion == "" {
+			fabricVersions, err := meta.GetFabricVersions(fabricLoader)
+			if err != nil {
+				return Instance{}, fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
+			}
+			options.LoaderVersion = fabricVersions[0].Version
 		}
-		loaderVersion = fabricVersions[0].Version
-		if _, err := meta.GetFabricMeta(options.GameVersion, loaderVersion, fabricLoader); err != nil {
+		if _, err := meta.GetFabricMeta(options.GameVersion, options.LoaderVersion, fabricLoader); err != nil {
 			return Instance{}, err
 		}
+	} else {
+		options.LoaderVersion = ""
 	}
-
-	dir := filepath.Join(env.InstancesDir, options.Name)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return Instance{}, fmt.Errorf("create instance directory: %w", err)
-	}
-
 	inst := Instance{
-		Dir:           dir,
 		Name:          options.Name,
 		GameVersion:   options.GameVersion,
 		Loader:        options.Loader,
-		LoaderVersion: loaderVersion,
+		LoaderVersion: options.LoaderVersion,
 		Config:        defaultConfig,
 	}
+
+	if err := os.MkdirAll(inst.Dir(), 0755); err != nil {
+		return Instance{}, fmt.Errorf("create instance directory: %w", err)
+	}
+
 	java, err := exec.LookPath("java")
 	if err == nil {
 		inst.Config.Java = java
 	}
-	data, _ := json.MarshalIndent(inst, "", "    ")
-	if err := os.WriteFile(filepath.Join(dir, "instance.json"), data, 0644); err != nil {
-		return Instance{}, fmt.Errorf("write instant metadata: %w", err)
+
+	if err := inst.WriteConfig(); err != nil {
+		return Instance{}, fmt.Errorf("write instance configuration: %w", err)
 	}
 
 	return inst, nil
@@ -123,7 +145,7 @@ func RemoveInstance(id string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.RemoveAll(inst.Dir); err != nil {
+	if err := os.RemoveAll(inst.Dir()); err != nil {
 		return fmt.Errorf("remove instance directory: %w", err)
 	}
 	return nil
@@ -142,7 +164,6 @@ func GetInstance(id string) (Instance, error) {
 	if err := json.Unmarshal(data, &inst); err != nil {
 		return Instance{}, fmt.Errorf("parse instance metadata: %w", err)
 	}
-	inst.Dir = dir
 	inst.Name = id
 	return inst, nil
 }
@@ -151,10 +172,10 @@ func GetInstance(id string) (Instance, error) {
 func GetAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(env.InstancesDir)
 	if errors.Is(err, os.ErrNotExist) {
-		return []Instance{}, nil
+		return nil, nil
 	}
 	if err != nil {
-		return []Instance{}, fmt.Errorf("read instances directory: %w", err)
+		return nil, fmt.Errorf("read instances directory: %w", err)
 	}
 	var insts []Instance
 	for _, entry := range entries {

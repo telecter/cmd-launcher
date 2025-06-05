@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -32,6 +33,7 @@ type FabricMeta struct {
 	Libraries []FabricLibrary
 }
 
+// A FabricLibrary is an implementation of Library based on Fabric-provided metadata.
 type FabricLibrary struct {
 	URL  string `json:"url,omitempty"`
 	Sha1 string `json:"sha1,omitempty"`
@@ -86,7 +88,7 @@ func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 	var versions FabricVersionList
 	if err := cache.UpdateAndRead(&versions); err != nil {
 		if err := cache.Read(&versions); err != nil {
-			return FabricVersionList{}, err
+			return nil, err
 		}
 	}
 
@@ -107,7 +109,13 @@ func GetFabricMeta(gameVersion string, loaderVersion string, fabricLoader Fabric
 	var meta FabricMeta
 	if err := cache.Read(&meta); err != nil {
 		if err := cache.UpdateAndRead(&meta); err != nil {
-			return FabricMeta{}, fmt.Errorf("retrieve metadata for %s version %s: %w", fabricLoader, loaderVersion, err)
+			var statusErr *network.HTTPStatusError
+			if errors.As(err, &statusErr) {
+				if statusErr.StatusCode == 400 {
+					return FabricMeta{}, fmt.Errorf("invalid Fabric version or invalid game version for Fabric")
+				}
+			}
+			return FabricMeta{}, err
 		}
 	}
 	return meta, nil

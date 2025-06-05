@@ -138,31 +138,34 @@ func (artifact Artifact) IsDownloaded() bool {
 }
 func (artifact Artifact) DownloadEntry() network.DownloadEntry {
 	return network.DownloadEntry{
-		URL:      artifact.URL,
-		Filename: artifact.RuntimePath(),
+		URL:  artifact.URL,
+		Path: artifact.RuntimePath(),
+		Sha1: artifact.Sha1,
 	}
 }
 
 // A Library represents metadata of a game library and its artifact(s).
 type Library interface {
 	Artifact() Artifact
-	ShouldInstall() bool
 	Specifier() LibrarySpecifier
+	// ShouldInstall reports whether the library should be installed on the system.
+	ShouldInstall() bool
 }
 
+// A MojangLibrary is an implementation of Library based on Mojang-provided metadata.
 type MojangLibrary struct {
 	Name      LibrarySpecifier `json:"name"`
 	Downloads struct {
 		Artifact    Artifact            `json:"artifact"`
 		Classifiers map[string]Artifact `json:"classifiers"`
-	} `json:"downloads"` // mojang
+	} `json:"downloads"`
 	Rules []struct {
 		Action string `json:"action"`
 		Os     struct {
 			Name string `json:"name"`
 		} `json:"os"`
-	} `json:"rules,omitempty"` // mojang
-	Natives map[string]string `json:"natives,omitempty"` // old mojang
+	} `json:"rules,omitempty"`
+	Natives map[string]string `json:"natives,omitempty"`
 }
 
 func (library MojangLibrary) Artifact() Artifact {
@@ -195,7 +198,6 @@ func (library MojangLibrary) Specifier() LibrarySpecifier {
 	return library.Name
 }
 
-// ShouldInstall reports whether the Rules field on library allows library to be installed.
 func (library MojangLibrary) ShouldInstall() bool {
 	if len(library.Rules) > 0 {
 		rule := library.Rules[0]
@@ -205,6 +207,7 @@ func (library MojangLibrary) ShouldInstall() bool {
 	return true
 }
 
+// A BaseLibrary is a basic implementation of Library which includes an artifact and library specifier.
 type BaseLibrary struct {
 	LibraryArtifact Artifact
 	Name            LibrarySpecifier
@@ -231,17 +234,18 @@ type AssetObject struct {
 	Size int    `json:"size"`
 }
 
-// DownloadEntry returns a DownloadEntry to fetch asset.
+// DownloadEntry returns a DownloadEntry to fetch the asset.
 func (object AssetObject) DownloadEntry() network.DownloadEntry {
 	return network.DownloadEntry{
-		URL:      fmt.Sprintf(MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash),
-		Filename: filepath.Join(env.AssetsDir, "objects", object.Hash[:2], object.Hash),
+		URL:  fmt.Sprintf(MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash),
+		Path: filepath.Join(env.AssetsDir, "objects", object.Hash[:2], object.Hash),
+		Sha1: object.Hash,
 	}
 }
 
-// IsDownloaded reports whether asset exists and has a valid checksum.
+// IsDownloaded reports whether the asset exists and has a valid checksum.
 func (object AssetObject) IsDownloaded() bool {
-	data, err := os.ReadFile(object.DownloadEntry().Filename)
+	data, err := os.ReadFile(object.DownloadEntry().Path)
 	if err != nil {
 		return false
 	}
@@ -308,7 +312,6 @@ func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
 		URL:  versionMeta.AssetIndex.URL,
 	}
 	download := true
-
 	var assetIndex AssetIndex
 	if err := cache.Read(&assetIndex); err == nil {
 		sum, _ := cache.Sha1()

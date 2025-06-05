@@ -35,6 +35,9 @@ type EnvOptions struct {
 	Demo               bool
 	DisableMultiplayer bool
 	DisableChat        bool
+
+	skipAssets    bool
+	skipLibraries bool
 }
 
 // A launchEnvironment represents the data needed to start the game.
@@ -113,7 +116,7 @@ func Launch(launchEnv launchEnvironment, runner Runner) error {
 func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnvironment, error) {
 	launchEnv := launchEnvironment{
 		javaPath: options.Config.Java,
-		gameDir:  inst.Dir,
+		gameDir:  inst.Dir(),
 	}
 
 	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
@@ -154,16 +157,20 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnv
 
 	var downloads []network.DownloadEntry
 
-	for _, library := range requiredLibs {
-		downloads = append(downloads, library.Artifact().DownloadEntry())
+	if !options.skipLibraries {
+		for _, library := range requiredLibs {
+			downloads = append(downloads, library.Artifact().DownloadEntry())
+		}
 	}
 	watcher.Handle(LibrariesResolvedEvent{
 		Libraries: len(installedLibs) + len(requiredLibs),
 	})
 
-	for _, object := range assetIndex.Objects {
-		if !object.IsDownloaded() {
-			downloads = append(downloads, object.DownloadEntry())
+	if !options.skipAssets {
+		for _, object := range assetIndex.Objects {
+			if !object.IsDownloaded() {
+				downloads = append(downloads, object.DownloadEntry())
+			}
 		}
 	}
 	watcher.Handle(AssetsResolvedEvent{Assets: len(assetIndex.Objects)})
@@ -196,7 +203,7 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnv
 		"--username", options.Session.Username,
 		"--accessToken", options.Session.AccessToken,
 		"--userType", "msa",
-		"--gameDir", inst.Dir,
+		"--gameDir", inst.Dir(),
 		"--assetsDir", env.AssetsDir,
 		"--assetIndex", versionMeta.AssetIndex.ID,
 		"--version", versionMeta.ID,

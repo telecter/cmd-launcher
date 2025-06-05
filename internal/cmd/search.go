@@ -10,12 +10,11 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/telecter/cmd-launcher/internal/meta"
-	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
 type Search struct {
 	Query   string `arg:"" name:"query" help:"Search query" optional:""`
-	Kind    string `name:"kind" help:"What to search for" short:"k" enum:"instances,versions,fabric,quilt" default:"instances"`
+	Kind    string `name:"kind" help:"What to search for" short:"k" enum:"versions,fabric,quilt" default:"versions"`
 	Reverse bool   `name:"reverse" short:"r" help:"Reverse the listing"`
 }
 
@@ -24,17 +23,6 @@ func (c *Search) Run(ctx *kong.Context) error {
 	var header table.Row
 
 	switch c.Kind {
-	case "instances":
-		header = table.Row{"#", "Name", "Version", "Type"}
-		instances, err := launcher.GetAllInstances()
-		if err != nil {
-			return fmt.Errorf("get all instances: %w", err)
-		}
-		for i, instance := range instances {
-			if strings.Contains(instance.Name, c.Query) {
-				rows = append(rows, table.Row{i, instance.Name, instance.GameVersion, instance.Loader})
-			}
-		}
 	case "versions":
 		header = table.Row{"#", "Version", "Type", "Release Date"}
 		manifest, err := meta.GetVersionManifest()
