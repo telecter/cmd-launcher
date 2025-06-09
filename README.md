@@ -3,7 +3,9 @@
 
 # cmd-launcher
 
-A minimal command line Minecraft launcher.
+A minimal command line Minecraft launcher.  
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/telecter/cmd-launcher)
+
 
 - [Installation](#installation)
   - [Building from source](#building-from-source)
@@ -34,14 +36,14 @@ Use the `--help` flag to get the usage information.
 
 ### Creating an instance
 
-To create a new instance, use the `create` command.  
-You can use the `--loader, -l` flag to set the mod loader. Only Fabric and Quilt are supported at the moment. 
+To create a new instance, use the `inst create` command.  
+You can use the `--loader, -l` flag to set the mod loader. Forge, NeoForge, Fabric, and Quilt are all supported. If you want to select a specific version of the loader, use the `--loader-version` flag. Otherwise, the latest applicable version is chosen.
 
 Use the `--version, -v` flag to set the game version. If no value is supplied, the latest release is used. Acceptable values also include `release` or `snapshot` for the latest of either.
 ```sh
-cmd-launcher create -v 1.21.5 -l fabric CoolInstance
+cmd-launcher inst create -v 1.21.5 -l fabric CoolInstance
 ```
-If you want to delete an instance, use the `delete` command.
+If you want to delete an instance, use the `inst delete` command.
 > [!IMPORTANT]
 > This launcher has not been tested for versions < 1.14. It may not work, but I am working on fixing these issues.
 
@@ -51,7 +53,9 @@ To start Minecraft, simply run the `start` command followed by the instance ID.
 ```bash
 cmd-launcher start CoolInstance
 ```
+To override instance configuration, you can set specific flags on the `start` command to set game options. Use the `-h` help flag to view them all.
 
+To increase the verbosity of the output, use the `-v` flag.
 ### Authentication
 If you want to play the game in online mode, you will need to add a Microsoft account. To do this, use the `auth login` command. As part of Microsoft's OAuth2 flow, the default web browser will be opened to complete the authentication. This can be avoided with the `--no-browser` flag. The launcher will automatically attempt to start the game in online mode if there is an account present.
 
@@ -64,7 +68,9 @@ Log out via the `auth logout` command.
 ### Instance Configuration
 To change configuration values for an instance, go to the instance directory and open the `instance.json` file.
 
-Currently configurable values are:
+Configurable values are:
+* Game Version
+* Mod Loader (and version)
 * Window Resolution
 * Java Executable Path
 * Minimum and maximum memory
@@ -89,7 +95,7 @@ These values can be overriden when starting the game via command line flags in t
 }
 ```
 ### Search
-The `search` command can search for Minecraft versions or instances that you have. While it defaults to searching for installed instances, it can also search for game, Fabric, and Quilt versions.
+The `search` command can search for Minecraft  or mod loader versions. While it defaults to searching for installed instances, it can also search for game, Fabric, and Quilt versions.
 
 ```bash
 cmd-launcher search [<query>] [--kind {instances, versions, fabric, quilt}]

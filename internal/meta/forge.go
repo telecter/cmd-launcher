@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -133,6 +134,12 @@ func (f forge) FetchInstaller(version string) (map[string]*zip.File, error) {
 
 	if err := cache.Read(&data); err != nil {
 		if err := cache.FetchAndRead(&data); err != nil {
+			var statusErr *network.HTTPStatusError
+			if errors.As(err, &statusErr) {
+				if statusErr.StatusCode == 404 {
+					return nil, fmt.Errorf("invalid version")
+				}
+			}
 			return nil, err
 		}
 	}
