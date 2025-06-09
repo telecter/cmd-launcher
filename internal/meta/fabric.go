@@ -52,11 +52,13 @@ func (f fabricAPI) FetchVersions() (FabricVersionList, error) {
 }
 
 // FetchMeta retrieves version metadata for the specified game and loader version of Fabric.
+//
+// Besides normal version identifiers, loaderVersion can also be "latest".
 func (f fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, error) {
 	if loaderVersion == "latest" {
 		versions, err := f.FetchVersions()
 		if err != nil {
-			return VersionMeta{}, fmt.Errorf("fetch fabric versions: %w", err)
+			return VersionMeta{}, fmt.Errorf("fetch versions: %w", err)
 		}
 		loaderVersion = versions[0].Version
 	}

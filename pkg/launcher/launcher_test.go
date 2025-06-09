@@ -98,18 +98,62 @@ func TestCreateInstance(t *testing.T) {
 		{
 			name: "Forge",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderForge,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderForge,
+				LoaderVersion: "latest",
 			},
+			wantError: false,
+		},
+		{
+			name: "Forge Versioned",
+			options: InstanceOptions{
+				GameVersion:   "1.21.5",
+				Name:          uuid.NewString(),
+				Loader:        LoaderForge,
+				LoaderVersion: "1.21.5-55.0.22",
+			},
+			wantError: false,
+		},
+		{
+			name: "Forge Invalid Version",
+			options: InstanceOptions{
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderForge,
+				LoaderVersion: "not valid",
+			},
+			wantError: true,
 		},
 		{
 			name: "NeoForge",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderNeoForge,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderNeoForge,
+				LoaderVersion: "latest",
 			},
+			wantError: false,
+		},
+		{
+			name: "NeoForge Versioned",
+			options: InstanceOptions{
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderNeoForge,
+				LoaderVersion: "21.5.75",
+			},
+			wantError: false,
+		},
+		{
+			name: "NeoForge Invalid Version",
+			options: InstanceOptions{
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderNeoForge,
+				LoaderVersion: "not valid",
+			},
+			wantError: true,
 		},
 	}
 
@@ -207,17 +251,19 @@ func TestPrepare(t *testing.T) {
 		{
 			name: "Forge",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderForge,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderForge,
+				LoaderVersion: "latest",
 			},
 		},
 		{
 			name: "NeoForge",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderNeoForge,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderNeoForge,
+				LoaderVersion: "latest",
 			},
 		},
 	}
@@ -229,7 +275,7 @@ func TestPrepare(t *testing.T) {
 				t.Fatalf("unexpected error creating instance for test: %s", err)
 			}
 
-			_, err = inst.Prepare(EnvOptions{
+			_, err = Prepare(inst, EnvOptions{
 				Session: auth.Session{
 					Username: "testing",
 				},

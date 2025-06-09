@@ -92,7 +92,7 @@ func (c *Start) Run(ctx *kong.Context) error {
 		DisableChat:        c.DisableChat,
 	}
 
-	launchEnv, err := inst.Prepare(options, watcher{
+	launchEnv, err := launcher.Prepare(inst, options, watcher{
 		DownloadProgressBar: progressbar.NewOptions(0,
 			progressbar.OptionSetDescription("Downloading files"),
 			progressbar.OptionSetWriter(os.Stdout),
@@ -110,5 +110,5 @@ func (c *Start) Run(ctx *kong.Context) error {
 	if err != nil {
 		return err
 	}
-	return launchEnv.Launch(launcher.ConsoleRunner{})
+	return launcher.Launch(launchEnv, launcher.ConsoleRunner{})
 }

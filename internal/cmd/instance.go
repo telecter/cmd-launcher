@@ -13,7 +13,7 @@ type Create struct {
 	ID            string `arg:"" name:"id" help:"Instance name"`
 	Loader        string `name:"loader" help:"Mod loader to use" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
 	Version       string `name:"version" help:"Game version" default:"release" short:"v"`
-	LoaderVersion string `name:"loader-version" help:"Loader version (if Fabric/Quilt)" default:"latest"`
+	LoaderVersion string `name:"loader-version" help:"Loader version" default:"latest"`
 }
 
 func (c *Create) Run(ctx *kong.Context) error {
@@ -104,8 +104,8 @@ func (c *List) Run(ctx *kong.Context) error {
 	if err != nil {
 		return fmt.Errorf("get all instances: %w", err)
 	}
-	for i, instance := range instances {
-		rows = append(rows, table.Row{i, instance.Name, instance.GameVersion, instance.Loader})
+	for i, inst := range instances {
+		rows = append(rows, table.Row{i, inst.Name, inst.GameVersion, inst.Loader})
 	}
 
 	t := table.NewWriter()

@@ -14,12 +14,11 @@ import (
 
 // An Instance represents a full installation of Minecraft and its information.
 type Instance struct {
-	Name          string           `json:"-"`
-	Version       meta.VersionMeta `json:"-"`
-	GameVersion   string           `json:"game_version"`
-	Loader        Loader           `json:"mod_loader"`
-	LoaderVersion string           `json:"mod_loader_version,omitempty"`
-	Config        InstanceConfig   `json:"config"`
+	Name          string         `json:"-"`
+	GameVersion   string         `json:"game_version"`
+	Loader        Loader         `json:"mod_loader"`
+	LoaderVersion string         `json:"mod_loader_version,omitempty"`
+	Config        InstanceConfig `json:"config"`
 }
 
 // WriteConfig marshals inst and writes it to the instance configuration file. This is used to save the instance configuration.
@@ -81,23 +80,19 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 
 	versionMeta, err := meta.FetchVersionMeta(options.GameVersion)
 	if err != nil {
-		return Instance{}, fmt.Errorf("fetch version meta: %w", err)
+		return Instance{}, err
 	}
 
-	loaderMeta, err := fetchLoaderMeta(versionMeta, options.Loader, options.LoaderVersion)
+	loaderMeta, err := fetchLoaderMeta(options.Loader, versionMeta.ID, options.LoaderVersion)
 	if err != nil {
-		return Instance{}, fmt.Errorf("fetch mod loader meta: %w", err)
+		return Instance{}, err
 	}
-	versionMeta.LoaderID = loaderMeta.ID
-
-	versionMeta = meta.MergeVersionMeta(versionMeta, loaderMeta)
 
 	inst := Instance{
 		Name:          options.Name,
 		GameVersion:   versionMeta.ID,
-		Version:       versionMeta,
 		Loader:        options.Loader,
-		LoaderVersion: versionMeta.LoaderID,
+		LoaderVersion: loaderMeta.LoaderID,
 		Config:        defaultConfig,
 	}
 
@@ -143,20 +138,6 @@ func FetchInstance(id string) (Instance, error) {
 		return Instance{}, fmt.Errorf("parse instance metadata: %w", err)
 	}
 	inst.Name = id
-
-	versionMeta, err := meta.FetchVersionMeta(inst.GameVersion)
-	if err != nil {
-		return Instance{}, fmt.Errorf("fetch version meta: %w", err)
-	}
-	versionMeta.LoaderID = inst.LoaderVersion
-
-	loaderMeta, err := fetchLoaderMeta(versionMeta, inst.Loader, inst.LoaderVersion)
-	if err != nil {
-		return Instance{}, fmt.Errorf("fetch mod loader meta: %w", err)
-	}
-	versionMeta = meta.MergeVersionMeta(versionMeta, loaderMeta)
-
-	inst.Version = versionMeta
 	return inst, nil
 }
 

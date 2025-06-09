@@ -274,6 +274,8 @@ func FetchVersionManifest() (VersionManifest, error) {
 }
 
 // FetchVersionMeta retrieves the version metadata for a specified version from the version manifest.
+//
+// Besides normal version identifiers, "release" and "snapshot" are also accepted IDs.
 func FetchVersionMeta(id string) (VersionMeta, error) {
 	manifest, err := FetchVersionManifest()
 	if err != nil {

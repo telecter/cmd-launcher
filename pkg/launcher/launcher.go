@@ -95,7 +95,7 @@ type LaunchEnvironment struct {
 // Launch starts a LaunchEnvironment with the specified runner.
 //
 // The Java executable is checked and the classpath and command arguments are finalized.
-func (launchEnv LaunchEnvironment) Launch(runner Runner) error {
+func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 	info, err := os.Stat(launchEnv.JavaPath)
 	if err != nil {
 		return fmt.Errorf("java executable does not exist")
@@ -111,22 +111,32 @@ func (launchEnv LaunchEnvironment) Launch(runner Runner) error {
 }
 
 // Prepare prepares the instance to be launched, returning a LaunchEnvironment, with the provided options and sends events to watcher.
-func (inst Instance) Prepare(options EnvOptions, watcher EventWatcher) (LaunchEnvironment, error) {
+func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnvironment, error) {
 	launchEnv := LaunchEnvironment{
-		JavaPath:  options.Config.Java,
-		GameDir:   inst.Dir(),
-		MainClass: inst.Version.MainClass,
+		JavaPath: options.Config.Java,
+		GameDir:  inst.Dir(),
 	}
 
-	inst.Version.Libraries = append(inst.Version.Libraries, inst.Version.Client())
+	version, err := meta.FetchVersionMeta(inst.GameVersion)
+	if err != nil {
+		return LaunchEnvironment{}, fmt.Errorf("retrieve version metadata: %w", err)
+	}
+	loaderMeta, err := fetchLoaderMeta(inst.Loader, version.ID, inst.LoaderVersion)
+	if err != nil {
+		return LaunchEnvironment{}, fmt.Errorf("retrieve loader metadata: %w", err)
+	}
+	version = meta.MergeVersionMeta(version, loaderMeta)
+
+	launchEnv.MainClass = version.MainClass
+	version.Libraries = append(version.Libraries, version.Client())
 
 	watcher.Handle(MetadataResolvedEvent{})
 
-	installedLibs, requiredLibs := filterLibraries(inst.Version.Libraries)
+	installedLibs, requiredLibs := filterLibraries(version.Libraries)
 
-	assetIndex, err := meta.DownloadAssetIndex(inst.Version)
+	assetIndex, err := meta.DownloadAssetIndex(version)
 	if err != nil {
-		return LaunchEnvironment{}, fmt.Errorf("fetch asset index: %w", err)
+		return LaunchEnvironment{}, fmt.Errorf("retrieve asset index: %w", err)
 	}
 
 	var downloads []network.DownloadEntry
@@ -168,14 +178,14 @@ func (inst Instance) Prepare(options EnvOptions, watcher EventWatcher) (LaunchEn
 		var post []meta.ForgeProcessor
 
 		if inst.Loader == LoaderForge {
-			post, err = meta.Forge.FetchPostProcessors(inst.Version.ID, inst.Version.LoaderID)
+			post, err = meta.Forge.FetchPostProcessors(version.ID, version.LoaderID)
 			if err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("fetch forge post meta: %w", err)
+				return LaunchEnvironment{}, fmt.Errorf("fetch forge post processors: %w", err)
 			}
 		} else if inst.Loader == LoaderNeoForge {
-			post, err = meta.Neoforge.FetchPostProcessors(inst.Version.ID, inst.Version.LoaderID)
+			post, err = meta.Neoforge.FetchPostProcessors(version.ID, version.LoaderID)
 			if err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post meta: %w", err)
+				return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post processors: %w", err)
 			}
 		}
 
@@ -204,9 +214,9 @@ func (inst Instance) Prepare(options EnvOptions, watcher EventWatcher) (LaunchEn
 		"--userType", "msa",
 		"--gameDir", inst.Dir(),
 		"--assetsDir", env.AssetsDir,
-		"--assetIndex", inst.Version.AssetIndex.ID,
-		"--version", inst.Version.ID,
-		"--versionType", inst.Version.Type,
+		"--assetIndex", version.AssetIndex.ID,
+		"--version", version.ID,
+		"--versionType", version.Type,
 		"--width", strconv.Itoa(options.Config.WindowResolution.Width),
 		"--height", strconv.Itoa(options.Config.WindowResolution.Height),
 	}
@@ -233,16 +243,16 @@ func (inst Instance) Prepare(options EnvOptions, watcher EventWatcher) (LaunchEn
 		launchEnv.Classpath = append(launchEnv.Classpath, library.Artifact.RuntimePath())
 	}
 
-	for _, arg := range inst.Version.Arguments.Jvm {
+	for _, arg := range version.Arguments.Jvm {
 		if arg, ok := arg.(string); ok {
-			arg = strings.ReplaceAll(arg, "${version_name}", inst.Version.ID)
+			arg = strings.ReplaceAll(arg, "${version_name}", version.ID)
 			arg = strings.ReplaceAll(arg, "${library_directory}", env.LibrariesDir)
 			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
 			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
 			launchEnv.JavaArgs = append(launchEnv.JavaArgs, arg)
 		}
 	}
-	for _, arg := range inst.Version.Arguments.Game {
+	for _, arg := range version.Arguments.Game {
 		if arg, ok := arg.(string); ok {
 			launchEnv.GameArgs = append(launchEnv.GameArgs, arg)
 		}
@@ -251,43 +261,41 @@ func (inst Instance) Prepare(options EnvOptions, watcher EventWatcher) (LaunchEn
 }
 
 // fetchLoaderMeta returns the loader version metadata for the specified loader and version.
-func fetchLoaderMeta(versionMeta meta.VersionMeta, loader Loader, loaderVersion string) (meta.VersionMeta, error) {
+func fetchLoaderMeta(loader Loader, gameVersion string, loaderVersion string) (meta.VersionMeta, error) {
 	var loaderMeta meta.VersionMeta
 	var err error
 
-	version := versionMeta.LoaderID
-
 	if loader == LoaderFabric {
-		loaderMeta, err = meta.Fabric.FetchMeta(versionMeta.ID, loaderVersion)
+		loaderMeta, err = meta.Fabric.FetchMeta(gameVersion, loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("fetch fabric meta: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve fabric metadata: %w", err)
 		}
 	} else if loader == LoaderQuilt {
-		loaderMeta, err = meta.Quilt.FetchMeta(versionMeta.ID, loaderVersion)
+		loaderMeta, err = meta.Quilt.FetchMeta(gameVersion, loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("fetch quilt meta: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve quilt metadata: %w", err)
 		}
 	} else if loader == LoaderNeoForge {
-		if version == "" {
-			version, err = meta.FetchNeoforgeVersion(versionMeta.ID)
+		if loaderVersion == "latest" {
+			loaderVersion, err = meta.FetchNeoforgeVersion(gameVersion)
 			if err != nil {
-				return meta.VersionMeta{}, fmt.Errorf("fetch neoforge version: %w", err)
+				return meta.VersionMeta{}, fmt.Errorf("retrieve neoforge version: %w", err)
 			}
 		}
-		loaderMeta, _, err = meta.Neoforge.FetchMeta(version)
+		loaderMeta, _, err = meta.Neoforge.FetchMeta(loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("fetch neoforge meta: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve neoforge metadata: %w", err)
 		}
 	} else if loader == LoaderForge {
-		if version == "" {
-			version, err = meta.FetchForgeVersion(versionMeta.ID)
+		if loaderVersion == "latest" {
+			loaderVersion, err = meta.FetchForgeVersion(gameVersion)
 			if err != nil {
-				return meta.VersionMeta{}, fmt.Errorf("fetch forge version: %w", err)
+				return meta.VersionMeta{}, fmt.Errorf("retrieve forge version: %w", err)
 			}
 		}
-		loaderMeta, _, err = meta.Forge.FetchMeta(version)
+		loaderMeta, _, err = meta.Forge.FetchMeta(loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("fetch forge meta: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve forge metadata: %w", err)
 		}
 	}
 	return loaderMeta, nil

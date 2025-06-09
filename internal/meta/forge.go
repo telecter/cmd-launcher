@@ -172,7 +172,7 @@ func (f forge) FetchMeta(version string) (VersionMeta, ForgeInstallProfile, erro
 
 	file, ok = files["install_profile.json"]
 	if !ok {
-		return VersionMeta{}, ForgeInstallProfile{}, fmt.Errorf("profile not present in installer")
+		return VersionMeta{}, ForgeInstallProfile{}, fmt.Errorf("install profile not present in installer")
 	}
 	rc, err = file.Open()
 	if err != nil {
@@ -209,19 +209,19 @@ func (f forge) FetchMeta(version string) (VersionMeta, ForgeInstallProfile, erro
 func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcessor, error) {
 	installerFiles, err := f.FetchInstaller(version)
 	if err != nil {
-		return []ForgeProcessor{}, fmt.Errorf("fetch installer: %w", err)
+		return nil, fmt.Errorf("fetch installer: %w", err)
 	}
 	_, profile, err := f.FetchMeta(version)
 	if err != nil {
-		return []ForgeProcessor{}, fmt.Errorf("fetch forge meta: %w", err)
+		return nil, fmt.Errorf("retrieve metadata: %w", err)
 	}
 
 	client, err := NewLibrarySpecifier(strings.Trim(profile.Data["PATCHED"].Client, "[]"))
 	if err != nil {
-		return []ForgeProcessor{}, fmt.Errorf("invalid patched client specifier: %w", err)
+		return nil, fmt.Errorf("invalid patched client specifier: %w", err)
 	}
 	if _, err := os.Stat(filepath.Join(env.LibrariesDir, client.Path())); err == nil {
-		return []ForgeProcessor{}, nil
+		return nil, nil
 	}
 
 	var processors []processor
@@ -245,26 +245,26 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 
 			file, ok := installerFiles[v.Client[1:]]
 			if !ok {
-				return []ForgeProcessor{}, fmt.Errorf("locate installer embedded file")
+				return nil, fmt.Errorf("embedded installer file not present")
 			}
 
 			f, err := file.Open()
 			if err != nil {
-				return []ForgeProcessor{}, fmt.Errorf("open installer embedded file: %w", err)
+				return nil, fmt.Errorf("open embedded installer file: %w", err)
 			}
 			defer f.Close()
 
 			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-				return []ForgeProcessor{}, fmt.Errorf("create directory for temporary installer file: %w", err)
+				return nil, fmt.Errorf("create directory for file: %w", err)
 			}
 
 			df, err := os.Create(path)
 			if err != nil {
-				return []ForgeProcessor{}, fmt.Errorf("create temporary installer file: %w", err)
+				return nil, fmt.Errorf("create file: %w", err)
 			}
 			defer df.Close()
 			if _, err := io.Copy(df, f); err != nil {
-				return []ForgeProcessor{}, fmt.Errorf("copy installer embedded file: %w", err)
+				return nil, fmt.Errorf("copy embedded installer file: %w", err)
 			}
 			v.Client = path
 		}
@@ -275,7 +275,7 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 
 	versionMeta, err := FetchVersionMeta(gameVersion)
 	if err != nil {
-		return []ForgeProcessor{}, fmt.Errorf("fetch version meta: %w", err)
+		return nil, fmt.Errorf("retrieve version metadata: %w", err)
 	}
 	variables["MINECRAFT_JAR"] = versionMeta.Client().Artifact.RuntimePath()
 
@@ -285,12 +285,12 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 		jar, ok := libraries[processor.Jar]
 		var mainClass string
 		if !ok {
-			return []ForgeProcessor{}, fmt.Errorf("post processor library not found")
+			return nil, fmt.Errorf("post processor library not found")
 		}
 
 		r, err := zip.OpenReader(jar.Artifact.RuntimePath())
 		if err != nil {
-			return []ForgeProcessor{}, fmt.Errorf("read processor JAR: %w", err)
+			return nil, fmt.Errorf("read processor JAR: %w", err)
 		}
 		defer r.Close()
 		files := make(map[string]*zip.File)
@@ -300,11 +300,11 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 
 		file, ok := files["META-INF/MANIFEST.MF"]
 		if !ok {
-			return []ForgeProcessor{}, fmt.Errorf("locate processor manifest")
+			return nil, fmt.Errorf("processor manifest not present")
 		}
 		f, err := file.Open()
 		if err != nil {
-			return []ForgeProcessor{}, fmt.Errorf("open processor manifest: %w", err)
+			return nil, fmt.Errorf("open processor manifest: %w", err)
 		}
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
@@ -315,14 +315,14 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 			}
 		}
 		if mainClass == "" {
-			return []ForgeProcessor{}, fmt.Errorf("no main class found in processor")
+			return nil, fmt.Errorf("no main class found in processor manifest")
 		}
 
 		var paths []string
 		for _, specifier := range processor.Classpath {
 			library, ok := libraries[specifier]
 			if !ok {
-				return []ForgeProcessor{}, fmt.Errorf("post processor library not found")
+				return nil, fmt.Errorf("post processor library not found")
 			}
 			paths = append(paths, library.Artifact.RuntimePath())
 		}
@@ -332,14 +332,14 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 				arg = strings.Trim(arg, "{}")
 				arg, ok = variables[arg]
 				if !ok {
-					return []ForgeProcessor{}, fmt.Errorf("unknown processor argument")
+					return nil, fmt.Errorf("unknown processor argument")
 				}
 			}
 			if arg[0] == '[' && arg[len(arg)-1] == ']' {
 				arg = strings.Trim(arg, "[]")
 				specifier, err := NewLibrarySpecifier(arg)
 				if err != nil {
-					return []ForgeProcessor{}, fmt.Errorf("processor argument contains invalid library specifier")
+					return nil, fmt.Errorf("processor argument contains invalid library specifier")
 				}
 				arg = filepath.Join(env.LibrariesDir, specifier.Path())
 			} else if arg[0] == '\'' && arg[len(arg)-1] == '\'' {

@@ -11,16 +11,21 @@ inst, err := launcher.CreateInstance(launcher.InstanceOptions{
 		GameVersion: "1.21.5",
 		Name:        "MyInstance",
 		Loader:      launcher.LoaderQuilt,
+		LoaderVersion: "latest",
 })
 ```
 The `Loader` can be `LoaderQuilt`, `LoaderFabric`, or `LoaderVanilla`.
 
+`LoaderVersion`, if the mod loader is not vanilla, can either be set to `latest` for the latest version or a version of that specific mod loader.
+
 ### Getting an instance
-If you have an instance that is already created, you can use the `GetInstance` function to get it.
+If you have an instance that is already created, you can use the `FetchInstance` function to get it.
 ```go
-inst, err := launcher.GetInstance("MyInstance")
+inst, err := launcher.FetchInstance("MyInstance")
 ```
-Instances can be removed with the `launcher.RemoveInstance` method which follows the same structure.
+Instances can be removed with the `launcher.RemoveInstance` function which follows the same structure.
+
+They can also be renamed with their `.Rename` method.
 ### Preparing the game
 
 After you create your instance, in order to start the game, you will need to prepare an launch environment.
