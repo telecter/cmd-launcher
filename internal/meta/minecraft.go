@@ -3,6 +3,7 @@ package meta
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,12 @@ import (
 
 	"github.com/telecter/cmd-launcher/internal/network"
 	env "github.com/telecter/cmd-launcher/pkg"
+)
+
+const (
+	VERSION_MANIFEST_URL    = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+	MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
+	MINECRAFT_LIBRARIES_URL = "https://libraries.minecraft.net"
 )
 
 // A VersionManifest is a list of all Minecraft versions.
@@ -69,11 +76,12 @@ type VersionMeta struct {
 		} `json:"server_mappings"`
 	} `json:"downloads"`
 	ID          string `json:"id"`
+	LoaderID    string `json:"-"`
 	JavaVersion struct {
 		Component    string `json:"component"`
 		MajorVersion int    `json:"majorVersion"`
 	} `json:"javaVersion"`
-	Libraries []MojangLibrary `json:"libraries"`
+	Libraries []Library `json:"libraries"`
 	Logging   struct {
 		Client struct {
 			Argument string `json:"argument"`
@@ -86,29 +94,25 @@ type VersionMeta struct {
 			Type string `json:"type"`
 		} `json:"client"`
 	} `json:"logging"`
-	MainClass              string    `json:"mainClass"`
-	MinimumLauncherVersion int       `json:"minimumLauncherVersion"`
-	ReleaseTime            time.Time `json:"releaseTime"`
-	Time                   time.Time `json:"time"`
-	Type                   string    `json:"type"`
+	MainClass              string `json:"mainClass"`
+	MinimumLauncherVersion int    `json:"minimumLauncherVersion"`
+	ReleaseTime            string `json:"releaseTime"`
+	Time                   string `json:"time"`
+	Type                   string `json:"type"`
 }
 
 // Client creates a library from the client JAR download of versionMeta.
-func (versionMeta VersionMeta) Client() MojangLibrary {
+func (versionMeta VersionMeta) Client() Library {
 	specifier, _ := NewLibrarySpecifier("com.mojang:minecraft:" + versionMeta.ID)
-	return MojangLibrary{
-		Name: specifier,
-		Downloads: struct {
-			Artifact    Artifact            "json:\"artifact\""
-			Classifiers map[string]Artifact "json:\"classifiers\""
-		}{
-			Artifact: Artifact{
-				Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
-				Sha1: versionMeta.Downloads.Client.Sha1,
-				Size: versionMeta.Downloads.Client.Size,
-				URL:  versionMeta.Downloads.Client.URL,
-			},
+	return Library{
+		Specifier: specifier,
+		Artifact: Artifact{
+			Path: fmt.Sprintf("com/mojang/minecraft/%s/%s.jar", versionMeta.ID, versionMeta.ID),
+			Sha1: versionMeta.Downloads.Client.Sha1,
+			Size: versionMeta.Downloads.Client.Size,
+			URL:  versionMeta.Downloads.Client.URL,
 		},
+		ShouldInstall: true,
 	}
 }
 
@@ -145,82 +149,81 @@ func (artifact Artifact) DownloadEntry() network.DownloadEntry {
 }
 
 // A Library represents metadata of a game library and its artifact(s).
-type Library interface {
-	Artifact() Artifact
-	Specifier() LibrarySpecifier
-	// ShouldInstall reports whether the library should be installed on the system.
-	ShouldInstall() bool
+type Library struct {
+	Artifact        Artifact
+	Natives         []Library
+	Specifier       LibrarySpecifier
+	ShouldInstall   bool
+	SkipOnClasspath bool
 }
 
-// A MojangLibrary is an implementation of Library based on Mojang-provided metadata.
-type MojangLibrary struct {
-	Name      LibrarySpecifier `json:"name"`
-	Downloads struct {
-		Artifact    Artifact            `json:"artifact"`
-		Classifiers map[string]Artifact `json:"classifiers"`
-	} `json:"downloads"`
-	Rules []struct {
-		Action string `json:"action"`
-		Os     struct {
-			Name string `json:"name"`
-		} `json:"os"`
-	} `json:"rules,omitempty"`
-	Natives map[string]string `json:"natives,omitempty"`
-}
+func (l *Library) UnmarshalJSON(b []byte) error {
+	type library struct {
+		Name      LibrarySpecifier `json:"name"`
+		Downloads struct {
+			Artifact    Artifact            `json:"artifact"`
+			Classifiers map[string]Artifact `json:"classifiers"`
+		} `json:"downloads"`
+		Rules []struct {
+			Action string `json:"action"`
+			Os     struct {
+				Name string `json:"name"`
+			} `json:"os"`
+		} `json:"rules,omitempty"`
+		Natives map[string]string `json:"natives,omitempty"`
 
-func (library MojangLibrary) Artifact() Artifact {
-	return library.Downloads.Artifact
-}
-func (library MojangLibrary) Classifiers() (natives []Library) {
-	var classifiers []string
-	for os, native := range library.Natives {
-		os = strings.ReplaceAll(os, "osx", "darwin")
-		if os == runtime.GOOS {
-			classifiers = append(classifiers, native)
+		// fabric
+
+		URL  string `json:"url,omitempty"`
+		Sha1 string `json:"sha1,omitempty"`
+		Size int    `json:"size,omitempty"`
+	}
+	var data library
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+	l.Specifier = data.Name
+	if data.URL != "" {
+		l.Artifact = Artifact{
+			Path: data.Name.Path(),
+			Sha1: data.Sha1,
+			Size: data.Size,
+			URL:  data.URL + "/" + data.Name.Path(),
+		}
+		l.ShouldInstall = true
+	} else {
+		l.Artifact = data.Downloads.Artifact
+		var classifiers []string
+		for os, native := range data.Natives {
+			os = strings.ReplaceAll(os, "osx", "darwin")
+			if os == runtime.GOOS {
+				classifiers = append(classifiers, native)
+			}
+		}
+		for _, classifier := range classifiers {
+			artifact := data.Downloads.Classifiers[classifier]
+			if artifact.URL == "" {
+				continue
+			}
+			specifier := data.Name
+			specifier.Classifier = classifier
+			l.Natives = append(l.Natives, Library{
+				Artifact:      artifact,
+				Specifier:     specifier,
+				ShouldInstall: true,
+			})
+		}
+		if len(data.Rules) > 0 {
+			rule := data.Rules[0]
+			os := strings.ReplaceAll(rule.Os.Name, "osx", "darwin")
+			if rule.Action == "allow" && (os == runtime.GOOS || os == "") {
+				l.ShouldInstall = true
+			}
+		} else {
+			l.ShouldInstall = true
 		}
 	}
-	for _, classifier := range classifiers {
-		artifact := library.Downloads.Classifiers[classifier]
-		if artifact.URL == "" {
-			continue
-		}
-		specifier := library.Name
-		specifier.Classifier = classifier
-		natives = append(natives, BaseLibrary{
-			LibraryArtifact: artifact,
-			Name:            specifier,
-		})
-	}
-	return natives
-}
-
-func (library MojangLibrary) Specifier() LibrarySpecifier {
-	return library.Name
-}
-
-func (library MojangLibrary) ShouldInstall() bool {
-	if len(library.Rules) > 0 {
-		rule := library.Rules[0]
-		os := strings.ReplaceAll(rule.Os.Name, "osx", "darwin")
-		return rule.Action == "allow" && (os == runtime.GOOS || os == "")
-	}
-	return true
-}
-
-// A BaseLibrary is a basic implementation of Library which includes an artifact and library specifier.
-type BaseLibrary struct {
-	LibraryArtifact Artifact
-	Name            LibrarySpecifier
-}
-
-func (library BaseLibrary) Artifact() Artifact {
-	return library.LibraryArtifact
-}
-func (library BaseLibrary) Specifier() LibrarySpecifier {
-	return library.Name
-}
-func (BaseLibrary) ShouldInstall() bool {
-	return true
+	return nil
 }
 
 // An AssetIndex contains a map of asset objects and their names.
@@ -253,11 +256,8 @@ func (object AssetObject) IsDownloaded() bool {
 	return object.Hash == hex.EncodeToString(sum[:])
 }
 
-const VERSION_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-const MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
-
-// GetVersionManifest retrieves the Mojang version manifest which lists all game versions.
-func GetVersionManifest() (VersionManifest, error) {
+// FetchVersionManifest retrieves the Mojang version manifest which lists all game versions.
+func FetchVersionManifest() (VersionManifest, error) {
 	cache := network.JSONCache[VersionManifest]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "version_manifest.json"),
 		URL:  VERSION_MANIFEST_URL,
@@ -265,7 +265,7 @@ func GetVersionManifest() (VersionManifest, error) {
 
 	var manifest VersionManifest
 
-	if err := cache.UpdateAndRead(&manifest); err != nil {
+	if err := cache.FetchAndRead(&manifest); err != nil {
 		if err := cache.Read(&manifest); err != nil {
 			return VersionManifest{}, err
 		}
@@ -273,11 +273,16 @@ func GetVersionManifest() (VersionManifest, error) {
 	return manifest, nil
 }
 
-// GetVersionMeta retrieves the version metadata for a specified version from the version manifest.
-func GetVersionMeta(id string) (VersionMeta, error) {
-	manifest, err := GetVersionManifest()
+// FetchVersionMeta retrieves the version metadata for a specified version from the version manifest.
+func FetchVersionMeta(id string) (VersionMeta, error) {
+	manifest, err := FetchVersionManifest()
 	if err != nil {
 		return VersionMeta{}, fmt.Errorf("retrieve version manifest: %w", err)
+	}
+	if id == "release" {
+		id = manifest.Latest.Release
+	} else if id == "snapshot" {
+		id = manifest.Latest.Snapshot
 	}
 	for _, v := range manifest.Versions {
 		if v.ID == id {
@@ -295,7 +300,7 @@ func GetVersionMeta(id string) (VersionMeta, error) {
 				}
 			}
 			if download {
-				if err := cache.UpdateAndRead(&versionMeta); err != nil {
+				if err := cache.FetchAndRead(&versionMeta); err != nil {
 					return VersionMeta{}, err
 				}
 			}
@@ -320,10 +325,37 @@ func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
 		}
 	}
 	if download {
-		if err := cache.UpdateAndRead(&assetIndex); err != nil {
+		if err := cache.FetchAndRead(&assetIndex); err != nil {
 			return AssetIndex{}, err
 		}
 	}
 
 	return assetIndex, nil
+}
+
+// MergeVersionMeta takes two instances of VersionMeta and merges w into v
+func MergeVersionMeta(v, w VersionMeta) VersionMeta {
+	v.Arguments.Jvm = w.Arguments.Jvm
+	v.Arguments.Game = w.Arguments.Game
+
+	m := make(map[string]int)
+	for _, library := range w.Libraries {
+		if !library.SkipOnClasspath {
+			m[library.Specifier.Artifact]++
+		}
+	}
+
+	libraries := w.Libraries
+
+	for _, library := range v.Libraries {
+		if m[library.Specifier.Artifact] < 1 {
+			libraries = append(libraries, library)
+		}
+	}
+	v.Libraries = libraries
+	v.LoaderID = w.LoaderID
+	if w.MainClass != "" {
+		v.MainClass = w.MainClass
+	}
+	return v
 }

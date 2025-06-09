@@ -54,7 +54,7 @@ type Start struct {
 }
 
 func (c *Start) Run(ctx *kong.Context) error {
-	inst, err := launcher.GetInstance(c.ID)
+	inst, err := launcher.FetchInstance(c.ID)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (c *Start) Run(ctx *kong.Context) error {
 		DisableChat:        c.DisableChat,
 	}
 
-	launchEnv, err := launcher.Prepare(inst, options, watcher{
+	launchEnv, err := inst.Prepare(options, watcher{
 		DownloadProgressBar: progressbar.NewOptions(0,
 			progressbar.OptionSetDescription("Downloading files"),
 			progressbar.OptionSetWriter(os.Stdout),
@@ -110,5 +110,5 @@ func (c *Start) Run(ctx *kong.Context) error {
 	if err != nil {
 		return err
 	}
-	return launcher.Launch(launchEnv, launcher.ConsoleRunner{})
+	return launchEnv.Launch(launcher.ConsoleRunner{})
 }

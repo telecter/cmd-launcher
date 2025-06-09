@@ -19,15 +19,18 @@ import (
 type Loader string
 
 const (
-	LoaderVanilla Loader = "vanilla"
-	LoaderFabric  Loader = "fabric"
-	LoaderQuilt   Loader = "quilt"
+	LoaderVanilla  Loader = "vanilla"
+	LoaderFabric   Loader = "fabric"
+	LoaderQuilt    Loader = "quilt"
+	LoaderNeoForge Loader = "neoforge"
+	LoaderForge    Loader = "forge"
 )
 
 func (loader Loader) String() string {
 	return string(loader)
 }
 
+// EnvOptions represents configuration options when preparing an instance to be launched.
 type EnvOptions struct {
 	Session            auth.Session
 	Config             InstanceConfig
@@ -38,16 +41,6 @@ type EnvOptions struct {
 
 	skipAssets    bool
 	skipLibraries bool
-}
-
-// A launchEnvironment represents the data needed to start the game.
-type launchEnvironment struct {
-	gameDir   string
-	javaPath  string
-	mainClass string
-	classpath []string
-	javaArgs  []string
-	gameArgs  []string
 }
 
 // An EventWatcher is a controller that handles game preparation events.
@@ -89,11 +82,21 @@ func (ConsoleRunner) Run(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-// Launch starts a launchEnvironment with the specified runner.
+// A LaunchEnvironment represents the data needed to start the game.
+type LaunchEnvironment struct {
+	GameDir   string
+	JavaPath  string
+	MainClass string
+	Classpath []string
+	JavaArgs  []string
+	GameArgs  []string
+}
+
+// Launch starts a LaunchEnvironment with the specified runner.
 //
 // The Java executable is checked and the classpath and command arguments are finalized.
-func Launch(launchEnv launchEnvironment, runner Runner) error {
-	info, err := os.Stat(launchEnv.javaPath)
+func (launchEnv LaunchEnvironment) Launch(runner Runner) error {
+	info, err := os.Stat(launchEnv.JavaPath)
 	if err != nil {
 		return fmt.Errorf("java executable does not exist")
 	}
@@ -101,65 +104,36 @@ func Launch(launchEnv launchEnvironment, runner Runner) error {
 		return fmt.Errorf("java binary is not executable")
 	}
 
-	separator := ":"
-	if runtime.GOOS == "windows" {
-		separator = ";"
-	}
-	javaArgs := append(launchEnv.javaArgs, "-cp", strings.Join(launchEnv.classpath, separator), launchEnv.mainClass)
-	cmd := exec.Command(launchEnv.javaPath, append(javaArgs, launchEnv.gameArgs...)...)
-	os.Chdir(launchEnv.gameDir)
-
+	javaArgs := append(launchEnv.JavaArgs, "-cp", strings.Join(launchEnv.Classpath, string(os.PathListSeparator)), launchEnv.MainClass)
+	cmd := exec.Command(launchEnv.JavaPath, append(javaArgs, launchEnv.GameArgs...)...)
+	cmd.Dir = launchEnv.GameDir
 	return runner.Run(cmd)
 }
 
-// Prepare prepares the specified instance to be launched, returning a launchEnvironment, with the provided options and sends events to watcher.
-func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnvironment, error) {
-	launchEnv := launchEnvironment{
-		javaPath: options.Config.Java,
-		gameDir:  inst.Dir(),
+// Prepare prepares the instance to be launched, returning a LaunchEnvironment, with the provided options and sends events to watcher.
+func (inst Instance) Prepare(options EnvOptions, watcher EventWatcher) (LaunchEnvironment, error) {
+	launchEnv := LaunchEnvironment{
+		JavaPath:  options.Config.Java,
+		GameDir:   inst.Dir(),
+		MainClass: inst.Version.MainClass,
 	}
 
-	versionMeta, err := meta.GetVersionMeta(inst.GameVersion)
-	if err != nil {
-		return launchEnvironment{}, fmt.Errorf("fetch version metadata: %w", err)
-	}
+	inst.Version.Libraries = append(inst.Version.Libraries, inst.Version.Client())
 
-	launchEnv.mainClass = versionMeta.MainClass
-	var libraries []meta.Library
-	if inst.Loader == LoaderFabric || inst.Loader == LoaderQuilt {
-		var fabricLoader meta.FabricLoader
-		switch inst.Loader {
-		case LoaderFabric:
-			fabricLoader = meta.FabricLoaderStandard
-		case LoaderQuilt:
-			fabricLoader = meta.FabricLoaderQuilt
-		}
-		fabricMeta, err := meta.GetFabricMeta(versionMeta.ID, inst.LoaderVersion, fabricLoader)
-		if err != nil {
-			return launchEnvironment{}, err
-		}
-		for _, library := range fabricMeta.Libraries {
-			libraries = append(libraries, library)
-		}
-		launchEnv.javaArgs = append(launchEnv.javaArgs, fabricMeta.Arguments.Jvm...)
-		launchEnv.mainClass = fabricMeta.MainClass
-	}
-	for _, library := range append(versionMeta.Libraries, versionMeta.Client()) {
-		libraries = append(libraries, library)
-	}
 	watcher.Handle(MetadataResolvedEvent{})
 
-	installedLibs, requiredLibs := filterLibraries(libraries)
-	assetIndex, err := meta.DownloadAssetIndex(versionMeta)
+	installedLibs, requiredLibs := filterLibraries(inst.Version.Libraries)
+
+	assetIndex, err := meta.DownloadAssetIndex(inst.Version)
 	if err != nil {
-		return launchEnvironment{}, fmt.Errorf("fetch asset index: %w", err)
+		return LaunchEnvironment{}, fmt.Errorf("fetch asset index: %w", err)
 	}
 
 	var downloads []network.DownloadEntry
 
 	if !options.skipLibraries {
 		for _, library := range requiredLibs {
-			downloads = append(downloads, library.Artifact().DownloadEntry())
+			downloads = append(downloads, library.Artifact.DownloadEntry())
 		}
 	}
 	watcher.Handle(LibrariesResolvedEvent{
@@ -180,7 +154,7 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnv
 		i := 0
 		for err := range results {
 			if err != nil {
-				return launchEnvironment{}, fmt.Errorf("download files: %w", err)
+				return LaunchEnvironment{}, fmt.Errorf("download files: %w", err)
 			}
 			watcher.Handle(DownloadingEvent{
 				Completed: i,
@@ -190,45 +164,131 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (launchEnv
 		}
 	}
 
+	if inst.Loader == LoaderNeoForge || inst.Loader == LoaderForge {
+		var post []meta.ForgeProcessor
+
+		if inst.Loader == LoaderForge {
+			post, err = meta.Forge.FetchPostProcessors(inst.Version.ID, inst.Version.LoaderID)
+			if err != nil {
+				return LaunchEnvironment{}, fmt.Errorf("fetch forge post meta: %w", err)
+			}
+		} else if inst.Loader == LoaderNeoForge {
+			post, err = meta.Neoforge.FetchPostProcessors(inst.Version.ID, inst.Version.LoaderID)
+			if err != nil {
+				return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post meta: %w", err)
+			}
+		}
+
+		for _, processor := range post {
+			cmd := exec.Command(launchEnv.JavaPath, processor.JavaArgs...)
+			cmd.Dir = inst.Dir()
+			cmd.Stderr = os.Stdout
+			if err := cmd.Run(); err != nil {
+				return LaunchEnvironment{}, fmt.Errorf("run forge post processor: %w", err)
+			}
+		}
+	}
+
 	if runtime.GOOS == "darwin" {
-		launchEnv.javaArgs = append(launchEnv.javaArgs, "-XstartOnFirstThread")
+		launchEnv.JavaArgs = append(launchEnv.JavaArgs, "-XstartOnFirstThread")
 	}
 	if options.Config.MinMemory != 0 {
-		launchEnv.javaArgs = append(launchEnv.javaArgs, fmt.Sprintf("-Xms%dm", options.Config.MinMemory))
+		launchEnv.JavaArgs = append(launchEnv.JavaArgs, fmt.Sprintf("-Xms%dm", options.Config.MinMemory))
 	}
 	if options.Config.MaxMemory != 0 {
-		launchEnv.javaArgs = append(launchEnv.javaArgs, fmt.Sprintf("-Xmx%dm", options.Config.MaxMemory))
+		launchEnv.JavaArgs = append(launchEnv.JavaArgs, fmt.Sprintf("-Xmx%dm", options.Config.MaxMemory))
 	}
-	launchEnv.gameArgs = []string{
+	launchEnv.GameArgs = []string{
 		"--username", options.Session.Username,
 		"--accessToken", options.Session.AccessToken,
 		"--userType", "msa",
 		"--gameDir", inst.Dir(),
 		"--assetsDir", env.AssetsDir,
-		"--assetIndex", versionMeta.AssetIndex.ID,
-		"--version", versionMeta.ID,
-		"--versionType", versionMeta.Type,
+		"--assetIndex", inst.Version.AssetIndex.ID,
+		"--version", inst.Version.ID,
+		"--versionType", inst.Version.Type,
 		"--width", strconv.Itoa(options.Config.WindowResolution.Width),
 		"--height", strconv.Itoa(options.Config.WindowResolution.Height),
 	}
 	if options.QuickPlayServer != "" {
-		launchEnv.gameArgs = append(launchEnv.gameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
+		launchEnv.GameArgs = append(launchEnv.GameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
 	}
 	if options.Session.UUID != "" {
-		launchEnv.gameArgs = append(launchEnv.gameArgs, "--uuid", options.Session.UUID)
+		launchEnv.GameArgs = append(launchEnv.GameArgs, "--uuid", options.Session.UUID)
 	}
 	if options.Demo {
-		launchEnv.gameArgs = append(launchEnv.gameArgs, "--demo")
+		launchEnv.GameArgs = append(launchEnv.GameArgs, "--demo")
 	}
 	if options.DisableChat {
-		launchEnv.gameArgs = append(launchEnv.gameArgs, "--disableChat")
+		launchEnv.GameArgs = append(launchEnv.GameArgs, "--disableChat")
 	}
 	if options.DisableMultiplayer {
-		launchEnv.gameArgs = append(launchEnv.gameArgs, "--disableMultiplayer")
+		launchEnv.GameArgs = append(launchEnv.GameArgs, "--disableMultiplayer")
 	}
 
 	for _, library := range append(installedLibs, requiredLibs...) {
-		launchEnv.classpath = append(launchEnv.classpath, library.Artifact().RuntimePath())
+		if library.SkipOnClasspath {
+			continue
+		}
+		launchEnv.Classpath = append(launchEnv.Classpath, library.Artifact.RuntimePath())
+	}
+
+	for _, arg := range inst.Version.Arguments.Jvm {
+		if arg, ok := arg.(string); ok {
+			arg = strings.ReplaceAll(arg, "${version_name}", inst.Version.ID)
+			arg = strings.ReplaceAll(arg, "${library_directory}", env.LibrariesDir)
+			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
+			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
+			launchEnv.JavaArgs = append(launchEnv.JavaArgs, arg)
+		}
+	}
+	for _, arg := range inst.Version.Arguments.Game {
+		if arg, ok := arg.(string); ok {
+			launchEnv.GameArgs = append(launchEnv.GameArgs, arg)
+		}
 	}
 	return launchEnv, nil
+}
+
+// fetchLoaderMeta returns the loader version metadata for the specified loader and version.
+func fetchLoaderMeta(versionMeta meta.VersionMeta, loader Loader, loaderVersion string) (meta.VersionMeta, error) {
+	var loaderMeta meta.VersionMeta
+	var err error
+
+	version := versionMeta.LoaderID
+
+	if loader == LoaderFabric {
+		loaderMeta, err = meta.Fabric.FetchMeta(versionMeta.ID, loaderVersion)
+		if err != nil {
+			return meta.VersionMeta{}, fmt.Errorf("fetch fabric meta: %w", err)
+		}
+	} else if loader == LoaderQuilt {
+		loaderMeta, err = meta.Quilt.FetchMeta(versionMeta.ID, loaderVersion)
+		if err != nil {
+			return meta.VersionMeta{}, fmt.Errorf("fetch quilt meta: %w", err)
+		}
+	} else if loader == LoaderNeoForge {
+		if version == "" {
+			version, err = meta.FetchNeoforgeVersion(versionMeta.ID)
+			if err != nil {
+				return meta.VersionMeta{}, fmt.Errorf("fetch neoforge version: %w", err)
+			}
+		}
+		loaderMeta, _, err = meta.Neoforge.FetchMeta(version)
+		if err != nil {
+			return meta.VersionMeta{}, fmt.Errorf("fetch neoforge meta: %w", err)
+		}
+	} else if loader == LoaderForge {
+		if version == "" {
+			version, err = meta.FetchForgeVersion(versionMeta.ID)
+			if err != nil {
+				return meta.VersionMeta{}, fmt.Errorf("fetch forge version: %w", err)
+			}
+		}
+		loaderMeta, _, err = meta.Forge.FetchMeta(version)
+		if err != nil {
+			return meta.VersionMeta{}, fmt.Errorf("fetch forge meta: %w", err)
+		}
+	}
+	return loaderMeta, nil
 }

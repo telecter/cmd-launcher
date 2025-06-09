@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 )
@@ -27,8 +28,11 @@ func (cache JSONCache[T]) Read(v *T) error {
 	return nil
 }
 
-// UpdateAndRead updates the cache with data from cache.URL and reads the contents of the cache into v.
-func (cache JSONCache[T]) UpdateAndRead(v *T) error {
+// FetchAndRead updates the cache with data from cache.URL, if set, and reads the contents of the cache into v.
+func (cache JSONCache[T]) FetchAndRead(v *T) error {
+	if cache.URL == "" {
+		return fmt.Errorf("no URL to fetch from")
+	}
 	if err := DownloadFile(DownloadEntry{
 		URL:  cache.URL,
 		Path: cache.Path,
@@ -54,4 +58,34 @@ func (cache JSONCache[T]) Sha1() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+type Cache struct {
+	Path string
+	URL  string
+}
+
+// Read reads the contents of the cache into v.
+func (cache Cache) Read(v *[]byte) error {
+	data, err := os.ReadFile(cache.Path)
+	if err != nil {
+		return err
+	}
+	*v = data
+	return nil
+}
+
+// FetchAndRead updates the cache with data from cache.URL, if set, and reads the contents of the cache into v.
+func (cache Cache) FetchAndRead(v *[]byte) error {
+	if cache.URL == "" {
+		return fmt.Errorf("no URL to fetch from")
+	}
+	if err := DownloadFile(DownloadEntry{
+		URL:  cache.URL,
+		Path: cache.Path,
+	}); err != nil {
+		return err
+	}
+
+	return cache.Read(v)
 }

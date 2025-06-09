@@ -12,20 +12,14 @@ import (
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
-type InstanceOptions struct {
-	Name          string
-	GameVersion   string
-	Loader        Loader
-	LoaderVersion string
-}
-
 // An Instance represents a full installation of Minecraft and its information.
 type Instance struct {
-	Name          string         `json:"-"`
-	GameVersion   string         `json:"game_version"`
-	Loader        Loader         `json:"mod_loader"`
-	LoaderVersion string         `json:"mod_loader_version,omitempty"`
-	Config        InstanceConfig `json:"config"`
+	Name          string           `json:"-"`
+	Version       meta.VersionMeta `json:"-"`
+	GameVersion   string           `json:"game_version"`
+	Loader        Loader           `json:"mod_loader"`
+	LoaderVersion string           `json:"mod_loader_version,omitempty"`
+	Config        InstanceConfig   `json:"config"`
 }
 
 // WriteConfig marshals inst and writes it to the instance configuration file. This is used to save the instance configuration.
@@ -47,6 +41,13 @@ func (inst *Instance) Rename(new string) error {
 	}
 	inst.Name = new
 	return nil
+}
+
+type InstanceOptions struct {
+	Name          string
+	GameVersion   string
+	Loader        Loader
+	LoaderVersion string
 }
 
 // InstanceConfig represents the configurable values of an Instance.
@@ -78,48 +79,25 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
 
-	if options.GameVersion == "release" || options.GameVersion == "snapshot" {
-		manifest, err := meta.GetVersionManifest()
-		if err != nil {
-			return Instance{}, err
-		}
-		if options.GameVersion == "release" {
-			options.GameVersion = manifest.Latest.Release
-		} else if options.GameVersion == "snapshot" {
-			options.GameVersion = manifest.Latest.Snapshot
-		}
+	versionMeta, err := meta.FetchVersionMeta(options.GameVersion)
+	if err != nil {
+		return Instance{}, fmt.Errorf("fetch version meta: %w", err)
 	}
 
-	if _, err := meta.GetVersionMeta(options.GameVersion); err != nil {
-		return Instance{}, err
+	loaderMeta, err := fetchLoaderMeta(versionMeta, options.Loader, options.LoaderVersion)
+	if err != nil {
+		return Instance{}, fmt.Errorf("fetch mod loader meta: %w", err)
 	}
+	versionMeta.LoaderID = loaderMeta.ID
 
-	if options.Loader == LoaderFabric || options.Loader == LoaderQuilt {
-		var fabricLoader meta.FabricLoader
-		switch options.Loader {
-		case LoaderFabric:
-			fabricLoader = meta.FabricLoaderStandard
-		case LoaderQuilt:
-			fabricLoader = meta.FabricLoaderQuilt
-		}
-		if options.LoaderVersion == "" {
-			fabricVersions, err := meta.GetFabricVersions(fabricLoader)
-			if err != nil {
-				return Instance{}, fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
-			}
-			options.LoaderVersion = fabricVersions[0].Version
-		}
-		if _, err := meta.GetFabricMeta(options.GameVersion, options.LoaderVersion, fabricLoader); err != nil {
-			return Instance{}, err
-		}
-	} else {
-		options.LoaderVersion = ""
-	}
+	versionMeta = meta.MergeVersionMeta(versionMeta, loaderMeta)
+
 	inst := Instance{
 		Name:          options.Name,
-		GameVersion:   options.GameVersion,
+		GameVersion:   versionMeta.ID,
+		Version:       versionMeta,
 		Loader:        options.Loader,
-		LoaderVersion: options.LoaderVersion,
+		LoaderVersion: versionMeta.LoaderID,
 		Config:        defaultConfig,
 	}
 
@@ -141,7 +119,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 
 // RemoveInstance removes the instance with the specified ID.
 func RemoveInstance(id string) error {
-	inst, err := GetInstance(id)
+	inst, err := FetchInstance(id)
 	if err != nil {
 		return err
 	}
@@ -152,7 +130,7 @@ func RemoveInstance(id string) error {
 }
 
 // GetInstance retrieves the instance with the specified ID.
-func GetInstance(id string) (Instance, error) {
+func FetchInstance(id string) (Instance, error) {
 	dir := filepath.Join(env.InstancesDir, id)
 	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
 	if errors.Is(err, os.ErrNotExist) {
@@ -165,11 +143,25 @@ func GetInstance(id string) (Instance, error) {
 		return Instance{}, fmt.Errorf("parse instance metadata: %w", err)
 	}
 	inst.Name = id
+
+	versionMeta, err := meta.FetchVersionMeta(inst.GameVersion)
+	if err != nil {
+		return Instance{}, fmt.Errorf("fetch version meta: %w", err)
+	}
+	versionMeta.LoaderID = inst.LoaderVersion
+
+	loaderMeta, err := fetchLoaderMeta(versionMeta, inst.Loader, inst.LoaderVersion)
+	if err != nil {
+		return Instance{}, fmt.Errorf("fetch mod loader meta: %w", err)
+	}
+	versionMeta = meta.MergeVersionMeta(versionMeta, loaderMeta)
+
+	inst.Version = versionMeta
 	return inst, nil
 }
 
-// GetAllInstances retrieves all valid instances within env.InstancesDir.
-func GetAllInstances() ([]Instance, error) {
+// AllInstances retrieves all valid instances within env.InstancesDir.
+func FetchAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(env.InstancesDir)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -180,7 +172,7 @@ func GetAllInstances() ([]Instance, error) {
 	var insts []Instance
 	for _, entry := range entries {
 		if entry.IsDir() {
-			inst, err := GetInstance(entry.Name())
+			inst, err := FetchInstance(entry.Name())
 			if err != nil {
 				continue
 			}
@@ -192,6 +184,6 @@ func GetAllInstances() ([]Instance, error) {
 
 // IsInstanceExist reports whether an instance with the specified ID exists.
 func IsInstanceExist(id string) bool {
-	_, err := GetInstance(id)
+	_, err := FetchInstance(id)
 	return err == nil
 }

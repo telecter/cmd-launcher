@@ -25,7 +25,7 @@ func (c *Search) Run(ctx *kong.Context) error {
 	switch c.Kind {
 	case "versions":
 		header = table.Row{"#", "Version", "Type", "Release Date"}
-		manifest, err := meta.GetVersionManifest()
+		manifest, err := meta.FetchVersionManifest()
 		if err != nil {
 			return fmt.Errorf("retrieve version manifest: %w", err)
 		}
@@ -36,13 +36,20 @@ func (c *Search) Run(ctx *kong.Context) error {
 		}
 	case "fabric", "quilt":
 		header = table.Row{"#", "Version"}
-		fabricLoader := meta.FabricLoaderStandard
-		if c.Kind == "quilt" {
-			fabricLoader = meta.FabricLoaderQuilt
-		}
-		versions, err := meta.GetFabricVersions(fabricLoader)
-		if err != nil {
-			return fmt.Errorf("retrieve %s versions: %w", fabricLoader.String(), err)
+		var versions meta.FabricVersionList
+
+		if c.Kind == "fabric" {
+			var err error
+			versions, err = meta.Fabric.FetchVersions()
+			if err != nil {
+				return fmt.Errorf("retrieve fabric versions: %w", err)
+			}
+		} else if c.Kind == "quilt" {
+			var err error
+			versions, err = meta.Quilt.FetchVersions()
+			if err != nil {
+				return fmt.Errorf("retrieve quilt versions: %w", err)
+			}
 		}
 
 		for i, version := range versions {

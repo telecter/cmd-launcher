@@ -11,20 +11,24 @@ import (
 
 type Create struct {
 	ID            string `arg:"" name:"id" help:"Instance name"`
-	Loader        string `name:"loader" help:"Mod loader to use" enum:"fabric,quilt,vanilla" default:"vanilla" short:"l"`
+	Loader        string `name:"loader" help:"Mod loader to use" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
 	Version       string `name:"version" help:"Game version" default:"release" short:"v"`
-	LoaderVersion string `name:"loader-version" help:"Loader version (if modded)"`
+	LoaderVersion string `name:"loader-version" help:"Loader version (if Fabric/Quilt)" default:"latest"`
 }
 
 func (c *Create) Run(ctx *kong.Context) error {
 	var loader launcher.Loader
 	switch c.Loader {
-	case launcher.LoaderFabric.String():
+	case "fabric":
 		loader = launcher.LoaderFabric
-	case launcher.LoaderQuilt.String():
+	case "quilt":
 		loader = launcher.LoaderQuilt
-	case launcher.LoaderVanilla.String():
+	case "vanilla":
 		loader = launcher.LoaderVanilla
+	case "neoforge":
+		loader = launcher.LoaderNeoForge
+	case "forge":
+		loader = launcher.LoaderForge
 	}
 
 	inst, err := launcher.CreateInstance(launcher.InstanceOptions{
@@ -54,7 +58,7 @@ type Delete struct {
 }
 
 func (c *Delete) Run(ctx *kong.Context) error {
-	inst, err := launcher.GetInstance(c.ID)
+	inst, err := launcher.FetchInstance(c.ID)
 	if err != nil {
 		return err
 	}
@@ -82,7 +86,7 @@ type Rename struct {
 }
 
 func (c *Rename) Run(ctx *kong.Context) error {
-	inst, err := launcher.GetInstance(c.ID)
+	inst, err := launcher.FetchInstance(c.ID)
 	if err != nil {
 		return err
 	}
@@ -96,7 +100,7 @@ type List struct{}
 
 func (c *List) Run(ctx *kong.Context) error {
 	var rows []table.Row
-	instances, err := launcher.GetAllInstances()
+	instances, err := launcher.FetchAllInstances()
 	if err != nil {
 		return fmt.Errorf("get all instances: %w", err)
 	}

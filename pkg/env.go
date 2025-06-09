@@ -17,6 +17,8 @@ var CachesDir string // Caches directory, e.g. version metadata, version manifes
 
 var AssetsDir string // Game assets directory and asset index
 
+var TmpDir string // Directory for temporary files
+
 var AuthStorePath string // Path of the global authentication store
 
 // SetDirs sets all directories to defaults from rootDir. These values can also be changed individually.
@@ -27,6 +29,7 @@ func SetDirs(rootDir string) error {
 	LibrariesDir = filepath.Join(RootDir, "libraries")
 	CachesDir = filepath.Join(RootDir, "caches")
 	AssetsDir = filepath.Join(RootDir, "assets")
+	TmpDir = filepath.Join(RootDir, "tmp")
 	AuthStorePath = filepath.Join(RootDir, "account.json")
 
 	if err := os.MkdirAll(rootDir, 0755); err != nil {

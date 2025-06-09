@@ -27,10 +27,10 @@ func DownloadFile(entry DownloadEntry) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if err := CheckResponse(resp); err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
 	if err := os.MkdirAll(filepath.Dir(entry.Path), 0755); err != nil {
 		return fmt.Errorf("create directory for file '%s': %w", entry.Path, err)

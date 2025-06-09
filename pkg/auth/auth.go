@@ -86,7 +86,9 @@ func (msa msaT) FetchDeviceCode() (deviceCodeResponse, error) {
 	}
 	var data deviceCodeResponse
 	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &data)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return deviceCodeResponse{}, err
+	}
 
 	return data, nil
 }
@@ -99,7 +101,9 @@ func (msaT) authenticate(payload url.Values) (msaResponse, error) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &data)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return msaResponse{}, err
+	}
 	return data, nil
 }
 
@@ -150,7 +154,9 @@ func (xblT) authenticate(msaAccessToken string) (xblResponse, error) {
 	body, _ := io.ReadAll(resp.Body)
 
 	var data xblResponse
-	json.Unmarshal(body, &data)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return xblResponse{}, err
+	}
 	return data, nil
 }
 
@@ -192,7 +198,9 @@ func (xstsT) authenticate(xblToken string) (xstsResponse, error) {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	var data xstsResponse
-	json.Unmarshal(body, &data)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return xstsResponse{}, err
+	}
 
 	if err := network.CheckResponse(resp); err != nil {
 		if data.XErr != 0 {
@@ -237,7 +245,9 @@ func (minecraftT) authenticate(xstsToken string, userhash string) (minecraftResp
 	}
 	var data minecraftResponse
 	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &data)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return minecraftResponse{}, minecraftProfile{}, err
+	}
 
 	req, _ := http.NewRequest("GET", "https://api.minecraftservices.com/minecraft/profile", nil)
 	req.Header.Add("Authorization", "Bearer "+data.AccessToken)
@@ -247,7 +257,9 @@ func (minecraftT) authenticate(xstsToken string, userhash string) (minecraftResp
 	}
 	var profile minecraftProfile
 	body, _ = io.ReadAll(resp.Body)
-	json.Unmarshal(body, &profile)
+	if err := json.Unmarshal(body, &profile); err != nil {
+		return minecraftResponse{}, minecraftProfile{}, err
+	}
 	if err := network.CheckResponse(resp); err != nil {
 		if profile.Error != "" && profile.ErrorMessage != "" {
 			return minecraftResponse{}, minecraftProfile{}, errors.New(profile.Error)

@@ -15,6 +15,9 @@ import (
 
 const MAVEN_REPO_URL = "https://repo.maven.apache.org/maven2/%s"
 
+// A LibrarySpecifier represents the Maven specifier syntax.
+//
+// group:artifact:version:classifier
 type LibrarySpecifier struct {
 	Group      string
 	Artifact   string
@@ -30,13 +33,20 @@ func (specifier LibrarySpecifier) String() string {
 	return strings.Join(p, ":")
 }
 func (specifier LibrarySpecifier) Path() string {
+	t := ".jar"
+	if strings.HasSuffix(specifier.Version, "@zip") {
+		specifier.Version = strings.ReplaceAll(specifier.Version, "@zip", "")
+		t = ".zip"
+	}
+
 	p := []string{specifier.Group, specifier.Artifact, specifier.Version}
+
 	p[0] = strings.ReplaceAll(p[0], ".", "/")
 	filename := p[1] + "-" + p[2]
 	if specifier.Classifier != "" {
 		filename += "-" + specifier.Classifier
 	}
-	filename += ".jar"
+	filename += t
 	return strings.Join([]string{p[0], p[1], p[2], filename}, "/")
 }
 func (specifier LibrarySpecifier) MarshalJSON() ([]byte, error) {
@@ -68,8 +78,8 @@ func NewLibrarySpecifier(s string) (LibrarySpecifier, error) {
 	return specifier, nil
 }
 
-// GetMavenLibrary returns library metadata for the specified name and path in the Maven repository.
-func GetMavenLibrary(specifier LibrarySpecifier) (Library, error) {
+// FetchMavenLibrary returns library metadata for the specified name and path in the Maven repository.
+func FetchMavenLibrary(specifier LibrarySpecifier) (Library, error) {
 	path := specifier.Path()
 	url := fmt.Sprintf(MAVEN_REPO_URL, path)
 
@@ -80,19 +90,19 @@ func GetMavenLibrary(specifier LibrarySpecifier) (Library, error) {
 	if err != nil {
 		resp, err := http.Get(url + ".sha1")
 		if err != nil {
-			return BaseLibrary{}, err
+			return Library{}, err
 		}
 		defer resp.Body.Close()
 		if err := network.CheckResponse(resp); err != nil {
-			return BaseLibrary{}, fmt.Errorf("library checksum could not fetched")
+			return Library{}, fmt.Errorf("library checksum could not fetched")
 		}
 		sum, _ = io.ReadAll(resp.Body)
 		os.MkdirAll(filepath.Dir(sumPath), 0755)
 		os.WriteFile(sumPath, sum, 0644)
 	}
-	return BaseLibrary{
-		Name: specifier,
-		LibraryArtifact: Artifact{
+	return Library{
+		Specifier: specifier,
+		Artifact: Artifact{
 			Path: path,
 			URL:  url,
 			Sha1: string(sum),

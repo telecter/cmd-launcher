@@ -18,75 +18,31 @@ type FabricVersionList []struct {
 	Stable    bool   `json:"stable"`
 }
 
-// A FabricMeta is metadata of the libraries and other data needed to start a Fabric-modded game.
-type FabricMeta struct {
-	ID           string `json:"id"`
-	InheritsFrom string `json:"inheritsFrom"`
-	ReleaseTime  string `json:"releaseTime"`
-	Time         string `json:"time"`
-	Type         string `json:"type"`
-	MainClass    string `json:"mainClass"`
-	Arguments    struct {
-		Game []any    `json:"game"`
-		Jvm  []string `json:"jvm"`
-	} `json:"arguments"`
-	Libraries []FabricLibrary
+type fabricAPI struct {
+	name     string // Name of the fabric API.
+	versions string // Loader versions endpoint.
+	profiles string // Launcher profiles endpoint.
 }
 
-// A FabricLibrary is an implementation of Library based on Fabric-provided metadata.
-type FabricLibrary struct {
-	URL  string `json:"url,omitempty"`
-	Sha1 string `json:"sha1,omitempty"`
-	Size int    `json:"size,omitempty"`
-	Name LibrarySpecifier
+var Fabric = fabricAPI{
+	name:     "fabric",
+	versions: "https://meta.fabricmc.net/v2/versions/loader",
+	profiles: "https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json",
+}
+var Quilt = fabricAPI{
+	name:     "quilt",
+	versions: "https://meta.quiltmc.org/v3/versions/loader",
+	profiles: "https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json",
 }
 
-func (library FabricLibrary) Artifact() Artifact {
-	path := library.Name.Path()
-	return Artifact{
-		Path: path,
-		URL:  library.URL + "/" + path,
-		Sha1: library.Sha1,
-		Size: library.Size,
-	}
-}
-func (library FabricLibrary) ShouldInstall() bool {
-	return true
-}
-func (library FabricLibrary) Specifier() LibrarySpecifier {
-	return library.Name
-}
-
-// FabricLoader represents a variant of the Fabric mod loader.
-type FabricLoader string
-
-const (
-	FabricLoaderStandard FabricLoader = "fabric" // FabricMC - https://fabricmc.net
-	FabricLoaderQuilt    FabricLoader = "quilt"  // Quilt - https://quiltmc.org
-)
-
-func (fabricLoader FabricLoader) String() string {
-	return string(fabricLoader)
-}
-
-const FABRIC_VERSIONS_URL = "https://meta.fabricmc.net/v2/versions/loader"
-const FABRIC_PROFILES_URL = "https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json"
-const QUILT_VERSIONS_URL = "https://meta.quiltmc.org/v3/versions/loader"
-const QUILT_PROFILES_URL = "https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json"
-
-// GetFabricVersions retrieves a list of all versions of the specified Fabric variant.
-func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
+// FetchFabricVersions retrieves a list of all versions of Fabric.
+func (f fabricAPI) FetchVersions() (FabricVersionList, error) {
 	cache := network.JSONCache[FabricVersionList]{
-		Path: filepath.Join(env.CachesDir, fabricLoader.String(), "versions.json"),
-	}
-	switch fabricLoader {
-	case FabricLoaderStandard:
-		cache.URL = FABRIC_VERSIONS_URL
-	case FabricLoaderQuilt:
-		cache.URL = QUILT_VERSIONS_URL
+		Path: filepath.Join(env.CachesDir, f.name, "versions.json"),
+		URL:  f.versions,
 	}
 	var versions FabricVersionList
-	if err := cache.UpdateAndRead(&versions); err != nil {
+	if err := cache.FetchAndRead(&versions); err != nil {
 		if err := cache.Read(&versions); err != nil {
 			return nil, err
 		}
@@ -95,28 +51,31 @@ func GetFabricVersions(fabricLoader FabricLoader) (FabricVersionList, error) {
 	return versions, nil
 }
 
-// GetFabricMeta retrieves the launcher metadata for a loader version and game version of the specified Fabric variant.
-func GetFabricMeta(gameVersion string, loaderVersion string, fabricLoader FabricLoader) (FabricMeta, error) {
-	cache := network.JSONCache[FabricMeta]{
-		Path: filepath.Join(env.CachesDir, fabricLoader.String(), loaderVersion+"-"+gameVersion+".json"),
+// FetchMeta retrieves version metadata for the specified game and loader version of Fabric.
+func (f fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, error) {
+	if loaderVersion == "latest" {
+		versions, err := f.FetchVersions()
+		if err != nil {
+			return VersionMeta{}, fmt.Errorf("fetch fabric versions: %w", err)
+		}
+		loaderVersion = versions[0].Version
 	}
-	switch fabricLoader {
-	case FabricLoaderStandard:
-		cache.URL = fmt.Sprintf(FABRIC_PROFILES_URL, gameVersion, loaderVersion)
-	case FabricLoaderQuilt:
-		cache.URL = fmt.Sprintf(QUILT_PROFILES_URL, gameVersion, loaderVersion)
+	cache := network.JSONCache[VersionMeta]{
+		Path: filepath.Join(env.CachesDir, "fabric", loaderVersion+"-"+gameVersion+".json"),
+		URL:  fmt.Sprintf(f.profiles, gameVersion, loaderVersion),
 	}
-	var meta FabricMeta
-	if err := cache.Read(&meta); err != nil {
-		if err := cache.UpdateAndRead(&meta); err != nil {
+	var fabricMeta VersionMeta
+	if err := cache.Read(&fabricMeta); err != nil {
+		if err := cache.FetchAndRead(&fabricMeta); err != nil {
 			var statusErr *network.HTTPStatusError
 			if errors.As(err, &statusErr) {
 				if statusErr.StatusCode == 400 {
-					return FabricMeta{}, fmt.Errorf("invalid Fabric version or invalid game version for Fabric")
+					return VersionMeta{}, fmt.Errorf("invalid fabric version or invalid game version for fabric")
 				}
 			}
-			return FabricMeta{}, err
+			return VersionMeta{}, err
 		}
 	}
-	return meta, nil
+	fabricMeta.LoaderID = loaderVersion
+	return fabricMeta, nil
 }

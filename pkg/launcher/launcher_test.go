@@ -38,9 +38,10 @@ func TestCreateInstance(t *testing.T) {
 		{
 			name: "Fabric",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderFabric,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderFabric,
+				LoaderVersion: "latest",
 			},
 			wantError: false,
 		},
@@ -67,9 +68,10 @@ func TestCreateInstance(t *testing.T) {
 		{
 			name: "Quilt",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderQuilt,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderQuilt,
+				LoaderVersion: "latest",
 			},
 			wantError: false,
 		},
@@ -92,6 +94,22 @@ func TestCreateInstance(t *testing.T) {
 				LoaderVersion: "not valid",
 			},
 			wantError: true,
+		},
+		{
+			name: "Forge",
+			options: InstanceOptions{
+				GameVersion: "release",
+				Name:        uuid.NewString(),
+				Loader:      LoaderForge,
+			},
+		},
+		{
+			name: "NeoForge",
+			options: InstanceOptions{
+				GameVersion: "release",
+				Name:        uuid.NewString(),
+				Loader:      LoaderNeoForge,
+			},
 		},
 	}
 
@@ -171,17 +189,35 @@ func TestPrepare(t *testing.T) {
 		{
 			name: "Fabric",
 			options: InstanceOptions{
-				GameVersion: "release",
-				Name:        uuid.NewString(),
-				Loader:      LoaderFabric,
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderFabric,
+				LoaderVersion: "latest",
 			},
 		},
 		{
 			name: "Quilt",
 			options: InstanceOptions{
+				GameVersion:   "release",
+				Name:          uuid.NewString(),
+				Loader:        LoaderQuilt,
+				LoaderVersion: "latest",
+			},
+		},
+		{
+			name: "Forge",
+			options: InstanceOptions{
 				GameVersion: "release",
 				Name:        uuid.NewString(),
-				Loader:      LoaderQuilt,
+				Loader:      LoaderForge,
+			},
+		},
+		{
+			name: "NeoForge",
+			options: InstanceOptions{
+				GameVersion: "release",
+				Name:        uuid.NewString(),
+				Loader:      LoaderNeoForge,
 			},
 		},
 	}
@@ -192,7 +228,8 @@ func TestPrepare(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error creating instance for test: %s", err)
 			}
-			_, err = Prepare(inst, EnvOptions{
+
+			_, err = inst.Prepare(EnvOptions{
 				Session: auth.Session{
 					Username: "testing",
 				},
