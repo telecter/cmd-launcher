@@ -2,6 +2,8 @@ package launcher
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -184,6 +186,9 @@ func TestRemoveInstance(t *testing.T) {
 	if err := RemoveInstance(inst.Name); err != nil {
 		t.Errorf("wanted no error; got: %s", err)
 	}
+	if _, err := os.Stat(inst.Dir()); err == nil {
+		t.Error("instance directory should not exist; but does")
+	}
 }
 
 func TestRenameInstance(t *testing.T) {
@@ -196,9 +201,14 @@ func TestRenameInstance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating instance for test: %s", err)
 	}
-	if err := inst.Rename(uuid.NewString()); err != nil {
+	name := uuid.NewString()
+	if err := inst.Rename(name); err != nil {
 		t.Errorf("wanted no error; got: %s", err)
 	}
+	if _, err := os.Stat(filepath.Join(env.InstancesDir, name)); err != nil {
+		t.Error("renamed instance directory does not exist; but should")
+	}
+
 }
 
 type testingWatcher struct{}

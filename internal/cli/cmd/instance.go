@@ -5,15 +5,17 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
+	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/telecter/cmd-launcher/internal/cli"
 	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
 type Create struct {
-	ID            string `arg:"" name:"id" help:"Instance name"`
-	Loader        string `name:"loader" help:"Mod loader to use" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
-	Version       string `name:"version" help:"Game version" default:"release" short:"v"`
-	LoaderVersion string `name:"loader-version" help:"Loader version" default:"latest"`
+	ID            string `arg:"" help:"${cmd_create_id}"`
+	Loader        string `help:"${cmd_create_loader}" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
+	Version       string `help:"${cmd_create_version}" default:"release" short:"v"`
+	LoaderVersion string `help:"${cmd_create_loaderversion}" default:"latest"`
 }
 
 func (c *Create) Run(ctx *kong.Context) error {
@@ -40,21 +42,22 @@ func (c *Create) Run(ctx *kong.Context) error {
 	if err != nil {
 		return fmt.Errorf("create instance: %w", err)
 	}
-	fmt.Printf("Created instance '%s' with Minecraft %s ", inst.Name, inst.GameVersion)
+
+	s := cli.Translate("cmd.create.complete", color.New(color.Bold).Sprint(inst.Name), inst.GameVersion)
 	if inst.Loader != launcher.LoaderVanilla {
-		fmt.Printf("(%s %s)\n", inst.Loader, inst.LoaderVersion)
-	} else {
-		fmt.Print("\n")
+		s += cli.Translate("cmd.create.complete.extra", inst.Loader, inst.LoaderVersion)
 	}
-	if inst.Config.Java == "" {
-		fmt.Println("Java could not be found. This means you will need to manually set its path in the instance configuration.")
+	cli.Success(s)
+
+	if inst.Config.Java != "" {
+		cli.Warning(cli.Translate("cmd.create.nojvm"))
 	}
 	return nil
 }
 
 type Delete struct {
-	ID  string `arg:"" name:"id" help:"Instance to delete"`
-	Yes bool   `name:"yes" short:"y" help:"Assume yes to all questions"`
+	ID  string `arg:"" name:"id" help:"${cmd_delete_id}"`
+	Yes bool   `name:"yes" short:"y" help:"${cmd_delete_yes}"`
 }
 
 func (c *Delete) Run(ctx *kong.Context) error {
@@ -65,7 +68,9 @@ func (c *Delete) Run(ctx *kong.Context) error {
 	delete := c.Yes
 	if !delete {
 		var input string
-		fmt.Printf("Are you sure you want to delete '%s'?\nIt will be gone forever (a long time!) [y/n] ", inst.Name)
+
+		cli.Warning(cli.Translate("cmd.delete.confirm"))
+		fmt.Print(cli.Translate("cmd.delete.warning", color.New(color.Bold).Sprint(inst.Name)))
 		fmt.Scanln(&input)
 		delete = input == "y" || input == "Y"
 	}
@@ -73,16 +78,16 @@ func (c *Delete) Run(ctx *kong.Context) error {
 		if err := launcher.RemoveInstance(c.ID); err != nil {
 			return fmt.Errorf("remove instance: %w", err)
 		}
-		fmt.Printf("Deleted instance '%s'\n", inst.Name)
+		cli.Success(cli.Translate("cmd.delete.complete", color.New(color.Bold).Sprint(inst.Name)))
 	} else {
-		fmt.Println("Operation aborted")
+		cli.Info(cli.Translate("cmd.delete.abort"))
 	}
 	return nil
 }
 
 type Rename struct {
-	ID  string `arg:"" name:"id" help:"Instance to rename"`
-	New string `arg:"" name:"new" help:"New name for instance"`
+	ID  string `arg:"" help:"${cmd_rename_id}"`
+	New string `arg:"" help:"${cmd_rename_new}"`
 }
 
 func (c *Rename) Run(ctx *kong.Context) error {
@@ -93,6 +98,7 @@ func (c *Rename) Run(ctx *kong.Context) error {
 	if err := inst.Rename(c.New); err != nil {
 		return fmt.Errorf("rename instance: %w", err)
 	}
+	cli.Success(cli.Translate("cmd.rename.complete"))
 	return nil
 }
 
@@ -102,7 +108,7 @@ func (c *List) Run(ctx *kong.Context) error {
 	var rows []table.Row
 	instances, err := launcher.FetchAllInstances()
 	if err != nil {
-		return fmt.Errorf("get all instances: %w", err)
+		return fmt.Errorf("fetch all instances: %w", err)
 	}
 	for i, inst := range instances {
 		rows = append(rows, table.Row{i, inst.Name, inst.GameVersion, inst.Loader})
@@ -111,15 +117,20 @@ func (c *List) Run(ctx *kong.Context) error {
 	t := table.NewWriter()
 	t.SetStyle(table.StyleLight)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"#", "Name", "Version", "Type"})
+	t.AppendHeader(table.Row{
+		"#",
+		cli.Translate("search.table.name"),
+		cli.Translate("search.table.version"),
+		cli.Translate("search.table.type"),
+	})
 	t.AppendRows(rows)
 	t.Render()
 	return nil
 }
 
 type Instance struct {
-	Create Create `cmd:"" help:"Create a new instance"`
-	Delete Delete `cmd:"" help:"Delete an instance"`
-	Rename Rename `cmd:"" help:"Rename an instance"`
-	List   List   `cmd:"" help:"List all instances"`
+	Create Create `cmd:"" help:"${cmd_create}"`
+	Delete Delete `cmd:"" help:"${cmd_delete}"`
+	Rename Rename `cmd:"" help:"${cmd_rename}"`
+	List   List   `cmd:"" help:"${cmd_list}"`
 }

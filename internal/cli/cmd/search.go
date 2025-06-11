@@ -9,13 +9,14 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/telecter/cmd-launcher/internal/cli"
 	"github.com/telecter/cmd-launcher/internal/meta"
 )
 
 type Search struct {
-	Query   string `arg:"" name:"query" help:"Search query" optional:""`
-	Kind    string `name:"kind" help:"What to search for" short:"k" enum:"versions,fabric,quilt" default:"versions"`
-	Reverse bool   `name:"reverse" short:"r" help:"Reverse the listing"`
+	Query   string `arg:"" help:"${cmd_search_query}" optional:""`
+	Kind    string `help:"${cmd_search_kind}" short:"k" enum:"versions,fabric,quilt" default:"versions"`
+	Reverse bool   `short:"r" help:"${cmd_search_reverse}"`
 }
 
 func (c *Search) Run(ctx *kong.Context) error {
@@ -24,7 +25,12 @@ func (c *Search) Run(ctx *kong.Context) error {
 
 	switch c.Kind {
 	case "versions":
-		header = table.Row{"#", "Version", "Type", "Release Date"}
+		header = table.Row{
+			"#",
+			cli.Translate("search.table.version"),
+			cli.Translate("search.table.type"),
+			cli.Translate("search.table.date"),
+		}
 		manifest, err := meta.FetchVersionManifest()
 		if err != nil {
 			return fmt.Errorf("retrieve version manifest: %w", err)
@@ -35,7 +41,10 @@ func (c *Search) Run(ctx *kong.Context) error {
 			}
 		}
 	case "fabric", "quilt":
-		header = table.Row{"#", "Version"}
+		header = table.Row{
+			"#",
+			cli.Translate("search.table.version"),
+		}
 		var versions meta.FabricVersionList
 
 		if c.Kind == "fabric" {

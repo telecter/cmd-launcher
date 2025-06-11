@@ -1,11 +1,11 @@
 module github.com/telecter/cmd-launcher
 
-go 1.24.2
+go 1.24.4
 
 require (
-	dario.cat/mergo v1.0.2
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/alecthomas/kong v1.11.0
+	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -13,6 +13,8 @@ require (
 )
 
 require (
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect

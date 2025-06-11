@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/telecter/cmd-launcher/internal/cli"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
@@ -319,10 +320,10 @@ func AuthenticateWithRedirect() (Session, error) {
 	http.HandleFunc(MSA.RedirectURI.Path, func(w http.ResponseWriter, req *http.Request) {
 		params := req.URL.Query()
 		if params.Get("error") != "" {
-			fmt.Fprintf(w, "Failed to log in. An error occurred during authentication: %s", params.Get("error_description"))
+			fmt.Fprint(w, cli.Translate("auth.fail", params.Get("error_description")))
 			err = fmt.Errorf("get MSA code interactively: %s", params.Get("error_description"))
 		} else {
-			fmt.Fprintf(w, "Logged in! You can close this window.")
+			fmt.Fprint(w, cli.Translate("auth.redirect"))
 		}
 		code = params.Get("code")
 		go server.Shutdown(context.Background())
@@ -360,15 +361,19 @@ func AuthenticateWithCode(codeResp deviceCodeResponse) (Session, error) {
 		if err != nil {
 			return Session{}, fmt.Errorf("authenticate with MSA: %w", err)
 		}
-		if resp.Error == "authorization_pending" {
+
+		switch resp.Error {
+		case "authorization_pending":
 			time.Sleep(time.Second * time.Duration(codeResp.Interval))
 			continue
-		} else if resp.Error == "" {
+		case "authorization_declined":
+			return Session{}, fmt.Errorf("authorization was declined")
+		case "":
 			Store.MSA.write(resp)
-			break
-		} else {
-			return Session{}, errors.New(resp.Error)
+		default:
+			return Session{}, fmt.Errorf("got error %q", err)
 		}
+		break
 	}
 	return Authenticate()
 }

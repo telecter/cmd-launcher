@@ -94,7 +94,7 @@ func FetchMavenLibrary(specifier LibrarySpecifier) (Library, error) {
 		}
 		defer resp.Body.Close()
 		if err := network.CheckResponse(resp); err != nil {
-			return Library{}, fmt.Errorf("library checksum could not fetched")
+			return Library{}, fmt.Errorf("fetch library checksum: %w", err)
 		}
 		sum, _ = io.ReadAll(resp.Body)
 		os.MkdirAll(filepath.Dir(sumPath), 0755)

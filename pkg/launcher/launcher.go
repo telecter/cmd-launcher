@@ -43,7 +43,7 @@ type EnvOptions struct {
 	skipLibraries bool
 }
 
-// An EventWatcher is a controller that handles game preparation events.
+// An EventWatcher is a controller that can handle multiple types of events.
 type EventWatcher interface {
 	Handle(event any)
 }
@@ -247,7 +247,6 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		if arg, ok := arg.(string); ok {
 			arg = strings.ReplaceAll(arg, "${version_name}", version.ID)
 			arg = strings.ReplaceAll(arg, "${library_directory}", env.LibrariesDir)
-			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
 			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
 			launchEnv.JavaArgs = append(launchEnv.JavaArgs, arg)
 		}

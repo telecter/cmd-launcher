@@ -19,6 +19,7 @@ import (
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
+// A ForgeInstallProfile contains install libraries and processors used to initialize Forge.
 type ForgeInstallProfile struct {
 	Spec        int    `json:"spec"`
 	Profile     string `json:"profile"`
@@ -43,6 +44,7 @@ type processor struct {
 	Args      []string           `json:"args"`
 }
 
+// A ForgeProcessor contains the finished JVM arguments to start a Forge post processor.
 type ForgeProcessor struct {
 	JavaArgs []string
 }
