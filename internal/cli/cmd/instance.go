@@ -45,11 +45,11 @@ func (c *Create) Run(ctx *kong.Context) error {
 
 	s := cli.Translate("cmd.create.complete", color.New(color.Bold).Sprint(inst.Name), inst.GameVersion)
 	if inst.Loader != launcher.LoaderVanilla {
-		s += cli.Translate("cmd.create.complete.extra", inst.Loader, inst.LoaderVersion)
+		s += " " + cli.Translate("cmd.create.complete.extra", inst.Loader, inst.LoaderVersion)
 	}
 	cli.Success(s)
 
-	if inst.Config.Java != "" {
+	if inst.Config.Java == "" {
 		cli.Warning(cli.Translate("cmd.create.nojvm"))
 	}
 	return nil

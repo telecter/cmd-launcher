@@ -45,11 +45,11 @@ type Start struct {
 	Demo        bool   `help:"${cmd_start_demo}" group:"opts"`
 	DisableMP   bool   `help:"${cmd_start_disablemp}" group:"opts"`
 	DisableChat bool   `help:"${cmd_start_disablechat}" group:"opts"`
-	Width       int    `help:"${cmd_start_width}" group:"overrides"`
-	Height      int    `help:"${cmd_start_height}" group:"overrides" `
+	Width       int    `help:"${cmd_start_width}" group:"overrides" and:"size"`
+	Height      int    `help:"${cmd_start_height}" group:"overrides" and:"size"`
 	JVM         string `help:"${cmd_start_jvm}" group:"overrides" type:"path" placeholder:"PATH"`
-	MinMemory   int    `help:"${cmd_start_minmemory}" group:"overrides" placeholder:"MB"`
-	MaxMemory   int    `help:"${cmd_start_maxmemory}" group:"overrides" placeholder:"MB"`
+	MinMemory   int    `help:"${cmd_start_minmemory}" group:"overrides" placeholder:"MB" and:"memory"`
+	MaxMemory   int    `help:"${cmd_start_maxmemory}" group:"overrides" placeholder:"MB" and:"memory"`
 }
 
 func (c *Start) Run(ctx *kong.Context, verbosity int) error {

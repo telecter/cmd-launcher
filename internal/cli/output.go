@@ -74,6 +74,7 @@ var translations = map[string]string{
 	"search.table.type":         "Type",
 	"search.table.date":         "Release Date",
 	"search.table.name":         "Name",
+	"verbosity":                 "Increase launcher output verbosity",
 }
 
 // Translate takes a translation string and looks up its human-readable text. If not available, it returns the same translation string.

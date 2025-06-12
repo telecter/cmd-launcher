@@ -36,12 +36,22 @@ type CLI struct {
 	Auth      cmd.Auth     `cmd:"" help:"${cmd_auth}"`
 	Search    cmd.Search   `cmd:"" help:"${cmd_search}"`
 	Version   version      `cmd:"" help:"${cmd_version}"`
-	Verbosity int          `short:"v" type:"counter"`
+	Verbosity string       `help:"${verbosity}" enum:"info,extra,debug" default:"info"`
 	Dir       string       `help:"${arg_dir}" type:"path" placeholder:"PATH"`
 	NoColor   bool         `help:"${arg_nocolor}"`
 }
 
-func (c *CLI) AfterApply() error {
+func (c *CLI) AfterApply(ctx *kong.Context) error {
+	var verbosity int
+	switch c.Verbosity {
+	case "info":
+		verbosity = 0
+	case "extra":
+		verbosity = 1
+	case "debug":
+		verbosity = 2
+	}
+	ctx.Bind(verbosity)
 	if c.Dir != "" {
 		if err := env.SetDirs(c.Dir); err != nil {
 			return err
@@ -70,12 +80,19 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			NoExpandSubcommands: true,
 		}),
+		kong.ValueFormatter(func(value *kong.Value) string {
+			if value.Enum != "" {
+				return fmt.Sprintf("%s [%s]", value.Help, strings.Join(value.EnumSlice(), ", "))
+			}
+			return value.Help
+		}),
 		kong.Groups{
 			"overrides": cli.Translate("cmd.start.overrides"),
 			"opts":      cli.Translate("cmd.start.opts"),
 		},
 		vars,
 	)
+
 	ctx, err := parser.Parse(os.Args[1:])
 	if err != nil {
 		exitCode := 1
@@ -88,7 +105,7 @@ func main() {
 		parser.Exit(exitCode)
 	}
 
-	if err := ctx.Run(c.Verbosity); err != nil {
+	if err := ctx.Run(); err != nil {
 		cli.Error("%s", err)
 		var coder kong.ExitCoder
 		if errors.As(err, &coder) {
