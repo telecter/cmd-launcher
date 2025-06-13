@@ -36,7 +36,7 @@ func (c *Login) Run(ctx *kong.Context) error {
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
-			cli.Info(cli.Translate("auth.code.display", color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI)))
+			cli.Info(cli.Translate("auth.code.display"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
 			session, err = auth.AuthenticateWithCode(resp)
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
@@ -44,9 +44,9 @@ func (c *Login) Run(ctx *kong.Context) error {
 		} else {
 			cli.Info(cli.Translate("auth.browser.opening"))
 			url := auth.MSA.AuthCodeURL()
-			if err := browser.OpenURL(url.String()); err != nil {
-				return fmt.Errorf("open browser: %w", err)
-			}
+			cli.Info(cli.Translate("auth.browser.url"), url.String())
+
+			browser.OpenURL(url.String())
 			var err error
 			session, err = auth.AuthenticateWithRedirect()
 			if err != nil {
@@ -54,7 +54,7 @@ func (c *Login) Run(ctx *kong.Context) error {
 			}
 		}
 	}
-	cli.Success(cli.Translate("auth.complete", color.New(color.Bold).Sprint(session.Username)))
+	cli.Success(cli.Translate("auth.complete"), color.New(color.Bold).Sprint(session.Username))
 	return nil
 }
 

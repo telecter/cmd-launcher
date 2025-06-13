@@ -63,7 +63,10 @@ cmd-launcher start CoolInstance
 To set game options and override instance configuration, you can set specific flags on the `start` command. These can be viewed in the help text.
 
 **Verbosity**  
-To increase the verbosity of the launcher, use the `-v` flag. It can be used multiple times for more verbosity (e.g. `-vv`).
+To increase the verbosity of the launcher, use the `--verbosity` flag. It can be set to either:
+* `info` - default, no extra logging
+* `extra` - more information when starting the game
+* `debug` - debug information useful for debugging the launcher 
 
 ### Authentication
 If you want to play the game in online mode, you will need to add a Microsoft account.

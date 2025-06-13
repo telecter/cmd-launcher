@@ -37,8 +37,8 @@ type CLI struct {
 	Search    cmd.Search   `cmd:"" help:"${cmd_search}"`
 	Version   version      `cmd:"" help:"${cmd_version}"`
 	Verbosity string       `help:"${verbosity}" enum:"info,extra,debug" default:"info"`
-	Dir       string       `help:"${arg_dir}" type:"path" placeholder:"PATH"`
-	NoColor   bool         `help:"${arg_nocolor}"`
+	Dir       string       `help:"${dir}" type:"path" placeholder:"PATH"`
+	NoColor   bool         `help:"${nocolor}"`
 }
 
 func (c *CLI) AfterApply(ctx *kong.Context) error {

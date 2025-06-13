@@ -43,11 +43,11 @@ func (c *Create) Run(ctx *kong.Context) error {
 		return fmt.Errorf("create instance: %w", err)
 	}
 
-	s := cli.Translate("cmd.create.complete", color.New(color.Bold).Sprint(inst.Name), inst.GameVersion)
-	if inst.Loader != launcher.LoaderVanilla {
-		s += " " + cli.Translate("cmd.create.complete.extra", inst.Loader, inst.LoaderVersion)
+	l := inst.LoaderVersion
+	if l != "" {
+		l = " " + l
 	}
-	cli.Success(s)
+	cli.Success(cli.Translate("cmd.create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
 
 	if inst.Config.Java == "" {
 		cli.Warning(cli.Translate("cmd.create.nojvm"))
@@ -70,7 +70,7 @@ func (c *Delete) Run(ctx *kong.Context) error {
 		var input string
 
 		cli.Warning(cli.Translate("cmd.delete.confirm"))
-		fmt.Print(cli.Translate("cmd.delete.warning", color.New(color.Bold).Sprint(inst.Name)))
+		fmt.Printf(cli.Translate("cmd.delete.warning"), color.New(color.Bold).Sprint(inst.Name))
 		fmt.Scanln(&input)
 		delete = input == "y" || input == "Y"
 	}
@@ -78,7 +78,7 @@ func (c *Delete) Run(ctx *kong.Context) error {
 		if err := launcher.RemoveInstance(c.ID); err != nil {
 			return fmt.Errorf("remove instance: %w", err)
 		}
-		cli.Success(cli.Translate("cmd.delete.complete", color.New(color.Bold).Sprint(inst.Name)))
+		cli.Success(cli.Translate("cmd.delete.complete"), color.New(color.Bold).Sprint(inst.Name))
 	} else {
 		cli.Info(cli.Translate("cmd.delete.abort"))
 	}

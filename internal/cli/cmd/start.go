@@ -24,11 +24,11 @@ func (watcher watcher) Handle(event any) {
 		watcher.progressbar.Add(1)
 	case launcher.AssetsResolvedEvent:
 		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.assets", e.Assets))
+			cli.Info(cli.Translate("start.assets"), e.Assets)
 		}
 	case launcher.LibrariesResolvedEvent:
 		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.libraries", e.Libraries))
+			cli.Info(cli.Translate("start.libraries"), e.Libraries)
 		}
 	case launcher.MetadataResolvedEvent:
 		if watcher.verbosity > 0 {
@@ -121,7 +121,7 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 	}
 
 	if verbosity > 1 {
-		cli.Debug(cli.Translate("start.debug.jvmargs", launchEnv.JavaArgs))
+		cli.Debug(cli.Translate("start.debug.jvmargs"), launchEnv.JavaArgs)
 
 		var gameArgs []string
 		var hideNext bool
@@ -137,11 +137,11 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 				hideNext = false
 			}
 		}
-		cli.Debug(cli.Translate("start.debug.gameargs", gameArgs))
-		cli.Debug(cli.Translate("start.debug.info", launchEnv.MainClass, launchEnv.GameDir))
+		cli.Debug(cli.Translate("start.debug.gameargs"), gameArgs)
+		cli.Debug(cli.Translate("start.debug.info"), launchEnv.MainClass, launchEnv.GameDir)
 	}
 
-	cli.Success(cli.Translate("start.launching", session.Username))
+	cli.Success(cli.Translate("start.launching"), session.Username)
 
 	return launcher.Launch(launchEnv, launcher.ConsoleRunner{})
 }
