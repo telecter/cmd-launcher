@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
-	"github.com/telecter/cmd-launcher/internal/meta"
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
@@ -47,6 +45,7 @@ type InstanceOptions struct {
 	GameVersion   string
 	Loader        Loader
 	LoaderVersion string
+	Java          string // Leave empty to use Mojang's Java distribution.
 }
 
 // InstanceConfig represents the configurable values of an Instance.
@@ -60,49 +59,37 @@ type InstanceConfig struct {
 	MaxMemory int    `json:"max_memory"`
 }
 
-var defaultConfig = InstanceConfig{
-	WindowResolution: struct {
-		Width  int "json:\"width\""
-		Height int "json:\"height\""
-	}{
-		Width:  1708,
-		Height: 960,
-	},
-	MinMemory: 512,
-	MaxMemory: 4096,
-}
-
 // CreateInstance creates a new instance with the specified options.
 func CreateInstance(options InstanceOptions) (Instance, error) {
 	if IsInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
 
-	versionMeta, err := meta.FetchVersionMeta(options.GameVersion)
-	if err != nil {
-		return Instance{}, err
-	}
-
-	loaderMeta, err := fetchLoaderMeta(options.Loader, versionMeta.ID, options.LoaderVersion)
+	version, err := fetchVersion(options.Loader, options.GameVersion, options.LoaderVersion)
 	if err != nil {
 		return Instance{}, err
 	}
 
 	inst := Instance{
 		Name:          options.Name,
-		GameVersion:   versionMeta.ID,
+		GameVersion:   version.ID,
 		Loader:        options.Loader,
-		LoaderVersion: loaderMeta.LoaderID,
-		Config:        defaultConfig,
-	}
+		LoaderVersion: version.LoaderID,
+		Config: InstanceConfig{
+			WindowResolution: struct {
+				Width  int "json:\"width\""
+				Height int "json:\"height\""
+			}{
+				Width:  1708,
+				Height: 960,
+			},
+			MinMemory: 512,
+			MaxMemory: 4096,
+			Java:      options.Java,
+		}}
 
 	if err := os.MkdirAll(inst.Dir(), 0755); err != nil {
 		return Instance{}, fmt.Errorf("create instance directory: %w", err)
-	}
-
-	java, err := exec.LookPath("java")
-	if err == nil {
-		inst.Config.Java = java
 	}
 
 	if err := inst.WriteConfig(); err != nil {

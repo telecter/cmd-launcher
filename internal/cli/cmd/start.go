@@ -140,7 +140,6 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 		cli.Debug(cli.Translate("start.debug.gameargs"), gameArgs)
 		cli.Debug(cli.Translate("start.debug.info"), launchEnv.MainClass, launchEnv.GameDir)
 	}
-
 	cli.Success(cli.Translate("start.launching"), session.Username)
 
 	return launcher.Launch(launchEnv, launcher.ConsoleRunner{})

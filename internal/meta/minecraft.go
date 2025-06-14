@@ -17,6 +17,7 @@ import (
 
 const (
 	VERSION_MANIFEST_URL    = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+	JAVA_RUNTIMES_URL       = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
 	MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
 	MINECRAFT_LIBRARIES_URL = "https://libraries.minecraft.net"
 )
@@ -36,6 +37,76 @@ type VersionManifest struct {
 		Sha1            string    `json:"sha1"`
 		ComplianceLevel int       `json:"complianceLevel"`
 	} `json:"versions"`
+}
+
+type JavaManifestList map[string]map[string][]struct {
+	Availability struct {
+		Group    int `json:"group"`
+		Progress int `json:"progress"`
+	} `json:"availability"`
+	Manifest struct {
+		Sha1 string `json:"sha1"`
+		Size int    `json:"size"`
+		URL  string `json:"url"`
+	} `json:"manifest"`
+	Version struct {
+		Name     string    `json:"name"`
+		Released time.Time `json:"released"`
+	} `json:"version"`
+}
+
+type JavaManifest struct {
+	Files map[string]struct {
+		Type       string `json:"type"`
+		Executable bool   `json:"executable"`
+		Target     string `json:"target"`
+		Downloads  struct {
+			LZMA struct {
+				Sha1 string `json:"sha1"`
+				Size int    `json:"size"`
+				URL  string `json:"url"`
+			} `json:"lzma"`
+			Raw struct {
+				Sha1 string `json:"sha1"`
+				Size int    `json:"size"`
+				URL  string `json:"url"`
+			} `json:"raw"`
+		} `json:"downloads"`
+	} `json:"files"`
+}
+
+func (manifest JavaManifest) DownloadEntries(runtimeName string) (entries []network.DownloadEntry, symlinks map[string]string) {
+	symlinks = make(map[string]string)
+	dir := filepath.Join(env.JavaDir, runtimeName)
+	for name, file := range manifest.Files {
+		path := filepath.Join(dir, name)
+
+		switch file.Type {
+		case "link":
+			if _, err := os.Lstat(path); err != nil {
+				symlinks[path] = file.Target
+			}
+		case "file":
+			data, err := os.ReadFile(path)
+			if err == nil {
+				sum := sha1.Sum(data)
+				if hex.EncodeToString(sum[:]) == file.Downloads.Raw.Sha1 {
+					continue
+				}
+			}
+			var mode os.FileMode
+			if file.Executable {
+				mode = 0755
+			}
+			entries = append(entries, network.DownloadEntry{
+				Sha1:     file.Downloads.Raw.Sha1,
+				Path:     path,
+				URL:      file.Downloads.Raw.URL,
+				FileMode: mode,
+			})
+		}
+	}
+	return entries, symlinks
 }
 
 // A VersionMeta is metadata of the libraries, assets, and other data needed to start a Minecraft version.
@@ -228,32 +299,31 @@ func (l *Library) UnmarshalJSON(b []byte) error {
 
 // An AssetIndex contains a map of asset objects and their names.
 type AssetIndex struct {
-	Objects map[string]AssetObject `json:"objects"`
+	Objects map[string]struct {
+		Hash string `json:"hash"`
+		Size int    `json:"size"`
+	} `json:"objects"`
 }
 
-// An AssetObject is a reference to an game asset which can be downloaded.
-type AssetObject struct {
-	Hash string `json:"hash"`
-	Size int    `json:"size"`
-}
-
-// DownloadEntry returns a DownloadEntry to fetch the asset.
-func (object AssetObject) DownloadEntry() network.DownloadEntry {
-	return network.DownloadEntry{
-		URL:  fmt.Sprintf(MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash),
-		Path: filepath.Join(env.AssetsDir, "objects", object.Hash[:2], object.Hash),
-		Sha1: object.Hash,
+// DownloadEntries returns a list of download entries to any undownloaded assets in the index.
+func (index AssetIndex) DownloadEntries() (entries []network.DownloadEntry) {
+	for _, object := range index.Objects {
+		path := filepath.Join(env.AssetsDir, "objects", object.Hash[:2], object.Hash)
+		url := fmt.Sprintf(MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash)
+		data, err := os.ReadFile(path)
+		if err == nil {
+			sum := sha1.Sum(data)
+			if object.Hash == hex.EncodeToString(sum[:]) {
+				continue
+			}
+		}
+		entries = append(entries, network.DownloadEntry{
+			URL:  url,
+			Path: path,
+			Sha1: object.Hash,
+		})
 	}
-}
-
-// IsDownloaded reports whether the asset exists and has a valid checksum.
-func (object AssetObject) IsDownloaded() bool {
-	data, err := os.ReadFile(object.DownloadEntry().Path)
-	if err != nil {
-		return false
-	}
-	sum := sha1.Sum(data)
-	return object.Hash == hex.EncodeToString(sum[:])
+	return entries
 }
 
 // FetchVersionManifest retrieves the Mojang version manifest which lists all game versions.
@@ -312,29 +382,6 @@ func FetchVersionMeta(id string) (VersionMeta, error) {
 	return VersionMeta{}, fmt.Errorf("invalid version")
 }
 
-// DownloadAssetIndex retrieves the asset index for the specified version.
-func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
-	cache := network.JSONCache[AssetIndex]{
-		Path: filepath.Join(env.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),
-		URL:  versionMeta.AssetIndex.URL,
-	}
-	download := true
-	var assetIndex AssetIndex
-	if err := cache.Read(&assetIndex); err == nil {
-		sum, _ := cache.Sha1()
-		if sum == versionMeta.AssetIndex.Sha1 {
-			download = false
-		}
-	}
-	if download {
-		if err := cache.FetchAndRead(&assetIndex); err != nil {
-			return AssetIndex{}, err
-		}
-	}
-
-	return assetIndex, nil
-}
-
 // MergeVersionMeta takes two instances of VersionMeta and merges w into v
 func MergeVersionMeta(v, w VersionMeta) VersionMeta {
 	v.Arguments.Jvm = w.Arguments.Jvm
@@ -360,4 +407,91 @@ func MergeVersionMeta(v, w VersionMeta) VersionMeta {
 		v.MainClass = w.MainClass
 	}
 	return v
+}
+
+// DownloadAssetIndex retrieves the asset index for the specified version.
+func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
+	cache := network.JSONCache[AssetIndex]{
+		Path: filepath.Join(env.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),
+		URL:  versionMeta.AssetIndex.URL,
+	}
+	download := true
+	var assetIndex AssetIndex
+	if err := cache.Read(&assetIndex); err == nil {
+		sum, _ := cache.Sha1()
+		if sum == versionMeta.AssetIndex.Sha1 {
+			download = false
+		}
+	}
+	if download {
+		if err := cache.FetchAndRead(&assetIndex); err != nil {
+			return AssetIndex{}, err
+		}
+	}
+
+	return assetIndex, nil
+}
+
+func FetchJavaManifestList() (JavaManifestList, error) {
+	cache := network.JSONCache[JavaManifestList]{
+		Path: filepath.Join(env.CachesDir, "minecraft", "java_all.json"),
+		URL:  JAVA_RUNTIMES_URL,
+	}
+	var list JavaManifestList
+	if err := cache.Read(&list); err != nil {
+		if err := cache.FetchAndRead(&list); err != nil {
+			return JavaManifestList{}, err
+		}
+	}
+	return list, nil
+}
+
+func FetchJavaManifest(name string) (JavaManifest, error) {
+	list, err := FetchJavaManifestList()
+	if err != nil {
+		return JavaManifest{}, fmt.Errorf("retrieve java manifest list: %w", err)
+	}
+
+	os := strings.ReplaceAll(runtime.GOOS, "darwin", "mac-os")
+	arch := strings.ReplaceAll(runtime.GOARCH, "386", "i386")
+
+	if arch != "amd64" {
+		os = os + "-" + arch
+	}
+
+	_, ok := list[os]
+	if !ok {
+		return JavaManifest{}, fmt.Errorf("system is not supported")
+	}
+	_, ok = list[os][name]
+	if !ok {
+		return JavaManifest{}, fmt.Errorf("invalid name")
+	}
+
+	if len(list[os][name]) < 1 {
+		return JavaManifest{}, fmt.Errorf("specified Java version not available for this system")
+	}
+
+	ref := list[os][name][0].Manifest
+
+	cache := network.JSONCache[JavaManifest]{
+		Path: filepath.Join(env.CachesDir, "minecraft", "java-"+name+".json"),
+		URL:  ref.URL,
+	}
+
+	download := true
+	var manifest JavaManifest
+	if err := cache.Read(&manifest); err == nil {
+		sum, _ := cache.Sha1()
+		if sum == ref.Sha1 {
+			download = false
+		}
+	}
+
+	if download {
+		if err := cache.FetchAndRead(&manifest); err != nil {
+			return JavaManifest{}, err
+		}
+	}
+	return manifest, nil
 }

@@ -238,6 +238,15 @@ func TestPrepare(t *testing.T) {
 				GameVersion: "release",
 				Name:        uuid.NewString(),
 				Loader:      LoaderVanilla,
+				Java:        "java",
+			},
+		},
+		{
+			name: "Vanilla with Mojang Java Download",
+			options: InstanceOptions{
+				GameVersion: "release",
+				Name:        uuid.NewString(),
+				Loader:      LoaderVanilla,
 			},
 		},
 		{
@@ -247,6 +256,7 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderFabric,
 				LoaderVersion: "latest",
+				Java:          "java",
 			},
 		},
 		{
@@ -256,6 +266,7 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderQuilt,
 				LoaderVersion: "latest",
+				Java:          "java",
 			},
 		},
 		{
@@ -265,6 +276,7 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderForge,
 				LoaderVersion: "latest",
+				Java:          "java",
 			},
 		},
 		{
@@ -274,6 +286,7 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderNeoForge,
 				LoaderVersion: "latest",
+				Java:          "java",
 			},
 		},
 	}

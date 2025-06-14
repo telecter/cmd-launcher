@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -112,35 +113,23 @@ func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 
 // Prepare prepares the instance to be launched, returning a LaunchEnvironment, with the provided options and sends events to watcher.
 func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnvironment, error) {
-	launchEnv := LaunchEnvironment{
-		JavaPath: options.Config.Java,
-		GameDir:  inst.Dir(),
-	}
+	var downloads []network.DownloadEntry
 
-	version, err := meta.FetchVersionMeta(inst.GameVersion)
-	if err != nil {
-		return LaunchEnvironment{}, fmt.Errorf("retrieve version metadata: %w", err)
-	}
-	loaderMeta, err := fetchLoaderMeta(inst.Loader, version.ID, inst.LoaderVersion)
+	version, err := fetchVersion(inst.Loader, inst.GameVersion, inst.LoaderVersion)
 	if err != nil {
 		return LaunchEnvironment{}, fmt.Errorf("retrieve loader metadata: %w", err)
 	}
-	version = meta.MergeVersionMeta(version, loaderMeta)
-
-	launchEnv.MainClass = version.MainClass
 	version.Libraries = append(version.Libraries, version.Client())
 
+	launchEnv := LaunchEnvironment{
+		GameDir:   inst.Dir(),
+		JavaPath:  options.Config.Java,
+		MainClass: version.MainClass,
+	}
 	watcher.Handle(MetadataResolvedEvent{})
 
+	// Filter libraries, and add necessary artifact download entries
 	installedLibs, requiredLibs := filterLibraries(version.Libraries)
-
-	assetIndex, err := meta.DownloadAssetIndex(version)
-	if err != nil {
-		return LaunchEnvironment{}, fmt.Errorf("retrieve asset index: %w", err)
-	}
-
-	var downloads []network.DownloadEntry
-
 	if !options.skipLibraries {
 		for _, library := range requiredLibs {
 			downloads = append(downloads, library.Artifact.DownloadEntry())
@@ -150,91 +139,54 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		Libraries: len(installedLibs) + len(requiredLibs),
 	})
 
+	// Download asset index and add all necessary asset download entries
+	assetIndex, err := meta.DownloadAssetIndex(version)
+	if err != nil {
+		return LaunchEnvironment{}, fmt.Errorf("retrieve asset index: %w", err)
+	}
 	if !options.skipAssets {
-		for _, object := range assetIndex.Objects {
-			if !object.IsDownloaded() {
-				downloads = append(downloads, object.DownloadEntry())
-			}
-		}
+		downloads = append(downloads, assetIndex.DownloadEntries()...)
 	}
 	watcher.Handle(AssetsResolvedEvent{Assets: len(assetIndex.Objects)})
 
-	if len(downloads) > 0 {
-		results := network.StartDownloadEntries(downloads)
-		i := 0
-		for err := range results {
-			if err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("download files: %w", err)
-			}
-			watcher.Handle(DownloadingEvent{
-				Completed: i,
-				Total:     len(downloads),
-			})
-			i++
+	if launchEnv.JavaPath == "" {
+		manifest, err := meta.FetchJavaManifest(version.JavaVersion.Component)
+		if err != nil {
+			return LaunchEnvironment{}, fmt.Errorf("fetch java manifest: %w", err)
 		}
-	}
-
-	if inst.Loader == LoaderNeoForge || inst.Loader == LoaderForge {
-		var post []meta.ForgeProcessor
-
-		if inst.Loader == LoaderForge {
-			post, err = meta.Forge.FetchPostProcessors(version.ID, version.LoaderID)
-			if err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("fetch forge post processors: %w", err)
+		entries, symlinks := manifest.DownloadEntries(version.JavaVersion.Component)
+		downloads = append(downloads, entries...)
+		for link, target := range symlinks {
+			if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+				panic(err)
 			}
-		} else if inst.Loader == LoaderNeoForge {
-			post, err = meta.Neoforge.FetchPostProcessors(version.ID, version.LoaderID)
-			if err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post processors: %w", err)
+
+			if err := os.Symlink(target, link); err != nil {
+				return LaunchEnvironment{}, fmt.Errorf("create symlink %q: %w", link, err)
 			}
 		}
+		launchEnv.JavaPath = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", "java")
+	}
 
-		for _, processor := range post {
-			cmd := exec.Command(launchEnv.JavaPath, processor.JavaArgs...)
-			cmd.Dir = inst.Dir()
-			cmd.Stderr = os.Stdout
-			if err := cmd.Run(); err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("run forge post processor: %w", err)
-			}
+	download(downloads, watcher)
+
+	var processors []meta.ForgeProcessor
+	if inst.Loader == LoaderForge {
+		processors, err = meta.Forge.FetchPostProcessors(version.ID, version.LoaderID)
+		if err != nil {
+			return LaunchEnvironment{}, fmt.Errorf("fetch forge post processors: %w", err)
+		}
+	} else if inst.Loader == LoaderNeoForge {
+		processors, err = meta.Neoforge.FetchPostProcessors(version.ID, version.LoaderID)
+		if err != nil {
+			return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post processors: %w", err)
 		}
 	}
+	if err := postProcess(launchEnv, processors); err != nil {
+		return LaunchEnvironment{}, fmt.Errorf("run forge post processors: %w", err)
+	}
 
-	if runtime.GOOS == "darwin" {
-		launchEnv.JavaArgs = append(launchEnv.JavaArgs, "-XstartOnFirstThread")
-	}
-	if options.Config.MinMemory != 0 {
-		launchEnv.JavaArgs = append(launchEnv.JavaArgs, fmt.Sprintf("-Xms%dm", options.Config.MinMemory))
-	}
-	if options.Config.MaxMemory != 0 {
-		launchEnv.JavaArgs = append(launchEnv.JavaArgs, fmt.Sprintf("-Xmx%dm", options.Config.MaxMemory))
-	}
-	launchEnv.GameArgs = []string{
-		"--username", options.Session.Username,
-		"--accessToken", options.Session.AccessToken,
-		"--userType", "msa",
-		"--gameDir", inst.Dir(),
-		"--assetsDir", env.AssetsDir,
-		"--assetIndex", version.AssetIndex.ID,
-		"--version", version.ID,
-		"--versionType", version.Type,
-		"--width", strconv.Itoa(options.Config.WindowResolution.Width),
-		"--height", strconv.Itoa(options.Config.WindowResolution.Height),
-	}
-	if options.QuickPlayServer != "" {
-		launchEnv.GameArgs = append(launchEnv.GameArgs, "--quickPlayMultiplayer", options.QuickPlayServer)
-	}
-	if options.Session.UUID != "" {
-		launchEnv.GameArgs = append(launchEnv.GameArgs, "--uuid", options.Session.UUID)
-	}
-	if options.Demo {
-		launchEnv.GameArgs = append(launchEnv.GameArgs, "--demo")
-	}
-	if options.DisableChat {
-		launchEnv.GameArgs = append(launchEnv.GameArgs, "--disableChat")
-	}
-	if options.DisableMultiplayer {
-		launchEnv.GameArgs = append(launchEnv.GameArgs, "--disableMultiplayer")
-	}
+	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options)
 
 	for _, library := range append(installedLibs, requiredLibs...) {
 		if library.SkipOnClasspath {
@@ -243,40 +195,120 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		launchEnv.Classpath = append(launchEnv.Classpath, library.Artifact.RuntimePath())
 	}
 
+	return launchEnv, nil
+}
+
+// download takes a list of download entries and executes them, reporting download events to watcher.
+func download(entries []network.DownloadEntry, watcher EventWatcher) error {
+	if len(entries) > 0 {
+		results := network.StartDownloadEntries(entries)
+		i := 0
+		for err := range results {
+			if err != nil {
+				return err
+			}
+			watcher.Handle(DownloadingEvent{
+				Completed: i,
+				Total:     len(entries),
+			})
+			i++
+		}
+	}
+	return nil
+}
+
+// createArgs takes data from a launch environment, version metadata, and environment options to
+// create a set of game and Java arguments to pass when starting the game.
+func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options EnvOptions) (java, game []string) {
+	game = []string{
+		"--username", options.Session.Username,
+		"--accessToken", options.Session.AccessToken,
+		"--userType", "msa",
+		"--gameDir", launchEnv.GameDir,
+		"--assetsDir", env.AssetsDir,
+		"--assetIndex", version.AssetIndex.ID,
+		"--version", version.ID,
+		"--versionType", version.Type,
+		"--width", strconv.Itoa(options.Config.WindowResolution.Width),
+		"--height", strconv.Itoa(options.Config.WindowResolution.Height),
+	}
+	if options.QuickPlayServer != "" {
+		game = append(game, "--quickPlayMultiplayer", options.QuickPlayServer)
+	}
+	if options.Session.UUID != "" {
+		game = append(game, "--uuid", options.Session.UUID)
+	}
+	if options.Demo {
+		game = append(game, "--demo")
+	}
+	if options.DisableChat {
+		game = append(game, "--disableChat")
+	}
+	if options.DisableMultiplayer {
+		game = append(game, "--disableMultiplayer")
+	}
+	if runtime.GOOS == "darwin" {
+		java = append(java, "-XstartOnFirstThread")
+	}
+	if options.Config.MinMemory != 0 {
+		java = append(java, fmt.Sprintf("-Xms%dm", options.Config.MinMemory))
+	}
+	if options.Config.MaxMemory != 0 {
+		java = append(java, fmt.Sprintf("-Xmx%dm", options.Config.MaxMemory))
+	}
+
+	for _, arg := range version.Arguments.Game {
+		if arg, ok := arg.(string); ok {
+			game = append(game, arg)
+		}
+	}
 	for _, arg := range version.Arguments.Jvm {
 		if arg, ok := arg.(string); ok {
 			arg = strings.ReplaceAll(arg, "${version_name}", version.ID)
 			arg = strings.ReplaceAll(arg, "${library_directory}", env.LibrariesDir)
 			arg = strings.ReplaceAll(arg, "${classpath_separator}", string(os.PathListSeparator))
-			launchEnv.JavaArgs = append(launchEnv.JavaArgs, arg)
+			java = append(java, arg)
 		}
 	}
-	for _, arg := range version.Arguments.Game {
-		if arg, ok := arg.(string); ok {
-			launchEnv.GameArgs = append(launchEnv.GameArgs, arg)
-		}
-	}
-	return launchEnv, nil
+	return java, game
 }
 
-// fetchLoaderMeta returns the loader version metadata for the specified loader and version.
-func fetchLoaderMeta(loader Loader, gameVersion string, loaderVersion string) (meta.VersionMeta, error) {
+// postProcess takes all Forge post processors and runs them with specified launch environment.
+func postProcess(launchEnv LaunchEnvironment, processors []meta.ForgeProcessor) error {
+	for _, processor := range processors {
+		cmd := exec.Command(launchEnv.JavaPath, processor.JavaArgs...)
+		cmd.Dir = launchEnv.GameDir
+		cmd.Stderr = os.Stdout
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// fetchVersion returns a VersionMeta containing both information for the base game, and specified mod loader.
+func fetchVersion(loader Loader, gameVersion string, loaderVersion string) (meta.VersionMeta, error) {
 	var loaderMeta meta.VersionMeta
 	var err error
 
+	version, err := meta.FetchVersionMeta(gameVersion)
+	if err != nil {
+		return meta.VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
+	}
+
 	if loader == LoaderFabric {
-		loaderMeta, err = meta.Fabric.FetchMeta(gameVersion, loaderVersion)
+		loaderMeta, err = meta.Fabric.FetchMeta(version.ID, loaderVersion)
 		if err != nil {
 			return meta.VersionMeta{}, fmt.Errorf("retrieve fabric metadata: %w", err)
 		}
 	} else if loader == LoaderQuilt {
-		loaderMeta, err = meta.Quilt.FetchMeta(gameVersion, loaderVersion)
+		loaderMeta, err = meta.Quilt.FetchMeta(version.ID, loaderVersion)
 		if err != nil {
 			return meta.VersionMeta{}, fmt.Errorf("retrieve quilt metadata: %w", err)
 		}
 	} else if loader == LoaderNeoForge {
 		if loaderVersion == "latest" {
-			loaderVersion, err = meta.FetchNeoforgeVersion(gameVersion)
+			loaderVersion, err = meta.FetchNeoforgeVersion(version.ID)
 			if err != nil {
 				return meta.VersionMeta{}, fmt.Errorf("retrieve neoforge version: %w", err)
 			}
@@ -287,7 +319,7 @@ func fetchLoaderMeta(loader Loader, gameVersion string, loaderVersion string) (m
 		}
 	} else if loader == LoaderForge {
 		if loaderVersion == "latest" {
-			loaderVersion, err = meta.FetchForgeVersion(gameVersion)
+			loaderVersion, err = meta.FetchForgeVersion(version.ID)
 			if err != nil {
 				return meta.VersionMeta{}, fmt.Errorf("retrieve forge version: %w", err)
 			}
@@ -297,5 +329,6 @@ func fetchLoaderMeta(loader Loader, gameVersion string, loaderVersion string) (m
 			return meta.VersionMeta{}, fmt.Errorf("retrieve forge metadata: %w", err)
 		}
 	}
-	return loaderMeta, nil
+
+	return meta.MergeVersionMeta(version, loaderMeta), nil
 }

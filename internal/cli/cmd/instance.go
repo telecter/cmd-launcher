@@ -48,10 +48,6 @@ func (c *Create) Run(ctx *kong.Context) error {
 		l = " " + l
 	}
 	cli.Success(cli.Translate("cmd.create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
-
-	if inst.Config.Java == "" {
-		cli.Warning(cli.Translate("cmd.create.nojvm"))
-	}
 	return nil
 }
 

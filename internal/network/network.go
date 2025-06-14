@@ -14,9 +14,10 @@ import (
 const MAX_CONCURRENT_DOWNLOADS = 6
 
 type DownloadEntry struct {
-	URL  string
-	Path string
-	Sha1 string
+	URL      string
+	Path     string
+	Sha1     string
+	FileMode os.FileMode
 }
 
 // DownloadFile downloads the specified DownloadEntry and saves it.
@@ -33,13 +34,19 @@ func DownloadFile(entry DownloadEntry) error {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(entry.Path), 0755); err != nil {
-		return fmt.Errorf("create directory for file '%s': %w", entry.Path, err)
+		return fmt.Errorf("create directory for file %q: %w", entry.Path, err)
 	}
 	out, err := os.Create(entry.Path)
 	if err != nil {
-		return fmt.Errorf("create file '%s': %w", entry.Path, err)
+		return fmt.Errorf("create file %q: %w", entry.Path, err)
 	}
 	defer out.Close()
+
+	if entry.FileMode != 0 {
+		if err := out.Chmod(entry.FileMode); err != nil {
+			return fmt.Errorf("set permissions for file %q: %w", entry.Path, err)
+		}
+	}
 
 	hash := sha1.New()
 	tee := io.TeeReader(resp.Body, hash)
@@ -50,7 +57,7 @@ func DownloadFile(entry DownloadEntry) error {
 
 	if entry.Sha1 != "" {
 		if hex.EncodeToString(hash.Sum(nil)) != entry.Sha1 {
-			return fmt.Errorf("invalid checksum from '%s'", entry.URL)
+			return fmt.Errorf("invalid checksum from %q", entry.URL)
 		}
 	}
 

@@ -59,7 +59,6 @@ var translations = map[string]string{
 	"cmd.create.version":       "Game version",
 	"cmd.create.loaderversion": "Mod loader version",
 	"cmd.create.complete":      "Created instance '%s' with Minecraft %s (%s%s)",
-	"cmd.create.nojvm":         "Java could not be found. This means you will need to manually set its path in the instance configuration.",
 	"cmd.auth.nobrowser":       "Use device code instead of browser for authentication",
 	"start.assets":             "Identified %d assets",
 	"start.libraries":          "Identified %d libraries",
