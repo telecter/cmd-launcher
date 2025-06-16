@@ -168,7 +168,9 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		launchEnv.JavaPath = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", "java")
 	}
 
-	download(downloads, watcher)
+	if err := download(downloads, watcher); err != nil {
+		return LaunchEnvironment{}, fmt.Errorf("download files: %w", err)
+	}
 
 	var processors []meta.ForgeProcessor
 	if inst.Loader == LoaderForge {

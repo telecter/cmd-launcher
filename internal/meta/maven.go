@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +14,7 @@ import (
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
-const MAVEN_REPO_URL = "https://repo.maven.apache.org/maven2/%s"
+const MavenRepoURL = "https://repo.maven.apache.org/maven2"
 
 // A LibrarySpecifier represents the Maven specifier syntax.
 //
@@ -80,8 +81,8 @@ func NewLibrarySpecifier(s string) (LibrarySpecifier, error) {
 
 // FetchMavenLibrary returns library metadata for the specified name and path in the Maven repository.
 func FetchMavenLibrary(specifier LibrarySpecifier) (Library, error) {
+	url, _ := url.JoinPath(MavenRepoURL, specifier.Path())
 	path := specifier.Path()
-	url := fmt.Sprintf(MAVEN_REPO_URL, path)
 
 	sumPath := filepath.Join(env.LibrariesDir, filepath.Dir(path), filepath.Base(path)+".sha1")
 	var sum []byte

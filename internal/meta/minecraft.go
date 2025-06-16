@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,10 +17,10 @@ import (
 )
 
 const (
-	VERSION_MANIFEST_URL    = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-	JAVA_RUNTIMES_URL       = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
-	MINECRAFT_RESOURCES_URL = "https://resources.download.minecraft.net/%s/%s"
-	MINECRAFT_LIBRARIES_URL = "https://libraries.minecraft.net"
+	VersionManifestURL    = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+	JavaRuntimesURL       = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
+	MinecraftResourcesURL = "https://resources.download.minecraft.net"
+	MinecraftLibrariesURL = "https://libraries.minecraft.net"
 )
 
 // A VersionManifest is a list of all Minecraft versions.
@@ -308,8 +309,8 @@ type AssetIndex struct {
 // DownloadEntries returns a list of download entries to any undownloaded assets in the index.
 func (index AssetIndex) DownloadEntries() (entries []network.DownloadEntry) {
 	for _, object := range index.Objects {
+		url, _ := url.JoinPath(MinecraftResourcesURL, object.Hash[:2], object.Hash)
 		path := filepath.Join(env.AssetsDir, "objects", object.Hash[:2], object.Hash)
-		url := fmt.Sprintf(MINECRAFT_RESOURCES_URL, object.Hash[:2], object.Hash)
 		data, err := os.ReadFile(path)
 		if err == nil {
 			sum := sha1.Sum(data)
@@ -330,7 +331,7 @@ func (index AssetIndex) DownloadEntries() (entries []network.DownloadEntry) {
 func FetchVersionManifest() (VersionManifest, error) {
 	cache := network.JSONCache[VersionManifest]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "version_manifest.json"),
-		URL:  VERSION_MANIFEST_URL,
+		URL:  VersionManifestURL,
 	}
 
 	var manifest VersionManifest
@@ -435,7 +436,7 @@ func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
 func FetchJavaManifestList() (JavaManifestList, error) {
 	cache := network.JSONCache[JavaManifestList]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "java_all.json"),
-		URL:  JAVA_RUNTIMES_URL,
+		URL:  JavaRuntimesURL,
 	}
 	var list JavaManifestList
 	if err := cache.Read(&list); err != nil {

@@ -26,7 +26,7 @@ var translations = map[string]string{
 	"cmd.start":                "Start the specified instance",
 	"cmd.instance":             "Manage Minecraft instances",
 	"cmd.auth":                 "Manage account authentication",
-	"cmd.version":              "Display launcher version and about",
+	"cmd.about":                "Display launcher version and about",
 	"cmd.search.query":         "Search query",
 	"cmd.search.kind":          "What to search for",
 	"cmd.search.reverse":       "Reverse the listing",

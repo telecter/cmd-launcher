@@ -16,17 +16,20 @@ import (
 )
 
 const (
-	NAME        = "cmd-launcher"
-	DESCRIPTION = "A minimal command line Minecraft launcher."
-	VERSION     = "1.1.0"
-	LICENSE     = "Licensed MIT"
-	COPYRIGHT   = "Copyright (c) 2024-2025 telecter"
+	name        = "cmd-launcher"
+	description = "A minimal command line Minecraft launcher."
+	version     = "1.1.0"
+	license     = "Licensed MIT"
+	copyright   = "Copyright (c) 2024-2025 telecter"
 )
 
-type version struct{}
+type about struct{}
 
-func (version) Run(ctx *kong.Context) error {
-	fmt.Printf("%s %s\n%s\n%s\n%s\n", NAME, VERSION, DESCRIPTION, COPYRIGHT, LICENSE)
+func (about) Run(ctx *kong.Context) error {
+	color.New(color.Bold).Printf("%s %s\n", name, version)
+	color.New(color.Underline).Println(description)
+	fmt.Println(copyright)
+	fmt.Println(license)
 	return nil
 }
 
@@ -35,7 +38,7 @@ type CLI struct {
 	Instance  cmd.Instance `cmd:"" help:"${cmd_instance}" aliases:"inst"`
 	Auth      cmd.Auth     `cmd:"" help:"${cmd_auth}"`
 	Search    cmd.Search   `cmd:"" help:"${cmd_search}"`
-	Version   version      `cmd:"" help:"${cmd_version}"`
+	About     about        `cmd:"" help:"${cmd_about}"`
 	Verbosity string       `help:"${verbosity}" enum:"info,extra,debug" default:"info"`
 	Dir       string       `help:"${dir}" type:"path" placeholder:"PATH"`
 	NoColor   bool         `help:"${nocolor}"`
@@ -72,11 +75,10 @@ func main() {
 		vars[strings.ReplaceAll(k, ".", "_")] = v
 	}
 
-	c := &CLI{}
-	parser := kong.Must(c,
+	parser := kong.Must(&CLI{},
 		kong.UsageOnError(),
-		kong.Name(NAME),
-		kong.Description(DESCRIPTION),
+		kong.Name(name),
+		kong.Description(description),
 		kong.ConfigureHelp(kong.HelpOptions{
 			NoExpandSubcommands: true,
 		}),
