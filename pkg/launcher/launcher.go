@@ -33,8 +33,9 @@ func (loader Loader) String() string {
 
 // EnvOptions represents configuration options when preparing an instance to be launched.
 type EnvOptions struct {
-	Session            auth.Session
-	Config             InstanceConfig
+	Session auth.Session
+	Config  InstanceConfig
+
 	QuickPlayServer    string
 	Demo               bool
 	DisableMultiplayer bool
@@ -117,7 +118,7 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 
 	version, err := fetchVersion(inst.Loader, inst.GameVersion, inst.LoaderVersion)
 	if err != nil {
-		return LaunchEnvironment{}, fmt.Errorf("retrieve loader metadata: %w", err)
+		return LaunchEnvironment{}, fmt.Errorf("retrieve metadata: %w", err)
 	}
 	version.Libraries = append(version.Libraries, version.Client())
 
@@ -149,6 +150,7 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 	}
 	watcher.Handle(AssetsResolvedEvent{Assets: len(assetIndex.Objects)})
 
+	// If no Java path is present, fetch Mojang Java downloads
 	if launchEnv.JavaPath == "" {
 		manifest, err := meta.FetchJavaManifest(version.JavaVersion.Component)
 		if err != nil {
@@ -172,24 +174,29 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		return LaunchEnvironment{}, fmt.Errorf("download files: %w", err)
 	}
 
+	// Fetch Forge post processors, if any
+
 	var processors []meta.ForgeProcessor
-	if inst.Loader == LoaderForge {
+	switch inst.Loader {
+	case LoaderForge:
 		processors, err = meta.Forge.FetchPostProcessors(version.ID, version.LoaderID)
 		if err != nil {
 			return LaunchEnvironment{}, fmt.Errorf("fetch forge post processors: %w", err)
 		}
-	} else if inst.Loader == LoaderNeoForge {
+	case LoaderNeoForge:
 		processors, err = meta.Neoforge.FetchPostProcessors(version.ID, version.LoaderID)
 		if err != nil {
 			return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post processors: %w", err)
 		}
 	}
+	// Run any available processors
 	if err := postProcess(launchEnv, processors); err != nil {
-		return LaunchEnvironment{}, fmt.Errorf("run forge post processors: %w", err)
+		return LaunchEnvironment{}, fmt.Errorf("run post processors: %w", err)
 	}
 
 	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options)
 
+	// Finalize classpath
 	for _, library := range append(installedLibs, requiredLibs...) {
 		if library.SkipOnClasspath {
 			continue
@@ -222,6 +229,7 @@ func download(entries []network.DownloadEntry, watcher EventWatcher) error {
 // createArgs takes data from a launch environment, version metadata, and environment options to
 // create a set of game and Java arguments to pass when starting the game.
 func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options EnvOptions) (java, game []string) {
+	// Game arguments
 	game = []string{
 		"--username", options.Session.Username,
 		"--accessToken", options.Session.AccessToken,
@@ -249,6 +257,7 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options E
 	if options.DisableMultiplayer {
 		game = append(game, "--disableMultiplayer")
 	}
+	// Java arguments
 	if runtime.GOOS == "darwin" {
 		java = append(java, "-XstartOnFirstThread")
 	}
@@ -265,6 +274,7 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options E
 		}
 	}
 	for _, arg := range version.Arguments.Jvm {
+		// Replace any templates
 		if arg, ok := arg.(string); ok {
 			arg = strings.ReplaceAll(arg, "${version_name}", version.ID)
 			arg = strings.ReplaceAll(arg, "${library_directory}", env.LibrariesDir)
@@ -298,17 +308,18 @@ func fetchVersion(loader Loader, gameVersion string, loaderVersion string) (meta
 		return meta.VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
 	}
 
-	if loader == LoaderFabric {
+	switch loader {
+	case LoaderFabric:
 		loaderMeta, err = meta.Fabric.FetchMeta(version.ID, loaderVersion)
 		if err != nil {
 			return meta.VersionMeta{}, fmt.Errorf("retrieve fabric metadata: %w", err)
 		}
-	} else if loader == LoaderQuilt {
+	case LoaderQuilt:
 		loaderMeta, err = meta.Quilt.FetchMeta(version.ID, loaderVersion)
 		if err != nil {
 			return meta.VersionMeta{}, fmt.Errorf("retrieve quilt metadata: %w", err)
 		}
-	} else if loader == LoaderNeoForge {
+	case LoaderNeoForge:
 		if loaderVersion == "latest" {
 			loaderVersion, err = meta.FetchNeoforgeVersion(version.ID)
 			if err != nil {
@@ -319,7 +330,7 @@ func fetchVersion(loader Loader, gameVersion string, loaderVersion string) (meta
 		if err != nil {
 			return meta.VersionMeta{}, fmt.Errorf("retrieve neoforge metadata: %w", err)
 		}
-	} else if loader == LoaderForge {
+	case LoaderForge:
 		if loaderVersion == "latest" {
 			loaderVersion, err = meta.FetchForgeVersion(version.ID)
 			if err != nil {

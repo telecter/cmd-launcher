@@ -352,9 +352,10 @@ func FetchVersionMeta(id string) (VersionMeta, error) {
 	if err != nil {
 		return VersionMeta{}, fmt.Errorf("retrieve version manifest: %w", err)
 	}
-	if id == "release" {
+	switch id {
+	case "release":
 		id = manifest.Latest.Release
-	} else if id == "snapshot" {
+	case "snapshot":
 		id = manifest.Latest.Snapshot
 	}
 	for _, v := range manifest.Versions {
@@ -462,7 +463,8 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 
 	_, ok := list[os]
 	if !ok {
-		return JavaManifest{}, fmt.Errorf("system is not supported")
+		return JavaManifest{}, fmt.Errorf("system is unsupported")
+
 	}
 	_, ok = list[os][name]
 	if !ok {
@@ -470,7 +472,7 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 	}
 
 	if len(list[os][name]) < 1 {
-		return JavaManifest{}, fmt.Errorf("specified Java version not available for this system")
+		return JavaManifest{}, fmt.Errorf("required version unavailable for this system")
 	}
 
 	ref := list[os][name][0].Manifest

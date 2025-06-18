@@ -307,7 +307,7 @@ func Authenticate() (Session, error) {
 
 // AuthenticateWithRedirect authenticates using the OAuth2 Code flow.
 //
-// This function blocks until a response has been recieved on the local authentication server.
+// This function blocks until a response has been received on the local authentication server.
 func AuthenticateWithRedirect() (Session, error) {
 	var code string
 	var err error

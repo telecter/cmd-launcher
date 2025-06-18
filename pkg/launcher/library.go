@@ -10,7 +10,7 @@ import (
 
 // filterLibraries sorts game libraries into installed and required libraries.
 //
-// It also provides fixes and swaps out some libraries to ensure compatability.
+// It also runs patchLibrary on each library.
 func filterLibraries(libraries []meta.Library) (installed []meta.Library, required []meta.Library) {
 	for _, library := range libraries {
 		all := []meta.Library{library}
