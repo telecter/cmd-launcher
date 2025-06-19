@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"net"
 
 	"github.com/fatih/color"
+	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 // Map of translation strings to human-readable text.
@@ -74,6 +77,8 @@ var translations = map[string]string{
 	"verbosity":                "Increase launcher output verbosity",
 	"dir":                      "Root directory to use for launcher",
 	"nocolor":                  "Disable all color output. The NO_COLOR environment variable is also supported.",
+	"tip.internet":             "Check your internet connection.",
+	"tip.cache":                "Remote resources were not cached and were unable to be retrieved. Check your Internet connection.",
 }
 
 // Translate takes a translation string and looks up its human-readable text. If not available, it returns the same translation string.
@@ -111,6 +116,14 @@ func Warning(format string, a ...any) {
 	fmt.Printf(format+"\n", a...)
 }
 
+// Debug prints a debug message.
+//
+// Used to print information messages useful for debugging the launcher.
+func Debug(format string, a ...any) {
+	color.New(color.Bold, color.FgMagenta).Print("| Debug: ")
+	fmt.Printf(format+"\n", a...)
+}
+
 // Error prints an error message.
 //
 // Indicates a fatal error.
@@ -119,10 +132,16 @@ func Error(format string, a ...any) {
 	fmt.Printf(format+"\n", a...)
 }
 
-// Debug prints a debug message.
-//
-// Used to print information messages useful for debugging the launcher.
-func Debug(format string, a ...any) {
-	color.New(color.Bold, color.FgMagenta).Print("| Debug: ")
-	fmt.Printf(format+"\n", a...)
+// Tip prints a tip message based on an error, if any are available.
+func Tip(err error) {
+	show := func(format string, a ...any) {
+		color.New(color.Bold, color.FgYellow).Print("| Tip: ")
+		fmt.Printf(format+"\n", a...)
+	}
+	if errors.Is(err, &net.OpError{}) {
+		show(Translate("tip.internet"))
+	}
+	if errors.Is(err, network.ErrNotCached) {
+		show(Translate("tip.cache"))
+	}
 }

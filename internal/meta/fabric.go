@@ -37,15 +37,14 @@ var Quilt = fabricAPI{
 
 // FetchFabricVersions retrieves a list of all versions of Fabric.
 func (f fabricAPI) FetchVersions() (FabricVersionList, error) {
-	cache := network.JSONCache[FabricVersionList]{
-		Path: filepath.Join(env.CachesDir, f.name, "versions.json"),
-		URL:  f.versions,
+	cache := network.Cache[FabricVersionList]{
+		Path:        filepath.Join(env.CachesDir, f.name, "versions.json"),
+		URL:         f.versions,
+		AlwaysFetch: true,
 	}
 	var versions FabricVersionList
-	if err := cache.FetchAndRead(&versions); err != nil {
-		if err := cache.Read(&versions); err != nil {
-			return nil, err
-		}
+	if err := cache.Read(&versions); err != nil {
+		return nil, err
 	}
 
 	return versions, nil
@@ -62,21 +61,20 @@ func (f fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, er
 		}
 		loaderVersion = versions[0].Version
 	}
-	cache := network.JSONCache[VersionMeta]{
+	cache := network.Cache[VersionMeta]{
 		Path: filepath.Join(env.CachesDir, "fabric", loaderVersion+"-"+gameVersion+".json"),
 		URL:  fmt.Sprintf(f.profiles, gameVersion, loaderVersion),
 	}
+
 	var fabricMeta VersionMeta
 	if err := cache.Read(&fabricMeta); err != nil {
-		if err := cache.FetchAndRead(&fabricMeta); err != nil {
-			var statusErr *network.HTTPStatusError
-			if errors.As(err, &statusErr) {
-				if statusErr.StatusCode == 400 || statusErr.StatusCode == 404 {
-					return VersionMeta{}, fmt.Errorf("invalid fabric version or invalid game version for fabric")
-				}
+		var statusErr *network.HTTPStatusError
+		if errors.As(err, &statusErr) {
+			if statusErr.StatusCode == 400 || statusErr.StatusCode == 404 {
+				return VersionMeta{}, fmt.Errorf("invalid or unsuitable game/fabric version")
 			}
-			return VersionMeta{}, err
 		}
+		return VersionMeta{}, err
 	}
 	fabricMeta.LoaderID = loaderVersion
 	return fabricMeta, nil

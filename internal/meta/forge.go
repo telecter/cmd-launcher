@@ -127,15 +127,14 @@ var Neoforge = forge{
 // FetchInstaller fetchs the Forge installer ZIP file and returns its contents.
 func (f forge) FetchInstaller(version string) (map[string]*zip.File, error) {
 	url := fmt.Sprintf(f.installerURL, version, version)
-	cache := network.Cache{
-		URL:  url,
-		Path: filepath.Join(env.CachesDir, "forge", path.Base(url)),
-	}
+	path := filepath.Join(env.CachesDir, "forge", path.Base(url))
 
-	var data []byte
-
-	if err := cache.Read(&data); err != nil {
-		if err := cache.FetchAndRead(&data); err != nil {
+	if _, err := os.Stat(path); err != nil {
+		err := network.DownloadFile(network.DownloadEntry{
+			URL:  url,
+			Path: path,
+		})
+		if err != nil {
 			var statusErr *network.HTTPStatusError
 			if errors.As(err, &statusErr) {
 				if statusErr.StatusCode == 404 {
@@ -145,6 +144,8 @@ func (f forge) FetchInstaller(version string) (map[string]*zip.File, error) {
 			return nil, err
 		}
 	}
+
+	data, err := os.ReadFile(path)
 
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {

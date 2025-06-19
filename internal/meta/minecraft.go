@@ -329,18 +329,17 @@ func (index AssetIndex) DownloadEntries() (entries []network.DownloadEntry) {
 
 // FetchVersionManifest retrieves the Mojang version manifest which lists all game versions.
 func FetchVersionManifest() (VersionManifest, error) {
-	cache := network.JSONCache[VersionManifest]{
-		Path: filepath.Join(env.CachesDir, "minecraft", "version_manifest.json"),
-		URL:  VersionManifestURL,
+	cache := network.Cache[VersionManifest]{
+		Path:        filepath.Join(env.CachesDir, "minecraft", "version_manifest.json"),
+		URL:         VersionManifestURL,
+		AlwaysFetch: true,
 	}
 
 	var manifest VersionManifest
-
-	if err := cache.FetchAndRead(&manifest); err != nil {
-		if err := cache.Read(&manifest); err != nil {
-			return VersionManifest{}, err
-		}
+	if err := cache.Read(&manifest); err != nil {
+		return VersionManifest{}, err
 	}
+
 	return manifest, nil
 }
 
@@ -360,23 +359,14 @@ func FetchVersionMeta(id string) (VersionMeta, error) {
 	}
 	for _, v := range manifest.Versions {
 		if v.ID == id {
-			cache := network.JSONCache[VersionMeta]{
-				Path: filepath.Join(env.CachesDir, "minecraft", v.ID+".json"),
-				URL:  v.URL,
+			cache := network.Cache[VersionMeta]{
+				Path:       filepath.Join(env.CachesDir, "minecraft", v.ID+".json"),
+				URL:        v.URL,
+				RemoteSha1: v.Sha1,
 			}
-			download := true
-
 			var versionMeta VersionMeta
-			if err := cache.Read(&versionMeta); err == nil {
-				sum, _ := cache.Sha1()
-				if sum == v.Sha1 {
-					download = false
-				}
-			}
-			if download {
-				if err := cache.FetchAndRead(&versionMeta); err != nil {
-					return VersionMeta{}, err
-				}
+			if err := cache.Read(&versionMeta); err != nil {
+				return VersionMeta{}, err
 			}
 			return versionMeta, nil
 		}
@@ -413,37 +403,27 @@ func MergeVersionMeta(v, w VersionMeta) VersionMeta {
 
 // DownloadAssetIndex retrieves the asset index for the specified version.
 func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
-	cache := network.JSONCache[AssetIndex]{
-		Path: filepath.Join(env.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),
-		URL:  versionMeta.AssetIndex.URL,
-	}
-	download := true
-	var assetIndex AssetIndex
-	if err := cache.Read(&assetIndex); err == nil {
-		sum, _ := cache.Sha1()
-		if sum == versionMeta.AssetIndex.Sha1 {
-			download = false
-		}
-	}
-	if download {
-		if err := cache.FetchAndRead(&assetIndex); err != nil {
-			return AssetIndex{}, err
-		}
+	cache := network.Cache[AssetIndex]{
+		Path:       filepath.Join(env.AssetsDir, "indexes", versionMeta.AssetIndex.ID+".json"),
+		URL:        versionMeta.AssetIndex.URL,
+		RemoteSha1: versionMeta.AssetIndex.Sha1,
 	}
 
+	var assetIndex AssetIndex
+	if err := cache.Read(&assetIndex); err != nil {
+		return AssetIndex{}, err
+	}
 	return assetIndex, nil
 }
 
 func FetchJavaManifestList() (JavaManifestList, error) {
-	cache := network.JSONCache[JavaManifestList]{
+	cache := network.Cache[JavaManifestList]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "java_all.json"),
 		URL:  JavaRuntimesURL,
 	}
 	var list JavaManifestList
 	if err := cache.Read(&list); err != nil {
-		if err := cache.FetchAndRead(&list); err != nil {
-			return JavaManifestList{}, err
-		}
+		return JavaManifestList{}, err
 	}
 	return list, nil
 }
@@ -477,24 +457,14 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 
 	ref := list[os][name][0].Manifest
 
-	cache := network.JSONCache[JavaManifest]{
+	cache := network.Cache[JavaManifest]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "java-"+name+".json"),
 		URL:  ref.URL,
 	}
 
-	download := true
 	var manifest JavaManifest
 	if err := cache.Read(&manifest); err == nil {
-		sum, _ := cache.Sha1()
-		if sum == ref.Sha1 {
-			download = false
-		}
-	}
-
-	if download {
-		if err := cache.FetchAndRead(&manifest); err != nil {
-			return JavaManifest{}, err
-		}
+		return JavaManifest{}, err
 	}
 	return manifest, nil
 }

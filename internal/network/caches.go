@@ -4,50 +4,65 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 )
 
-type JSONCache[T any] struct {
-	Path       string
-	URL        string
-	RemoteSha1 string
+var ErrNotCached = errors.New("data not cached and request failed")
+
+// A Cache stores and retrieves remote data to unmarshal either into JSON or a custom unmarshaler.
+type Cache[T any] struct {
+	Path        string
+	URL         string
+	RemoteSha1  string
+	AlwaysFetch bool
+	Unmarshaler func(data []byte, v any) error // Custom unmarshal function. Defaults to JSON.
 }
 
 // Read reads the contents of the cache into v.
-func (cache JSONCache[T]) Read(v *T) error {
+func (cache Cache[T]) Read(v *T) error {
+	download := true
+	if _, err := os.Stat(cache.Path); err == nil {
+		sum, err := cache.Sha1()
+		if err != nil {
+			return err
+		}
+		if cache.RemoteSha1 == "" || cache.RemoteSha1 == sum {
+			download = false
+		}
+	}
+
+	if download || cache.AlwaysFetch {
+		if cache.URL == "" {
+			return fmt.Errorf("no URL to fetch from")
+		}
+
+		err := DownloadFile(DownloadEntry{
+			URL:  cache.URL,
+			Path: cache.Path,
+			Sha1: cache.RemoteSha1,
+		})
+		if err != nil && download {
+			return fmt.Errorf("%w: %w", ErrNotCached, err)
+		}
+	}
+
 	data, err := os.ReadFile(cache.Path)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(data, v)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
-// FetchAndRead updates the cache with data from cache.URL, if set, and reads the contents of the cache into v.
-func (cache JSONCache[T]) FetchAndRead(v *T) error {
-	if cache.URL == "" {
-		return fmt.Errorf("no URL to fetch from")
+	if cache.Unmarshaler != nil {
+		return cache.Unmarshaler(data, v)
+	} else {
+		return json.Unmarshal(data, v)
 	}
-	if err := DownloadFile(DownloadEntry{
-		URL:  cache.URL,
-		Path: cache.Path,
-		Sha1: cache.RemoteSha1,
-	}); err != nil {
-		return err
-	}
-	if err := cache.Read(v); err != nil {
-		return err
-	}
-	return nil
 }
 
 // Sha1 returns the SHA1 checksum of the cache
-func (cache JSONCache[T]) Sha1() (string, error) {
+func (cache Cache[T]) Sha1() (string, error) {
 	f, err := os.Open(cache.Path)
 	if err != nil {
 		return "", err
@@ -58,34 +73,4 @@ func (cache JSONCache[T]) Sha1() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-type Cache struct {
-	Path string
-	URL  string
-}
-
-// Read reads the contents of the cache into v.
-func (cache Cache) Read(v *[]byte) error {
-	data, err := os.ReadFile(cache.Path)
-	if err != nil {
-		return err
-	}
-	*v = data
-	return nil
-}
-
-// FetchAndRead updates the cache with data from cache.URL, if set, and reads the contents of the cache into v.
-func (cache Cache) FetchAndRead(v *[]byte) error {
-	if cache.URL == "" {
-		return fmt.Errorf("no URL to fetch from")
-	}
-	if err := DownloadFile(DownloadEntry{
-		URL:  cache.URL,
-		Path: cache.Path,
-	}); err != nil {
-		return err
-	}
-
-	return cache.Read(v)
 }
