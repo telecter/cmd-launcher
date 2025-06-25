@@ -43,6 +43,7 @@ var translations = map[string]string{
 	"cmd.start.width":          "Game window width",
 	"cmd.start.height":         "Game window height",
 	"cmd.start.jvm":            "Path to the JVM to use",
+	"cmd.start.jvmargs":        "Extra JVM arguments",
 	"cmd.start.minmemory":      "Minimum memory",
 	"cmd.start.maxmemory":      "Maximum memory",
 	"cmd.start.opts":           "Game Options",
@@ -79,6 +80,7 @@ var translations = map[string]string{
 	"nocolor":                  "Disable all color output. The NO_COLOR environment variable is also supported.",
 	"tip.internet":             "Check your internet connection.",
 	"tip.cache":                "Remote resources were not cached and were unable to be retrieved. Check your Internet connection.",
+	"tip.configure":            "Configure this instance with the `instance.json` file within the instance directory.",
 }
 
 // Translate takes a translation string and looks up its human-readable text. If not available, it returns the same translation string.
@@ -132,16 +134,17 @@ func Error(format string, a ...any) {
 	fmt.Printf(format+"\n", a...)
 }
 
-// Tip prints a tip message based on an error, if any are available.
-func Tip(err error) {
-	show := func(format string, a ...any) {
-		color.New(color.Bold, color.FgYellow).Print("| Tip: ")
-		fmt.Printf(format+"\n", a...)
-	}
+func Tip(format string, a ...any) {
+	color.New(color.Bold, color.FgYellow).Print("| Tip: ")
+	fmt.Printf(format+"\n", a...)
+}
+
+// Tips prints a tip message based on an error, if any are available.
+func Tips(err error) {
 	if errors.Is(err, &net.OpError{}) {
-		show(Translate("tip.internet"))
+		Tip(Translate("tip.internet"))
 	}
 	if errors.Is(err, network.ErrNotCached) {
-		show(Translate("tip.cache"))
+		Tip(Translate("tip.cache"))
 	}
 }

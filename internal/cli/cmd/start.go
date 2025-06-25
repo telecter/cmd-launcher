@@ -24,11 +24,11 @@ func (watcher watcher) Handle(event any) {
 		watcher.progressbar.Add(1)
 	case launcher.AssetsResolvedEvent:
 		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.assets"), e.Assets)
+			cli.Info(cli.Translate("start.assets"), e.Total)
 		}
 	case launcher.LibrariesResolvedEvent:
 		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.libraries"), e.Libraries)
+			cli.Info(cli.Translate("start.libraries"), e.Total)
 		}
 	case launcher.MetadataResolvedEvent:
 		if watcher.verbosity > 0 {
@@ -40,16 +40,21 @@ func (watcher watcher) Handle(event any) {
 type Start struct {
 	ID string `arg:"" name:"id" help:"${cmd_start_id}"`
 
-	Username    string `help:"${cmd_start_username}" short:"u" group:"opts"`
-	Server      string `help:"${cmd_start_server}" short:"s" group:"opts"`
-	Demo        bool   `help:"${cmd_start_demo}" group:"opts"`
-	DisableMP   bool   `help:"${cmd_start_disablemp}" group:"opts"`
-	DisableChat bool   `help:"${cmd_start_disablechat}" group:"opts"`
-	Width       int    `help:"${cmd_start_width}" group:"overrides" and:"size"`
-	Height      int    `help:"${cmd_start_height}" group:"overrides" and:"size"`
-	JVM         string `help:"${cmd_start_jvm}" group:"overrides" type:"path" placeholder:"PATH"`
-	MinMemory   int    `help:"${cmd_start_minmemory}" group:"overrides" placeholder:"MB" and:"memory"`
-	MaxMemory   int    `help:"${cmd_start_maxmemory}" group:"overrides" placeholder:"MB" and:"memory"`
+	Options struct {
+		Username    string `help:"${cmd_start_username}" short:"u"`
+		Server      string `help:"${cmd_start_server}" short:"s"`
+		Demo        bool   `help:"${cmd_start_demo}"`
+		DisableMP   bool   `help:"${cmd_start_disablemp}"`
+		DisableChat bool   `help:"${cmd_start_disablechat}"`
+	} `embed:"" group:"opts"`
+	Overrides struct {
+		Width     int    `help:"${cmd_start_width}" and:"size"`
+		Height    int    `help:"${cmd_start_height}" and:"size"`
+		JVM       string `help:"${cmd_start_jvm}" type:"path" placeholder:"PATH"`
+		JVMArgs   string `help:"${cmd_start_jvmargs}"`
+		MinMemory int    `help:"${cmd_start_minmemory}" placeholder:"MB" and:"memory"`
+		MaxMemory int    `help:"${cmd_start_maxmemory}" placeholder:"MB" and:"memory"`
+	} `embed:"" group:"overrides"`
 }
 
 func (c *Start) Run(ctx *kong.Context, verbosity int) error {
@@ -64,12 +69,13 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 			Width  int "json:\"width\""
 			Height int "json:\"height\""
 		}{
-			Width:  c.Width,
-			Height: c.Height,
+			Width:  c.Overrides.Width,
+			Height: c.Overrides.Height,
 		},
-		Java:      c.JVM,
-		MinMemory: c.MinMemory,
-		MaxMemory: c.MaxMemory,
+		Java:      c.Overrides.JVM,
+		JavaArgs:  c.Overrides.JVMArgs,
+		MinMemory: c.Overrides.MinMemory,
+		MaxMemory: c.Overrides.MaxMemory,
 	}
 	if override.WindowResolution.Width != 0 && override.WindowResolution.Height != 0 {
 		config.WindowResolution = override.WindowResolution
@@ -77,44 +83,49 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 	if override.Java != "" {
 		config.Java = override.Java
 	}
+	if override.JavaArgs != "" {
+		config.JavaArgs = override.JavaArgs
+	}
 	if override.MinMemory != 0 && override.MaxMemory != 0 {
 		config.MinMemory = override.MinMemory
 		config.MaxMemory = override.MaxMemory
 	}
 
 	session := auth.Session{
-		Username: c.Username,
+		Username: c.Options.Username,
 	}
-	if c.Username == "" {
+	if c.Options.Username == "" {
 		session, err = auth.Authenticate()
 		if err != nil {
 			return fmt.Errorf("authenticate session: %w", err)
 		}
 	}
 
-	options := launcher.EnvOptions{
-		Session:            session,
-		Config:             config,
-		QuickPlayServer:    c.Server,
-		Demo:               c.Demo,
-		DisableMultiplayer: c.DisableMP,
-		DisableChat:        c.DisableChat,
-	}
+	launchEnv, err := launcher.Prepare(
+		inst,
+		launcher.LaunchOptions{
+			Session: session,
 
-	launchEnv, err := launcher.Prepare(inst, options, watcher{
-		progressbar: progressbar.NewOptions(0,
-			progressbar.OptionSetDescription(cli.Translate("cmd.start.downloading")),
-			progressbar.OptionSetWriter(os.Stdout),
-			progressbar.OptionThrottle(65*time.Millisecond),
-			progressbar.OptionShowCount(),
-			progressbar.OptionShowIts(),
-			progressbar.OptionOnCompletion(func() {
-				fmt.Print("\n")
-			}),
-			progressbar.OptionFullWidth(),
-		),
-		verbosity: verbosity,
-	})
+			InstanceConfig:     config,
+			QuickPlayServer:    c.Options.Server,
+			Demo:               c.Options.Demo,
+			DisableMultiplayer: c.Options.DisableMP,
+			DisableChat:        c.Options.DisableChat,
+		},
+		watcher{
+			progressbar: progressbar.NewOptions(0,
+				progressbar.OptionSetDescription(cli.Translate("cmd.start.downloading")),
+				progressbar.OptionSetWriter(os.Stdout),
+				progressbar.OptionThrottle(65*time.Millisecond),
+				progressbar.OptionShowCount(),
+				progressbar.OptionShowIts(),
+				progressbar.OptionOnCompletion(func() {
+					fmt.Print("\n")
+				}),
+				progressbar.OptionFullWidth(),
+			),
+			verbosity: verbosity,
+		})
 
 	if err != nil {
 		return err

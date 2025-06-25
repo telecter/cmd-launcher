@@ -109,7 +109,7 @@ func main() {
 
 	if err := ctx.Run(); err != nil {
 		cli.Error("%s", err)
-		cli.Tip(err)
+		cli.Tips(err)
 		var coder kong.ExitCoder
 		if errors.As(err, &coder) {
 			ctx.Exit(coder.ExitCode())

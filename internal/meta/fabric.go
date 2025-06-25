@@ -62,7 +62,7 @@ func (f fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, er
 		loaderVersion = versions[0].Version
 	}
 	cache := network.Cache[VersionMeta]{
-		Path: filepath.Join(env.CachesDir, "fabric", loaderVersion+"-"+gameVersion+".json"),
+		Path: filepath.Join(env.CachesDir, f.name, loaderVersion+"-"+gameVersion+".json"),
 		URL:  fmt.Sprintf(f.profiles, gameVersion, loaderVersion),
 	}
 

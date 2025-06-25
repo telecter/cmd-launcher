@@ -38,6 +38,7 @@ func (c *Create) Run(ctx *kong.Context) error {
 		Name:          c.ID,
 		Loader:        loader,
 		LoaderVersion: c.LoaderVersion,
+		Config:        defaultInstanceConfig,
 	})
 	if err != nil {
 		return fmt.Errorf("create instance: %w", err)
@@ -48,6 +49,7 @@ func (c *Create) Run(ctx *kong.Context) error {
 		l = " " + l
 	}
 	cli.Success(cli.Translate("cmd.create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
+	cli.Tip(cli.Translate("tip.configure"))
 	return nil
 }
 
@@ -129,4 +131,16 @@ type Instance struct {
 	Delete Delete `cmd:"" help:"${cmd_delete}"`
 	Rename Rename `cmd:"" help:"${cmd_rename}"`
 	List   List   `cmd:"" help:"${cmd_list}"`
+}
+
+var defaultInstanceConfig = launcher.InstanceConfig{
+	WindowResolution: struct {
+		Width  int "json:\"width\""
+		Height int "json:\"height\""
+	}{
+		Width:  1708,
+		Height: 960,
+	},
+	MinMemory: 512,
+	MaxMemory: 4096,
 }

@@ -216,9 +216,9 @@ type testingWatcher struct{}
 func (watcher testingWatcher) Handle(event any) {
 	switch e := event.(type) {
 	case AssetsResolvedEvent:
-		fmt.Printf("Identified %d assets\n", e.Assets)
+		fmt.Printf("Identified %d assets\n", e.Total)
 	case LibrariesResolvedEvent:
-		fmt.Printf("Identified %d libraries\n", e.Libraries)
+		fmt.Printf("Identified %d libraries\n", e.Total)
 
 	case MetadataResolvedEvent:
 		fmt.Println("Version metadata retrieved")
@@ -228,6 +228,7 @@ func (watcher testingWatcher) Handle(event any) {
 
 func TestPrepare(t *testing.T) {
 	env.SetDirs(t.TempDir())
+
 	tests := []struct {
 		name    string
 		options InstanceOptions
@@ -238,7 +239,9 @@ func TestPrepare(t *testing.T) {
 				GameVersion: "release",
 				Name:        uuid.NewString(),
 				Loader:      LoaderVanilla,
-				Java:        "java",
+				Config: InstanceConfig{
+					Java: "java",
+				},
 			},
 		},
 		{
@@ -256,7 +259,9 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderFabric,
 				LoaderVersion: "latest",
-				Java:          "java",
+				Config: InstanceConfig{
+					Java: "java",
+				},
 			},
 		},
 		{
@@ -266,7 +271,9 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderQuilt,
 				LoaderVersion: "latest",
-				Java:          "java",
+				Config: InstanceConfig{
+					Java: "java",
+				},
 			},
 		},
 		{
@@ -276,7 +283,9 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderForge,
 				LoaderVersion: "latest",
-				Java:          "java",
+				Config: InstanceConfig{
+					Java: "java",
+				},
 			},
 		},
 		{
@@ -286,7 +295,9 @@ func TestPrepare(t *testing.T) {
 				Name:          uuid.NewString(),
 				Loader:        LoaderNeoForge,
 				LoaderVersion: "latest",
-				Java:          "java",
+				Config: InstanceConfig{
+					Java: "java",
+				},
 			},
 		},
 	}
@@ -298,12 +309,12 @@ func TestPrepare(t *testing.T) {
 				t.Fatalf("unexpected error creating instance for test: %s", err)
 			}
 
-			_, err = Prepare(inst, EnvOptions{
+			_, err = Prepare(inst, LaunchOptions{
 				Session: auth.Session{
 					Username: "testing",
 				},
-				Config:     inst.Config,
-				skipAssets: true,
+				InstanceConfig: inst.Config,
+				skipAssets:     true,
 			}, testingWatcher{})
 			if err != nil {
 				t.Errorf("wanted no error; got: %s", err)

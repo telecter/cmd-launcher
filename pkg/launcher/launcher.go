@@ -27,15 +27,11 @@ const (
 	LoaderForge    Loader = "forge"
 )
 
-func (loader Loader) String() string {
-	return string(loader)
-}
-
-// EnvOptions represents configuration options when preparing an instance to be launched.
-type EnvOptions struct {
+// LaunchOptions represents configuration options when preparing an instance to be launched.
+type LaunchOptions struct {
 	Session auth.Session
-	Config  InstanceConfig
 
+	InstanceConfig
 	QuickPlayServer    string
 	Demo               bool
 	DisableMultiplayer bool
@@ -55,12 +51,12 @@ type MetadataResolvedEvent struct{}
 
 // LibrariesResolvedEvent is called when all game libraries have been identified and filtered.
 type LibrariesResolvedEvent struct {
-	Libraries int
+	Total int
 }
 
 // AssetsResolvedEvent is called when all game assets have been identified and filtered.
 type AssetsResolvedEvent struct {
-	Assets int
+	Total int
 }
 
 // DownloadingEvent is called when a download has progressed.
@@ -84,10 +80,10 @@ func (ConsoleRunner) Run(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-// A LaunchEnvironment represents the data needed to start the game.
+// A LaunchEnvironment represents the information needed to start the game.
 type LaunchEnvironment struct {
 	GameDir   string
-	JavaPath  string
+	Java      string
 	MainClass string
 	Classpath []string
 	JavaArgs  []string
@@ -98,7 +94,7 @@ type LaunchEnvironment struct {
 //
 // The Java executable is checked and the classpath and command arguments are finalized.
 func Launch(launchEnv LaunchEnvironment, runner Runner) error {
-	info, err := os.Stat(launchEnv.JavaPath)
+	info, err := os.Stat(launchEnv.Java)
 	if err != nil {
 		return fmt.Errorf("java executable does not exist")
 	}
@@ -107,29 +103,32 @@ func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 	}
 
 	javaArgs := append(launchEnv.JavaArgs, "-cp", strings.Join(launchEnv.Classpath, string(os.PathListSeparator)), launchEnv.MainClass)
-	cmd := exec.Command(launchEnv.JavaPath, append(javaArgs, launchEnv.GameArgs...)...)
+	cmd := exec.Command(launchEnv.Java, append(javaArgs, launchEnv.GameArgs...)...)
 	cmd.Dir = launchEnv.GameDir
 	return runner.Run(cmd)
 }
 
 // Prepare prepares the instance to be launched, returning a LaunchEnvironment, with the provided options and sends events to watcher.
-func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnvironment, error) {
+func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (LaunchEnvironment, error) {
 	var downloads []network.DownloadEntry
 
 	version, err := fetchVersion(inst.Loader, inst.GameVersion, inst.LoaderVersion)
 	if err != nil {
 		return LaunchEnvironment{}, fmt.Errorf("retrieve metadata: %w", err)
 	}
-	version.Libraries = append(version.Libraries, version.Client())
 
 	launchEnv := LaunchEnvironment{
 		GameDir:   inst.Dir(),
-		JavaPath:  options.Config.Java,
+		Java:      options.Java,
 		MainClass: version.MainClass,
 	}
 	watcher.Handle(MetadataResolvedEvent{})
 
 	// Filter libraries, and add necessary artifact download entries
+	if options.CustomJar == "" {
+		version.Libraries = append(version.Libraries, version.Client())
+	}
+
 	installedLibs, requiredLibs := filterLibraries(version.Libraries)
 	if !options.skipLibraries {
 		for _, library := range requiredLibs {
@@ -137,7 +136,7 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		}
 	}
 	watcher.Handle(LibrariesResolvedEvent{
-		Libraries: len(installedLibs) + len(requiredLibs),
+		Total: len(installedLibs) + len(requiredLibs),
 	})
 
 	// Download asset index and add all necessary asset download entries
@@ -148,29 +147,23 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 	if !options.skipAssets {
 		downloads = append(downloads, assetIndex.DownloadEntries()...)
 	}
-	watcher.Handle(AssetsResolvedEvent{Assets: len(assetIndex.Objects)})
+	watcher.Handle(AssetsResolvedEvent{Total: len(assetIndex.Objects)})
 
 	// If no Java path is present, fetch Mojang Java downloads
-	if launchEnv.JavaPath == "" {
+	var symlinks map[string]string
+	if launchEnv.Java == "" {
 		manifest, err := meta.FetchJavaManifest(version.JavaVersion.Component)
 		if err != nil {
 			return LaunchEnvironment{}, fmt.Errorf("fetch java manifest: %w", err)
 		}
-		entries, symlinks := manifest.DownloadEntries(version.JavaVersion.Component)
+		var entries []network.DownloadEntry
+		entries, symlinks = manifest.DownloadEntries(version.JavaVersion.Component)
 		downloads = append(downloads, entries...)
-		for link, target := range symlinks {
-			if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
-				panic(err)
-			}
 
-			if err := os.Symlink(target, link); err != nil {
-				return LaunchEnvironment{}, fmt.Errorf("create symlink %q: %w", link, err)
-			}
-		}
-		launchEnv.JavaPath = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", "java")
+		launchEnv.Java = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", "java")
 	}
 
-	if err := download(downloads, watcher); err != nil {
+	if err := download(downloads, symlinks, watcher); err != nil {
 		return LaunchEnvironment{}, fmt.Errorf("download files: %w", err)
 	}
 
@@ -203,12 +196,24 @@ func Prepare(inst Instance, options EnvOptions, watcher EventWatcher) (LaunchEnv
 		}
 		launchEnv.Classpath = append(launchEnv.Classpath, library.Artifact.RuntimePath())
 	}
-
+	if options.CustomJar != "" {
+		launchEnv.Classpath = append(launchEnv.Classpath, options.CustomJar)
+	}
 	return launchEnv, nil
 }
 
 // download takes a list of download entries and executes them, reporting download events to watcher.
-func download(entries []network.DownloadEntry, watcher EventWatcher) error {
+//
+// It also creates all symlinks specified.
+func download(entries []network.DownloadEntry, symlinks map[string]string, watcher EventWatcher) error {
+	for link, target := range symlinks {
+		if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+			return fmt.Errorf("create directory for symlink %q: %w", link, err)
+		}
+		if err := os.Symlink(target, link); err != nil {
+			return fmt.Errorf("create symlink %q: %w", link, err)
+		}
+	}
 	if len(entries) > 0 {
 		results := network.StartDownloadEntries(entries)
 		i := 0
@@ -228,7 +233,7 @@ func download(entries []network.DownloadEntry, watcher EventWatcher) error {
 
 // createArgs takes data from a launch environment, version metadata, and environment options to
 // create a set of game and Java arguments to pass when starting the game.
-func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options EnvOptions) (java, game []string) {
+func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options LaunchOptions) (java, game []string) {
 	// Game arguments
 	game = []string{
 		"--username", options.Session.Username,
@@ -239,8 +244,8 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options E
 		"--assetIndex", version.AssetIndex.ID,
 		"--version", version.ID,
 		"--versionType", version.Type,
-		"--width", strconv.Itoa(options.Config.WindowResolution.Width),
-		"--height", strconv.Itoa(options.Config.WindowResolution.Height),
+		"--width", strconv.Itoa(options.WindowResolution.Width),
+		"--height", strconv.Itoa(options.WindowResolution.Height),
 	}
 	if options.QuickPlayServer != "" {
 		game = append(game, "--quickPlayMultiplayer", options.QuickPlayServer)
@@ -261,13 +266,15 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options E
 	if runtime.GOOS == "darwin" {
 		java = append(java, "-XstartOnFirstThread")
 	}
-	if options.Config.MinMemory != 0 {
-		java = append(java, fmt.Sprintf("-Xms%dm", options.Config.MinMemory))
+	if options.MinMemory != 0 {
+		java = append(java, fmt.Sprintf("-Xms%dm", options.MinMemory))
 	}
-	if options.Config.MaxMemory != 0 {
-		java = append(java, fmt.Sprintf("-Xmx%dm", options.Config.MaxMemory))
+	if options.MaxMemory != 0 {
+		java = append(java, fmt.Sprintf("-Xmx%dm", options.MaxMemory))
 	}
-
+	if options.JavaArgs != "" {
+		java = append(java, strings.Split(options.JavaArgs, " ")...)
+	}
 	for _, arg := range version.Arguments.Game {
 		if arg, ok := arg.(string); ok {
 			game = append(game, arg)
@@ -288,7 +295,7 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options E
 // postProcess takes all Forge post processors and runs them with specified launch environment.
 func postProcess(launchEnv LaunchEnvironment, processors []meta.ForgeProcessor) error {
 	for _, processor := range processors {
-		cmd := exec.Command(launchEnv.JavaPath, processor.JavaArgs...)
+		cmd := exec.Command(launchEnv.Java, processor.JavaArgs...)
 		cmd.Dir = launchEnv.GameDir
 		cmd.Stderr = os.Stdout
 		if err := cmd.Run(); err != nil {

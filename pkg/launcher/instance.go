@@ -40,14 +40,6 @@ func (inst *Instance) Rename(new string) error {
 	return nil
 }
 
-type InstanceOptions struct {
-	Name          string
-	GameVersion   string
-	Loader        Loader
-	LoaderVersion string
-	Java          string // Leave empty to use Mojang's Java distribution.
-}
-
 // InstanceConfig represents the configurable values of an Instance.
 type InstanceConfig struct {
 	WindowResolution struct {
@@ -55,8 +47,20 @@ type InstanceConfig struct {
 		Height int `json:"height"`
 	} `json:"resolution"`
 	Java      string `json:"java"`
+	JavaArgs  string `json:"java_args"`
+	CustomJar string `json:"custom_jar"`
 	MinMemory int    `json:"min_memory"`
 	MaxMemory int    `json:"max_memory"`
+}
+
+// InstanceOptions are options used to designate an instance's version and other parameters on creation.
+type InstanceOptions struct {
+	Name          string
+	GameVersion   string
+	Loader        Loader
+	LoaderVersion string
+
+	Config InstanceConfig
 }
 
 // CreateInstance creates a new instance with the specified options.
@@ -75,18 +79,8 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		GameVersion:   version.ID,
 		Loader:        options.Loader,
 		LoaderVersion: version.LoaderID,
-		Config: InstanceConfig{
-			WindowResolution: struct {
-				Width  int "json:\"width\""
-				Height int "json:\"height\""
-			}{
-				Width:  1708,
-				Height: 960,
-			},
-			MinMemory: 512,
-			MaxMemory: 4096,
-			Java:      options.Java,
-		}}
+		Config:        options.Config,
+	}
 
 	if err := os.MkdirAll(inst.Dir(), 0755); err != nil {
 		return Instance{}, fmt.Errorf("create instance directory: %w", err)
@@ -111,7 +105,7 @@ func RemoveInstance(id string) error {
 	return nil
 }
 
-// GetInstance retrieves the instance with the specified ID.
+// FetchInstance retrieves the instance with the specified ID.
 func FetchInstance(id string) (Instance, error) {
 	dir := filepath.Join(env.InstancesDir, id)
 	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
@@ -128,7 +122,7 @@ func FetchInstance(id string) (Instance, error) {
 	return inst, nil
 }
 
-// AllInstances retrieves all valid instances within env.InstancesDir.
+// FetchAllInstances retrieves all valid instances within env.InstancesDir.
 func FetchAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(env.InstancesDir)
 	if errors.Is(err, os.ErrNotExist) {

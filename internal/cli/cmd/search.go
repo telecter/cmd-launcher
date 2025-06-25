@@ -47,13 +47,14 @@ func (c *Search) Run(ctx *kong.Context) error {
 		}
 		var versions meta.FabricVersionList
 
-		if c.Kind == "fabric" {
+		switch c.Kind {
+		case "fabric":
 			var err error
 			versions, err = meta.Fabric.FetchVersions()
 			if err != nil {
 				return fmt.Errorf("retrieve fabric versions: %w", err)
 			}
-		} else if c.Kind == "quilt" {
+		case "quilt":
 			var err error
 			versions, err = meta.Quilt.FetchVersions()
 			if err != nil {
