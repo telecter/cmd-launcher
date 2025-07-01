@@ -12,27 +12,34 @@ import (
 	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
-type watcher struct {
-	progressbar *progressbar.ProgressBar
-	verbosity   int
-}
-
-func (watcher watcher) Handle(event any) {
-	switch e := event.(type) {
-	case launcher.DownloadingEvent:
-		watcher.progressbar.ChangeMax(e.Total)
-		watcher.progressbar.Add(1)
-	case launcher.AssetsResolvedEvent:
-		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.assets"), e.Total)
-		}
-	case launcher.LibrariesResolvedEvent:
-		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.libraries"), e.Total)
-		}
-	case launcher.MetadataResolvedEvent:
-		if watcher.verbosity > 0 {
-			cli.Info(cli.Translate("start.metadata"))
+func watcher(verbosity int) launcher.EventWatcher {
+	var bar = progressbar.NewOptions(0,
+		progressbar.OptionSetDescription(cli.Translate("cmd.start.downloading")),
+		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionThrottle(65*time.Millisecond),
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Print("\n")
+		}),
+		progressbar.OptionFullWidth())
+	return func(event any) {
+		switch e := event.(type) {
+		case launcher.DownloadingEvent:
+			bar.ChangeMax(e.Total)
+			bar.Add(1)
+		case launcher.AssetsResolvedEvent:
+			if verbosity > 0 {
+				cli.Info(cli.Translate("start.assets"), e.Total)
+			}
+		case launcher.LibrariesResolvedEvent:
+			if verbosity > 0 {
+				cli.Info(cli.Translate("start.libraries"), e.Total)
+			}
+		case launcher.MetadataResolvedEvent:
+			if verbosity > 0 {
+				cli.Info(cli.Translate("start.metadata"))
+			}
 		}
 	}
 }
@@ -112,20 +119,7 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 			DisableMultiplayer: c.Options.DisableMP,
 			DisableChat:        c.Options.DisableChat,
 		},
-		watcher{
-			progressbar: progressbar.NewOptions(0,
-				progressbar.OptionSetDescription(cli.Translate("cmd.start.downloading")),
-				progressbar.OptionSetWriter(os.Stdout),
-				progressbar.OptionThrottle(65*time.Millisecond),
-				progressbar.OptionShowCount(),
-				progressbar.OptionShowIts(),
-				progressbar.OptionOnCompletion(func() {
-					fmt.Print("\n")
-				}),
-				progressbar.OptionFullWidth(),
-			),
-			verbosity: verbosity,
-		})
+		watcher(verbosity))
 
 	if err != nil {
 		return err
@@ -153,5 +147,5 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 	}
 	cli.Success(cli.Translate("start.launching"), session.Username)
 
-	return launcher.Launch(launchEnv, launcher.ConsoleRunner{})
+	return launcher.Launch(launchEnv, launcher.ConsoleRunner)
 }

@@ -26,7 +26,7 @@ const (
 type about struct{}
 
 func (about) Run(ctx *kong.Context) error {
-	color.New(color.Bold).Printf("%s %s\n", name, version)
+	color.New(color.Bold).Println(name, version)
 	color.New(color.Underline).Println(description)
 	fmt.Println(copyright)
 	fmt.Println(license)
@@ -74,7 +74,6 @@ func main() {
 	for k, v := range cli.Translations() {
 		vars[strings.ReplaceAll(k, ".", "_")] = v
 	}
-
 	parser := kong.Must(&CLI{},
 		kong.UsageOnError(),
 		kong.Name(name),

@@ -42,9 +42,7 @@ type LaunchOptions struct {
 }
 
 // An EventWatcher is a controller that can handle multiple types of events.
-type EventWatcher interface {
-	Handle(event any)
-}
+type EventWatcher func(event any)
 
 // MetadataResolvedEvent is called when all metadata has been retrieved
 type MetadataResolvedEvent struct{}
@@ -66,14 +64,10 @@ type DownloadingEvent struct {
 }
 
 // A Runner is a controller which manages the starting of the game.
-type Runner interface {
-	Run(cmd *exec.Cmd) error
-}
+type Runner func(cmd *exec.Cmd) error
 
 // An ConsoleRunner is an implementation of Runner which logs game output to the console.
-type ConsoleRunner struct{}
-
-func (ConsoleRunner) Run(cmd *exec.Cmd) error {
+func ConsoleRunner(cmd *exec.Cmd) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -105,7 +99,7 @@ func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 	javaArgs := append(launchEnv.JavaArgs, "-cp", strings.Join(launchEnv.Classpath, string(os.PathListSeparator)), launchEnv.MainClass)
 	cmd := exec.Command(launchEnv.Java, append(javaArgs, launchEnv.GameArgs...)...)
 	cmd.Dir = launchEnv.GameDir
-	return runner.Run(cmd)
+	return runner(cmd)
 }
 
 // Prepare prepares the instance to be launched, returning a LaunchEnvironment, with the provided options and sends events to watcher.
@@ -122,7 +116,7 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 		Java:      options.Java,
 		MainClass: version.MainClass,
 	}
-	watcher.Handle(MetadataResolvedEvent{})
+	watcher(MetadataResolvedEvent{})
 
 	// Filter libraries, and add necessary artifact download entries
 	if options.CustomJar == "" {
@@ -135,7 +129,7 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 			downloads = append(downloads, library.Artifact.DownloadEntry())
 		}
 	}
-	watcher.Handle(LibrariesResolvedEvent{
+	watcher(LibrariesResolvedEvent{
 		Total: len(installedLibs) + len(requiredLibs),
 	})
 
@@ -147,7 +141,7 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 	if !options.skipAssets {
 		downloads = append(downloads, assetIndex.DownloadEntries()...)
 	}
-	watcher.Handle(AssetsResolvedEvent{Total: len(assetIndex.Objects)})
+	watcher(AssetsResolvedEvent{Total: len(assetIndex.Objects)})
 
 	// If no Java path is present, fetch Mojang Java downloads
 	var symlinks map[string]string
@@ -221,7 +215,7 @@ func download(entries []network.DownloadEntry, symlinks map[string]string, watch
 			if err != nil {
 				return err
 			}
-			watcher.Handle(DownloadingEvent{
+			watcher(DownloadingEvent{
 				Completed: i,
 				Total:     len(entries),
 			})

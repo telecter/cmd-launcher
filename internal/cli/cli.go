@@ -83,6 +83,10 @@ var translations = map[string]string{
 	"tip.configure":            "Configure this instance with the `instance.json` file within the instance directory.",
 }
 
+func Translations() map[string]string {
+	return translations
+}
+
 // Translate takes a translation string and looks up its human-readable text. If not available, it returns the same translation string.
 func Translate(key string) string {
 	t, ok := translations[key]
@@ -90,10 +94,6 @@ func Translate(key string) string {
 		return key
 	}
 	return t
-}
-
-func Translations() map[string]string {
-	return translations
 }
 
 // Info prints an general info message.

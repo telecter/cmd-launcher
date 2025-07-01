@@ -19,27 +19,24 @@ type FabricVersionList []struct {
 }
 
 type fabricAPI struct {
-	name     string // Name of the fabric API.
-	versions string // Loader versions endpoint.
-	profiles string // Launcher profiles endpoint.
+	name string
+	url  string
 }
 
 var Fabric = fabricAPI{
-	name:     "fabric",
-	versions: "https://meta.fabricmc.net/v2/versions/loader",
-	profiles: "https://meta.fabricmc.net/v2/versions/loader/%s/%s/profile/json",
+	name: "fabric",
+	url:  "https://meta.fabricmc.net/v2",
 }
 var Quilt = fabricAPI{
-	name:     "quilt",
-	versions: "https://meta.quiltmc.org/v3/versions/loader",
-	profiles: "https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json",
+	name: "quilt",
+	url:  "https://meta.quiltmc.org/v3",
 }
 
-// FetchFabricVersions retrieves a list of all versions of Fabric.
+// FetchVersions retrieves a list of all versions of Fabric.
 func (f fabricAPI) FetchVersions() (FabricVersionList, error) {
 	cache := network.Cache[FabricVersionList]{
 		Path:        filepath.Join(env.CachesDir, f.name, "versions.json"),
-		URL:         f.versions,
+		URL:         fmt.Sprintf("%s/versions/loader", f.url),
 		AlwaysFetch: true,
 	}
 	var versions FabricVersionList
@@ -63,7 +60,7 @@ func (f fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, er
 	}
 	cache := network.Cache[VersionMeta]{
 		Path: filepath.Join(env.CachesDir, f.name, loaderVersion+"-"+gameVersion+".json"),
-		URL:  fmt.Sprintf(f.profiles, gameVersion, loaderVersion),
+		URL:  fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", f.url, gameVersion, loaderVersion),
 	}
 
 	var fabricMeta VersionMeta

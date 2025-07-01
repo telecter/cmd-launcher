@@ -114,19 +114,19 @@ func FetchForgeVersion(gameVersion string) (string, error) {
 }
 
 type forge struct {
-	installerURL string
+	installer string
 }
 
 var Forge = forge{
-	installerURL: "https://maven.minecraftforge.net/net/minecraftforge/forge/%s/forge-%s-installer.jar",
+	installer: "https://maven.minecraftforge.net/net/minecraftforge/forge/%s/forge-%s-installer.jar",
 }
 var Neoforge = forge{
-	installerURL: "https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-installer.jar",
+	installer: "https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-installer.jar",
 }
 
 // FetchInstaller fetchs the Forge installer ZIP file and returns its contents.
 func (f forge) FetchInstaller(version string) (map[string]*zip.File, error) {
-	url := fmt.Sprintf(f.installerURL, version, version)
+	url := fmt.Sprintf(f.installer, version, version)
 	path := filepath.Join(env.CachesDir, "forge", path.Base(url))
 
 	if _, err := os.Stat(path); err != nil {

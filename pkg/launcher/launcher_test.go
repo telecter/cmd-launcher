@@ -211,9 +211,7 @@ func TestRenameInstance(t *testing.T) {
 
 }
 
-type testingWatcher struct{}
-
-func (watcher testingWatcher) Handle(event any) {
+func testingWatcher(event any) {
 	switch e := event.(type) {
 	case AssetsResolvedEvent:
 		fmt.Printf("Identified %d assets\n", e.Total)
@@ -315,7 +313,7 @@ func TestPrepare(t *testing.T) {
 				},
 				InstanceConfig: inst.Config,
 				skipAssets:     true,
-			}, testingWatcher{})
+			}, testingWatcher)
 			if err != nil {
 				t.Errorf("wanted no error; got: %s", err)
 			}
