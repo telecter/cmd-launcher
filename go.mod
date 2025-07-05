@@ -3,8 +3,8 @@ module github.com/telecter/cmd-launcher
 go 1.24.4
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/alecthomas/kong v1.11.0
+	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/alecthomas/kong v1.12.0
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.6.7
@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10 // indirect
+	github.com/buildkite/shellwords v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect

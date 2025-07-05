@@ -12,9 +12,11 @@ import (
 
 // Map of translation strings to human-readable text.
 var translations = map[string]string{
-	"instance": "Manage Minecraft instances",
-	"auth":     "Manage account authentication",
-	"about":    "Display launcher version and about",
+	"instance":    "Manage Minecraft instances",
+	"auth":        "Manage account authentication",
+	"about":       "Display launcher version and about",
+	"list":        "List all instances",
+	"completions": "Outputs shell command to install completions",
 
 	"login":               "Login in to an account",
 	"login.code.fetching": "Loading device code...",
@@ -48,10 +50,6 @@ var translations = map[string]string{
 	"rename.complete": "Renamed instance.",
 	"rename.arg.id":   "Instance to rename",
 	"rename.arg.new":  "New name for instance",
-
-	"list": "List all instances",
-
-	"completions": "Outputs shell command to install completions",
 
 	"search":               "Search versions",
 	"search.table.version": "Version",
