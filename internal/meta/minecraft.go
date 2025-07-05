@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -428,6 +429,9 @@ func FetchJavaManifestList() (JavaManifestList, error) {
 	return list, nil
 }
 
+var ErrJavaBadSystem = errors.New("system is unsupported")
+var ErrJavaNoVersion = errors.New("required version unavailable for this system")
+
 func FetchJavaManifest(name string) (JavaManifest, error) {
 	list, err := FetchJavaManifestList()
 	if err != nil {
@@ -443,7 +447,7 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 
 	_, ok := list[os]
 	if !ok {
-		return JavaManifest{}, fmt.Errorf("system is unsupported")
+		return JavaManifest{}, ErrJavaBadSystem
 
 	}
 	_, ok = list[os][name]
@@ -452,7 +456,7 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 	}
 
 	if len(list[os][name]) < 1 {
-		return JavaManifest{}, fmt.Errorf("required version unavailable for this system")
+		return JavaManifest{}, ErrJavaNoVersion
 	}
 
 	ref := list[os][name][0].Manifest

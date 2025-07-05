@@ -6,6 +6,8 @@ github.com/alecthomas/kong v1.11.0 h1:y++1gI7jf8O7G7l4LZo5ASFhrhJvzc+WgF/arranEm
 github.com/alecthomas/kong v1.11.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
+github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10 h1:XwHQ5xDtYPdtBbVPyRO6UZoWZe8/mbKUb076f8x7RvI=
+github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10/go.mod h1:gv0DYOzHEsKgo31lTCDGauIg4DTTGn41Bzp+t3wSOlk=
 github.com/chengxilo/virtualterm v1.0.4 h1:Z6IpERbRVlfB8WkOmtbHiDbBANU7cimRIof7mk9/PwM=
 github.com/chengxilo/virtualterm v1.0.4/go.mod h1:DyxxBZz/x1iqJjFxTFcr6/x+jSpqN0iwWCOK1q10rlY=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -37,6 +39,8 @@ github.com/schollz/progressbar/v3 v3.18.0 h1:uXdoHABRFmNIjUfte/Ex7WtuyVslrw2wVPQ
 github.com/schollz/progressbar/v3 v3.18.0/go.mod h1:IsO3lpbaGuzh8zIMzgY3+J8l4C8GjO0Y9S69eFvNsec=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+go.abhg.dev/komplete v0.1.0 h1:OE/uazFmWxrYYxttaKri9UpVr/i3J2Iv1vh21mYVom8=
+go.abhg.dev/komplete v0.1.0/go.mod h1:MYxEW+7RETaNiYbeZv0LOSBmiZ2vfzfk/6m36EC04kc=
 golang.org/x/sys v0.1.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.33.0 h1:q3i8TbbEz+JRD9ywIRlyRAQbM0qF7hu24q3teo2hbuw=

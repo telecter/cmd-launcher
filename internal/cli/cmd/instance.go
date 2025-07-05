@@ -12,10 +12,10 @@ import (
 )
 
 type Create struct {
-	ID            string `arg:"" help:"${cmd_create_id}"`
-	Loader        string `help:"${cmd_create_loader}" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
-	Version       string `help:"${cmd_create_version}" default:"release" short:"v"`
-	LoaderVersion string `help:"${cmd_create_loaderversion}" default:"latest"`
+	ID            string `arg:"" help:"${create_arg_id}"`
+	Loader        string `help:"${create_arg_loader}" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
+	Version       string `help:"${create_arg_version}" default:"release" short:"v"`
+	LoaderVersion string `help:"${create_arg_loaderversion}" default:"latest"`
 }
 
 func (c *Create) Run(ctx *kong.Context) error {
@@ -48,14 +48,14 @@ func (c *Create) Run(ctx *kong.Context) error {
 	if l != "" {
 		l = " " + l
 	}
-	cli.Success(cli.Translate("cmd.create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
+	cli.Success(cli.Translate("create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
 	cli.Tip(cli.Translate("tip.configure"))
 	return nil
 }
 
 type Delete struct {
-	ID  string `arg:"" name:"id" help:"${cmd_delete_id}"`
-	Yes bool   `name:"yes" short:"y" help:"${cmd_delete_yes}"`
+	ID  string `arg:"" name:"id" help:"${delete_arg_id}"`
+	Yes bool   `name:"yes" short:"y" help:"${delete_arg_yes}"`
 }
 
 func (c *Delete) Run(ctx *kong.Context) error {
@@ -67,8 +67,8 @@ func (c *Delete) Run(ctx *kong.Context) error {
 	if !delete {
 		var input string
 
-		cli.Warning(cli.Translate("cmd.delete.confirm"))
-		fmt.Printf(cli.Translate("cmd.delete.warning"), color.New(color.Bold).Sprint(inst.Name))
+		cli.Warning(cli.Translate("delete.confirm"))
+		fmt.Printf(cli.Translate("delete.warning"), color.New(color.Bold).Sprint(inst.Name))
 		fmt.Scanln(&input)
 		delete = input == "y" || input == "Y"
 	}
@@ -76,16 +76,16 @@ func (c *Delete) Run(ctx *kong.Context) error {
 		if err := launcher.RemoveInstance(c.ID); err != nil {
 			return fmt.Errorf("remove instance: %w", err)
 		}
-		cli.Success(cli.Translate("cmd.delete.complete"), color.New(color.Bold).Sprint(inst.Name))
+		cli.Success(cli.Translate("delete.complete"), color.New(color.Bold).Sprint(inst.Name))
 	} else {
-		cli.Info(cli.Translate("cmd.delete.abort"))
+		cli.Info(cli.Translate("delete.abort"))
 	}
 	return nil
 }
 
 type Rename struct {
-	ID  string `arg:"" help:"${cmd_rename_id}"`
-	New string `arg:"" help:"${cmd_rename_new}"`
+	ID  string `arg:"" help:"${rename_arg_id}"`
+	New string `arg:"" help:"${rename_arg_new}"`
 }
 
 func (c *Rename) Run(ctx *kong.Context) error {
@@ -96,7 +96,7 @@ func (c *Rename) Run(ctx *kong.Context) error {
 	if err := inst.Rename(c.New); err != nil {
 		return fmt.Errorf("rename instance: %w", err)
 	}
-	cli.Success(cli.Translate("cmd.rename.complete"))
+	cli.Success(cli.Translate("rename.complete"))
 	return nil
 }
 
@@ -127,10 +127,10 @@ func (c *List) Run(ctx *kong.Context) error {
 }
 
 type Instance struct {
-	Create Create `cmd:"" help:"${cmd_create}"`
-	Delete Delete `cmd:"" help:"${cmd_delete}"`
-	Rename Rename `cmd:"" help:"${cmd_rename}"`
-	List   List   `cmd:"" help:"${cmd_list}"`
+	Create Create `cmd:"" help:"${create}"`
+	Delete Delete `cmd:"" help:"${delete}"`
+	Rename Rename `cmd:"" help:"${rename}"`
+	List   List   `cmd:"" help:"${list}"`
 }
 
 var defaultInstanceConfig = launcher.InstanceConfig{

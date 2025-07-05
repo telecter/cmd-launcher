@@ -10,9 +10,11 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/schollz/progressbar/v3 v3.18.0
+	go.abhg.dev/komplete v0.1.0
 )
 
 require (
+	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect

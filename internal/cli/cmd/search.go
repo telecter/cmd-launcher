@@ -14,9 +14,9 @@ import (
 )
 
 type Search struct {
-	Query   string `arg:"" help:"${cmd_search_query}" optional:""`
-	Kind    string `help:"${cmd_search_kind}" short:"k" enum:"versions,fabric,quilt" default:"versions"`
-	Reverse bool   `short:"r" help:"${cmd_search_reverse}"`
+	Query   string `arg:"" help:"${search_arg_query}" optional:""`
+	Kind    string `help:"${search_arg_kind}" short:"k" enum:"versions,fabric,quilt" default:"versions"`
+	Reverse bool   `short:"r" help:"${search_arg_reverse}"`
 }
 
 func (c *Search) Run(ctx *kong.Context) error {

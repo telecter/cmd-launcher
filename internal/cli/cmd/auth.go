@@ -22,7 +22,7 @@ func init() {
 }
 
 type Login struct {
-	NoBrowser bool `help:"${cmd_auth_nobrowser}"`
+	NoBrowser bool `help:"${login_arg_nobrowser}"`
 }
 
 func (c *Login) Run(ctx *kong.Context) error {
@@ -31,20 +31,20 @@ func (c *Login) Run(ctx *kong.Context) error {
 	session, err := auth.Authenticate()
 	if err != nil {
 		if c.NoBrowser {
-			cli.Info(cli.Translate("auth.code.fetching"))
+			cli.Info(cli.Translate("login.code.fetching"))
 			resp, err := auth.MSA.FetchDeviceCode()
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
-			cli.Info(cli.Translate("auth.code.display"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
+			cli.Info(cli.Translate("login.code.display"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
 			session, err = auth.AuthenticateWithCode(resp)
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}
 		} else {
-			cli.Info(cli.Translate("auth.browser.opening"))
+			cli.Info(cli.Translate("login.browser"))
 			url := auth.MSA.AuthCodeURL()
-			cli.Info(cli.Translate("auth.browser.url"), url.String())
+			cli.Info(cli.Translate("login.url"), url.String())
 
 			browser.OpenURL(url.String())
 			var err error
@@ -54,7 +54,7 @@ func (c *Login) Run(ctx *kong.Context) error {
 			}
 		}
 	}
-	cli.Success(cli.Translate("auth.complete"), color.New(color.Bold).Sprint(session.Username))
+	cli.Success(cli.Translate("login.complete"), color.New(color.Bold).Sprint(session.Username))
 	return nil
 }
 
@@ -62,11 +62,11 @@ type Logout struct{}
 
 func (c *Logout) Run(ctx *kong.Context) error {
 	auth.Store.Clear()
-	cli.Info(cli.Translate("auth.logout"))
+	cli.Info(cli.Translate("logout.complete"))
 	return nil
 }
 
 type Auth struct {
-	Login  Login  `cmd:"" help:"${cmd_login}"`
-	Logout Logout `cmd:"" help:"${cmd_logout}"`
+	Login  Login  `cmd:"" help:"${login}"`
+	Logout Logout `cmd:"" help:"${logout}"`
 }

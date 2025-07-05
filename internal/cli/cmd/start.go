@@ -14,7 +14,7 @@ import (
 
 func watcher(verbosity int) launcher.EventWatcher {
 	var bar = progressbar.NewOptions(0,
-		progressbar.OptionSetDescription(cli.Translate("cmd.start.downloading")),
+		progressbar.OptionSetDescription(cli.Translate("start.launch.downloading")),
 		progressbar.OptionSetWriter(os.Stdout),
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionShowCount(),
@@ -30,37 +30,38 @@ func watcher(verbosity int) launcher.EventWatcher {
 			bar.Add(1)
 		case launcher.AssetsResolvedEvent:
 			if verbosity > 0 {
-				cli.Info(cli.Translate("start.assets"), e.Total)
+				cli.Info(cli.Translate("start.launch.assets"), e.Total)
 			}
 		case launcher.LibrariesResolvedEvent:
 			if verbosity > 0 {
-				cli.Info(cli.Translate("start.libraries"), e.Total)
+				cli.Info(cli.Translate("start.launch.libraries"), e.Total)
 			}
 		case launcher.MetadataResolvedEvent:
 			if verbosity > 0 {
-				cli.Info(cli.Translate("start.metadata"))
+				cli.Info(cli.Translate("start.launch.metadata"))
 			}
 		}
 	}
 }
 
 type Start struct {
-	ID string `arg:"" name:"id" help:"${cmd_start_id}"`
+	ID string `arg:"" name:"id" help:"${start_arg_id}"`
 
 	Options struct {
-		Username    string `help:"${cmd_start_username}" short:"u"`
-		Server      string `help:"${cmd_start_server}" short:"s"`
-		Demo        bool   `help:"${cmd_start_demo}"`
-		DisableMP   bool   `help:"${cmd_start_disablemp}"`
-		DisableChat bool   `help:"${cmd_start_disablechat}"`
+		Username    string `help:"${start_arg_username}" short:"u"`
+		Server      string `help:"${start_arg_server}" short:"s" placeholder:"IP" xor:"quickplay"`
+		World       string `help:"${start_arg_world}" short:"w" placeholder:"NAME" xor:"quickplay"`
+		Demo        bool   `help:"${start_arg_demo}"`
+		DisableMP   bool   `help:"${start_arg_disablemp}"`
+		DisableChat bool   `help:"${start_arg_disablechat}"`
 	} `embed:"" group:"opts"`
 	Overrides struct {
-		Width     int    `help:"${cmd_start_width}" and:"size"`
-		Height    int    `help:"${cmd_start_height}" and:"size"`
-		JVM       string `help:"${cmd_start_jvm}" type:"path" placeholder:"PATH"`
-		JVMArgs   string `help:"${cmd_start_jvmargs}"`
-		MinMemory int    `help:"${cmd_start_minmemory}" placeholder:"MB" and:"memory"`
-		MaxMemory int    `help:"${cmd_start_maxmemory}" placeholder:"MB" and:"memory"`
+		Width     int    `help:"${start_arg_width}" and:"size"`
+		Height    int    `help:"${start_arg_height}" and:"size"`
+		JVM       string `help:"${start_arg_jvm}" type:"path" placeholder:"PATH"`
+		JVMArgs   string `help:"${start_arg_jvmargs}"`
+		MinMemory int    `help:"${start_arg_minmemory}" placeholder:"MB" and:"memory"`
+		MaxMemory int    `help:"${start_arg_maxmemory}" placeholder:"MB" and:"memory"`
 	} `embed:"" group:"overrides"`
 }
 
@@ -115,6 +116,7 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 
 			InstanceConfig:     config,
 			QuickPlayServer:    c.Options.Server,
+			QuickPlayWorld:     c.Options.World,
 			Demo:               c.Options.Demo,
 			DisableMultiplayer: c.Options.DisableMP,
 			DisableChat:        c.Options.DisableChat,
@@ -126,7 +128,7 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 	}
 
 	if verbosity > 1 {
-		cli.Debug(cli.Translate("start.debug.jvmargs"), launchEnv.JavaArgs)
+		cli.Debug(cli.Translate("start.launch.jvmargs"), launchEnv.JavaArgs)
 
 		var gameArgs []string
 		var hideNext bool
@@ -142,10 +144,10 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 				hideNext = false
 			}
 		}
-		cli.Debug(cli.Translate("start.debug.gameargs"), gameArgs)
-		cli.Debug(cli.Translate("start.debug.info"), launchEnv.MainClass, launchEnv.GameDir)
+		cli.Debug(cli.Translate("start.launch.gameargs"), gameArgs)
+		cli.Debug(cli.Translate("start.launch.info"), launchEnv.MainClass, launchEnv.GameDir)
 	}
-	cli.Success(cli.Translate("start.launching"), session.Username)
+	cli.Success(cli.Translate("start.launch"), session.Username)
 
 	return launcher.Launch(launchEnv, launcher.ConsoleRunner)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/telecter/cmd-launcher/internal/cli"
 	"github.com/telecter/cmd-launcher/internal/cli/cmd"
+	"go.abhg.dev/komplete"
 
 	env "github.com/telecter/cmd-launcher/pkg"
 	"github.com/telecter/cmd-launcher/pkg/auth"
@@ -34,14 +35,15 @@ func (about) Run(ctx *kong.Context) error {
 }
 
 type CLI struct {
-	Start     cmd.Start    `cmd:"" help:"${cmd_start}"`
-	Instance  cmd.Instance `cmd:"" help:"${cmd_instance}" aliases:"inst"`
-	Auth      cmd.Auth     `cmd:"" help:"${cmd_auth}"`
-	Search    cmd.Search   `cmd:"" help:"${cmd_search}"`
-	About     about        `cmd:"" help:"${cmd_about}"`
-	Verbosity string       `help:"${verbosity}" enum:"info,extra,debug" default:"info"`
-	Dir       string       `help:"${dir}" type:"path" placeholder:"PATH"`
-	NoColor   bool         `help:"${nocolor}"`
+	Start       cmd.Start        `cmd:"" help:"${start}"`
+	Instance    cmd.Instance     `cmd:"" help:"${instance}" aliases:"inst"`
+	Auth        cmd.Auth         `cmd:"" help:"${auth}"`
+	Search      cmd.Search       `cmd:"" help:"${search}"`
+	About       about            `cmd:"" help:"${about}"`
+	Completions komplete.Command `cmd:"" help:"${completions}"`
+	Verbosity   string           `help:"${arg_verbosity}" enum:"info,extra,debug" default:"info"`
+	Dir         string           `help:"${arg_dir}" type:"path" placeholder:"PATH"`
+	NoColor     bool             `help:"${arg_nocolor}"`
 }
 
 func (c *CLI) AfterApply(ctx *kong.Context) error {
@@ -88,11 +90,12 @@ func main() {
 			return value.Help
 		}),
 		kong.Groups{
-			"overrides": cli.Translate("cmd.start.overrides"),
-			"opts":      cli.Translate("cmd.start.opts"),
+			"overrides": cli.Translate("start.arg.overrides"),
+			"opts":      cli.Translate("start.arg.opts"),
 		},
 		vars,
 	)
+	komplete.Run(parser)
 
 	ctx, err := parser.Parse(os.Args[1:])
 	if err != nil {

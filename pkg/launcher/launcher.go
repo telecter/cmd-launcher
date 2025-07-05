@@ -33,6 +33,7 @@ type LaunchOptions struct {
 
 	InstanceConfig
 	QuickPlayServer    string
+	QuickPlayWorld     string
 	Demo               bool
 	DisableMultiplayer bool
 	DisableChat        bool
@@ -241,8 +242,12 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options L
 		"--width", strconv.Itoa(options.WindowResolution.Width),
 		"--height", strconv.Itoa(options.WindowResolution.Height),
 	}
-	if options.QuickPlayServer != "" {
+
+	switch {
+	case options.QuickPlayServer != "":
 		game = append(game, "--quickPlayMultiplayer", options.QuickPlayServer)
+	case options.QuickPlayWorld != "":
+		game = append(game, "--quickPlaySingleplayer", options.QuickPlayWorld)
 	}
 	if options.Session.UUID != "" {
 		game = append(game, "--uuid", options.Session.UUID)
@@ -256,6 +261,7 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options L
 	if options.DisableMultiplayer {
 		game = append(game, "--disableMultiplayer")
 	}
+
 	// Java arguments
 	if runtime.GOOS == "darwin" {
 		java = append(java, "-XstartOnFirstThread")
