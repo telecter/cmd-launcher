@@ -43,7 +43,7 @@ You can use the `--loader, -l` flag to set the mod loader. Forge, NeoForge, Fabr
 
 Use the `--version, -v` flag to set the game version. If no value is supplied, the latest release is used. Acceptable values also include `release` or `snapshot` for the latest of either.
 
-The launcher will attempt to locate a Java executable on your `$PATH`. If it can't find one, you will need to set one manually in the instance configuration.
+When starting the game, the launcher will attempt to download a Java runtime from Mojang. If it can't find a suitable one, you will need to set one manually in the instance configuration.
 ```sh
 cmd-launcher inst create -v 1.21.5 -l fabric CoolInstance
 ```
@@ -85,9 +85,11 @@ To change configuration values for an instance, navigate to the instance directo
 
 Configurable values are:
 * Game version
-* Mod loader (and version)
+* Mod loader and version (if not vanilla)
 * Window resolution
-* Java executable path
+* Java executable path (if empty, Mojang Java will be downloaded)
+* Custom JAR path to use instead of downloading the normal client JAR
+* Extra Java args
 * Minimum and maximum memory
 
 As mentioned previously, these values can be overriden with command line flags.
@@ -104,6 +106,8 @@ As mentioned previously, these values can be overriden with command line flags.
       "height": 960
     },
     "java": "/usr/bin/java",
+    "java_args": "",
+    "custom_jar": "",
     "min_memory": 512,
     "max_memory": 4096
   }

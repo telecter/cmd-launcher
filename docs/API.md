@@ -1,4 +1,4 @@
-# cmd-launcher API (1.1.0)
+# cmd-launcher API (1.2.0)
 In addition to the CLI, this launcher also provides an API which can be used to programmatically interact with it.
 This page will be structured similarly to the main README, however for the API not the CLI.
 
@@ -11,11 +11,14 @@ inst, err := launcher.CreateInstance(launcher.InstanceOptions{
 		Name:        "MyInstance",
 		Loader:      launcher.LoaderQuilt,
 		LoaderVersion: "latest",
+		Config: launcher.InstanceConfig{}
 })
 ```
 The `Loader` can be `LoaderQuilt`, `LoaderFabric`, or `LoaderVanilla`.
 
 `LoaderVersion`, if the mod loader is not vanilla, can either be set to `latest` for the latest version or a version of that specific mod loader.
+
+The `Config` field is an InstanceConfig struct with game options. Refer to the go reference to find its fields.
 
 ### Getting an instance
 If you have an instance that is already created, you can use the `FetchInstance` function to get it.
@@ -25,32 +28,28 @@ inst, err := launcher.FetchInstance("MyInstance")
 Instances can be removed with the `launcher.RemoveInstance` function which follows the same structure.
 
 They can also be renamed with their `.Rename` method.
+
+If you would like to change the configuration of an instance, change its `Config` field and then run the instance's `WriteConfig` method.
 ### Preparing the game
 
 After you create your instance, in order to start the game, you will need to prepare an launch environment.
 
 ```go
-env, err := launcher.Prepare(inst, launcher.EnvOptions{
+env, err := launcher.Prepare(inst, launcher.LaunchOptions{
 	Session: auth.Session{
 		Username: "Dinnerbone",
 	},
-	Config: inst.Config,
-}, myWatcher{})
+	InstanceConfig: inst.Config,
+}, myWatcher)
 ```
 
-The `Config` value can also be changed before it is used. In this case, the `inst.Config` from the instance is used. However, you could change a value if you want,
-```go
-config := inst.Config
-config.WindowResolution.Height = 200
-...
-```
+There are more fields to LaunchOptions with can be found in the go reference. These allow you to customize the start behavior of the game such as multiplayer/singleplayer quick play. It also allows you to override instance configuration via the `InstanceConfig` field. If you don't want to do that, provide the `Config` field of the instance there.
 
-Now what about the `myWatcher{}`? The watcher is used to respond to various events that occur during the instance preparation. You need to define a struct on the EventWatcher interface.
+Now what about the `myWatcher`? The watcher is used to respond to various events that occur during the instance preparation. You need to define an EventWatcher function.
 
 ```go
-type myWatcher struct {}
 
-func (myWatcher) Handle(event any) {
+func myWatcher(event any) {
 	switch e := event.(type) {
 	case launcher.DownloadingEvent:
 		...
@@ -66,12 +65,11 @@ This could be used, for example, to create a progress bar of the libraries/asset
 The `Session` field is set without an access token, meaning it's an offline session. We will get to authenticating later.
 
 ### Starting the game
-After you have a launch environment from `launcher.Prepare` you will need to create a `Runner` to actually run and monitor the game in the way that you want.
+After you have a launch environment from `launcher.Prepare` you will need to create a `Runner`, which is just another function, to actually run and monitor the game in the way that you want.
 
 ```go
-type myRunner struct{}
 
-func (runner) Run(cmd *exec.Cmd) error {
+func myRunner(cmd *exec.Cmd) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -83,7 +81,7 @@ However, you should use your own runner if you have a different use case, such a
 
 With this runner, you can start the game.
 ```go
-err := launcher.Launch(env, myRunner{})
+err := launcher.Launch(env, myRunner)
 ```
 
 ### Authentication

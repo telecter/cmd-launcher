@@ -36,7 +36,7 @@ func (c *Login) Run(ctx *kong.Context) error {
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
-			cli.Info(cli.Translate("login.code.display"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
+			cli.Info(cli.Translate("login.code"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
 			session, err = auth.AuthenticateWithCode(resp)
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)

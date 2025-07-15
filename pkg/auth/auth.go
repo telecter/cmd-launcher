@@ -320,10 +320,10 @@ func AuthenticateWithRedirect() (Session, error) {
 	http.HandleFunc(MSA.RedirectURI.Path, func(w http.ResponseWriter, req *http.Request) {
 		params := req.URL.Query()
 		if params.Get("error") != "" {
-			fmt.Fprintf(w, cli.Translate("auth.fail"), params.Get("error_description"))
+			fmt.Fprintf(w, cli.Translate("login.redirectfail"), params.Get("error_description"))
 			err = fmt.Errorf("got error: %s", params.Get("error_description"))
 		} else {
-			fmt.Fprint(w, cli.Translate("auth.redirect"))
+			fmt.Fprint(w, cli.Translate("login.redirect"))
 		}
 		code = params.Get("code")
 		go server.Shutdown(context.Background())
