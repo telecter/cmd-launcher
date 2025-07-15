@@ -19,7 +19,7 @@ import (
 const (
 	name        = "cmd-launcher"
 	description = "A minimal command line Minecraft launcher."
-	version     = "1.1.0"
+	version     = "1.2.0"
 	license     = "Licensed MIT"
 	copyright   = "Copyright (c) 2024-2025 telecter"
 )
