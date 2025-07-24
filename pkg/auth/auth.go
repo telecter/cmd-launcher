@@ -12,11 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/telecter/cmd-launcher/internal/cli"
 	"github.com/telecter/cmd-launcher/internal/network"
 )
 
 const scope = "XboxLive.signin offline_access"
+
+var ClientID string      // Client ID for the Azure application
+var RedirectURI *url.URL // Redirect URI for the OAuth2 authorization code grant
 
 // A Session holds the necessary information to start Minecraft authenticated.
 type Session struct {
@@ -25,33 +27,14 @@ type Session struct {
 	AccessToken string
 }
 
-type msaT struct {
-	ClientID    string
-	RedirectURI *url.URL
-}
-
-var MSA msaT
-
-type msaResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
-	Scope        string `json:"scope"`
-	IDToken      string `json:"id_token"`
-	// error response
-	Error            string `json:"error"`
-	ErrorDescription string `json:"error_description"`
-}
-
 // AuthCodeURL returns an authorization code URL for the user to navigate to
 //
 // Used for the OAuth2 authorization code grant
-func (msa msaT) AuthCodeURL() *url.URL {
+func AuthCodeURL() *url.URL {
 	query := url.Values{
-		"client_id":     {msa.ClientID},
+		"client_id":     {ClientID},
 		"response_type": {"code"},
-		"redirect_uri":  {msa.RedirectURI.String()},
+		"redirect_uri":  {RedirectURI.String()},
 		"scope":         {scope},
 		"response_mode": {"query"},
 	}
@@ -72,9 +55,9 @@ type deviceCodeResponse struct {
 // FetchDeviceCode returns a device code for the user to input to authenticate
 //
 // Used for the OAuth2 device code grant
-func (msa msaT) FetchDeviceCode() (deviceCodeResponse, error) {
+func FetchDeviceCode() (deviceCodeResponse, error) {
 	params := url.Values{
-		"client_id": {msa.ClientID},
+		"client_id": {ClientID},
 		"scope":     {scope},
 	}
 	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
@@ -94,7 +77,19 @@ func (msa msaT) FetchDeviceCode() (deviceCodeResponse, error) {
 	return data, nil
 }
 
-func (msaT) authenticate(payload url.Values) (msaResponse, error) {
+type msaResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	Scope        string `json:"scope"`
+	IDToken      string `json:"id_token"`
+	// error response
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+func authenticateMSA(payload url.Values) (msaResponse, error) {
 	var data msaResponse
 	resp, err := http.Post("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", "application/x-www-form-urlencoded", strings.NewReader(payload.Encode()))
 	if err != nil {
@@ -108,10 +103,6 @@ func (msaT) authenticate(payload url.Values) (msaResponse, error) {
 	return data, nil
 }
 
-type xblT struct{}
-
-var xbl xblT
-
 type xblResponse struct {
 	Token         string `json:"Token"`
 	DisplayClaims struct {
@@ -123,7 +114,7 @@ type xblResponse struct {
 	NotAfter     time.Time `json:"NotAfter"`
 }
 
-func (xblT) authenticate(msaAccessToken string) (xblResponse, error) {
+func authenticateXBL(msaAccessToken string) (xblResponse, error) {
 	type properties struct {
 		AuthMethod string `json:"AuthMethod"`
 		SiteName   string `json:"SiteName"`
@@ -161,10 +152,6 @@ func (xblT) authenticate(msaAccessToken string) (xblResponse, error) {
 	return data, nil
 }
 
-type xstsT struct{}
-
-var xsts xstsT
-
 type xstsResponse struct {
 	Token        string    `json:"Token"`
 	IssueInstant time.Time `json:"IssueInstant"`
@@ -173,7 +160,7 @@ type xstsResponse struct {
 	XErr int `json:"XErr"`
 }
 
-func (xstsT) authenticate(xblToken string) (xstsResponse, error) {
+func authenticateXSTS(xblToken string) (xstsResponse, error) {
 	type properties struct {
 		SandboxID  string   `json:"SandboxId"`
 		UserTokens []string `json:"UserTokens"`
@@ -212,10 +199,6 @@ func (xstsT) authenticate(xblToken string) (xstsResponse, error) {
 	return data, nil
 }
 
-type minecraftT struct{}
-
-var minecraft minecraftT
-
 type minecraftResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
@@ -229,7 +212,7 @@ type minecraftProfile struct {
 	ErrorMessage string `json:"errorMessage"`
 }
 
-func (minecraftT) authenticate(xstsToken string, userhash string) (minecraftResponse, minecraftProfile, error) {
+func authenticateMinecraft(xstsToken string, userhash string) (minecraftResponse, minecraftProfile, error) {
 	type request struct {
 		IdentityToken string `json:"identityToken"`
 	}
@@ -270,10 +253,12 @@ func (minecraftT) authenticate(xstsToken string, userhash string) (minecraftResp
 	return data, profile, nil
 }
 
+var ErrNoAccount = errors.New("no account found")
+
 // Authenticate authenticates with all necessary endpoints, or cached data if available and returns a Session.
 func Authenticate() (Session, error) {
 	if Store.MSA.RefreshToken == "" {
-		return Session{}, fmt.Errorf("no account found")
+		return Session{}, ErrNoAccount
 	}
 	if !Store.MSA.isValid() {
 		if err := Store.MSA.refresh(); err != nil {
@@ -282,7 +267,7 @@ func Authenticate() (Session, error) {
 	}
 	if !Store.XBL.isValid() {
 		if err := Store.XBL.refresh(); err != nil {
-			return Session{}, fmt.Errorf("authenticate with XBL: %w", err)
+			return Session{}, fmt.Errorf("authenticate with Xbox Live: %w", err)
 		}
 	}
 	if !Store.XSTS.isValid() {
@@ -307,23 +292,26 @@ func Authenticate() (Session, error) {
 
 // AuthenticateWithRedirect authenticates using the OAuth2 Code flow.
 //
+// success is a string to be shown to the user upon successful authentication.
+// fail is shown if an authentication error occurs.
+//
 // This function blocks until a response has been received on the local authentication server.
-func AuthenticateWithRedirect() (Session, error) {
+func AuthenticateWithRedirect(success, fail string) (Session, error) {
 	var code string
 	var err error
 
-	port := MSA.RedirectURI.Port()
+	port := RedirectURI.Port()
 	if port == "" {
 		return Session{}, fmt.Errorf("redirect URL must have port specified")
 	}
 	server := &http.Server{Addr: ":" + port, Handler: nil}
-	http.HandleFunc(MSA.RedirectURI.Path, func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc(RedirectURI.Path, func(w http.ResponseWriter, req *http.Request) {
 		params := req.URL.Query()
 		if params.Get("error") != "" {
-			fmt.Fprintf(w, cli.Translate("login.redirectfail"), params.Get("error_description"))
+			fmt.Fprint(w, fail+"\n"+params.Get("error_description"))
 			err = fmt.Errorf("got error: %s", params.Get("error_description"))
 		} else {
-			fmt.Fprint(w, cli.Translate("login.redirect"))
+			fmt.Fprint(w, success)
 		}
 		code = params.Get("code")
 		go server.Shutdown(context.Background())
@@ -333,10 +321,10 @@ func AuthenticateWithRedirect() (Session, error) {
 		return Session{}, err
 	}
 
-	resp, err := MSA.authenticate(url.Values{
-		"client_id":    {MSA.ClientID},
+	resp, err := authenticateMSA(url.Values{
+		"client_id":    {ClientID},
 		"scope":        {scope},
-		"redirect_uri": {MSA.RedirectURI.String()},
+		"redirect_uri": {RedirectURI.String()},
 		"grant_type":   {"authorization_code"},
 		"code":         {code},
 	})
@@ -353,9 +341,9 @@ func AuthenticateWithRedirect() (Session, error) {
 // This function blocks until the user has been authenticated, or another error has occurred.
 func AuthenticateWithCode(codeResp deviceCodeResponse) (Session, error) {
 	for {
-		resp, err := MSA.authenticate(url.Values{
+		resp, err := authenticateMSA(url.Values{
 			"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
-			"client_id":   {MSA.ClientID},
+			"client_id":   {ClientID},
 			"device_code": {codeResp.DeviceCode},
 		})
 		if err != nil {

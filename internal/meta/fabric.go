@@ -33,10 +33,10 @@ var Quilt = fabricAPI{
 }
 
 // FetchVersions retrieves a list of all versions of Fabric.
-func (f fabricAPI) FetchVersions() (FabricVersionList, error) {
+func (api fabricAPI) FetchVersions() (FabricVersionList, error) {
 	cache := network.Cache[FabricVersionList]{
-		Path:        filepath.Join(env.CachesDir, f.name, "versions.json"),
-		URL:         fmt.Sprintf("%s/versions/loader", f.url),
+		Path:        filepath.Join(env.CachesDir, api.name, "versions.json"),
+		URL:         fmt.Sprintf("%s/versions/loader", api.url),
 		AlwaysFetch: true,
 	}
 	var versions FabricVersionList
@@ -50,26 +50,24 @@ func (f fabricAPI) FetchVersions() (FabricVersionList, error) {
 // FetchMeta retrieves version metadata for the specified game and loader version of Fabric.
 //
 // Besides normal version identifiers, loaderVersion can also be "latest".
-func (f fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, error) {
+func (api fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, error) {
 	if loaderVersion == "latest" {
-		versions, err := f.FetchVersions()
+		versions, err := api.FetchVersions()
 		if err != nil {
 			return VersionMeta{}, fmt.Errorf("fetch versions: %w", err)
 		}
 		loaderVersion = versions[0].Version
 	}
 	cache := network.Cache[VersionMeta]{
-		Path: filepath.Join(env.CachesDir, f.name, loaderVersion+"-"+gameVersion+".json"),
-		URL:  fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", f.url, gameVersion, loaderVersion),
+		Path: filepath.Join(env.CachesDir, api.name, loaderVersion+"-"+gameVersion+".json"),
+		URL:  fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", api.url, gameVersion, loaderVersion),
 	}
 
 	var fabricMeta VersionMeta
 	if err := cache.Read(&fabricMeta); err != nil {
 		var statusErr *network.HTTPStatusError
-		if errors.As(err, &statusErr) {
-			if statusErr.StatusCode == 400 || statusErr.StatusCode == 404 {
-				return VersionMeta{}, fmt.Errorf("invalid or unsuitable game/fabric version")
-			}
+		if errors.As(err, &statusErr) && (statusErr.StatusCode == 400 || statusErr.StatusCode == 404) {
+			return VersionMeta{}, fmt.Errorf("invalid or unsuitable game/fabric version")
 		}
 		return VersionMeta{}, err
 	}

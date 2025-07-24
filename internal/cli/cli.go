@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/internal/network"
+	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
 // Map of translation strings to human-readable text.
@@ -25,7 +26,7 @@ var translations = map[string]string{
 	"login.url":           "If the browser does not open, please copy and paste this URL into your browser: %s",
 	"login.complete":      "Logged in as %s",
 	"login.redirect":      "Logged in! You can close this window and return to the launcher.",
-	"login.redirectfail":  "Failed to log in. An error occurred during authentication: %s",
+	"login.redirectfail":  "Failed to log in: An error occurred during authentication.",
 	"login.arg.nobrowser": "Use device code instead of browser for authentication",
 
 	"logout":          "Log out of an account",
@@ -93,7 +94,8 @@ var translations = map[string]string{
 	"tip.internet":  "Check your internet connection.",
 	"tip.cache":     "Remote resources were not cached and were unable to be retrieved. Check your Internet connection.",
 	"tip.configure": "Configure this instance with the `instance.json` file within the instance directory.",
-	"tip.nojvm":     "If a Mojang-provided JVM is not available, you can install it yourself and set the path to the `java` executable in the instance configuration.",
+	"tip.nojvm":     "If a Mojang-provided JVM is not available, you can install it yourself and set the path to the Java executable in the instance configuration.",
+	"tip.noaccount": "To launch in offline mode, use the --username (-u) flag.",
 }
 
 func Translations() map[string]string {
@@ -162,5 +164,8 @@ func Tips(err error) {
 	}
 	if errors.Is(err, meta.ErrJavaBadSystem) || errors.Is(err, meta.ErrJavaNoVersion) {
 		Tip(Translate("tip.nojvm"))
+	}
+	if errors.Is(err, auth.ErrNoAccount) {
+		Tip(Translate("tip.noaccount"))
 	}
 }

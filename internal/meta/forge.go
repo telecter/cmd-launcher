@@ -70,6 +70,10 @@ func FetchNeoforgeVersion(gameVersion string) (string, error) {
 	}
 	defer resp.Body.Close()
 	if err := network.CheckResponse(resp); err != nil {
+		var statusErr *network.HTTPStatusError
+		if errors.As(err, &statusErr) && statusErr.StatusCode == 404 {
+			return "", fmt.Errorf("no version found for specified game version")
+		}
 		return "", err
 	}
 
@@ -107,26 +111,30 @@ func FetchForgeVersion(gameVersion string) (string, error) {
 
 	version, ok := data.Promos[gameVersion+"-latest"]
 	if !ok {
-		return "", fmt.Errorf("no promoted version found")
+		return "", fmt.Errorf("no version found for specified game version")
 	}
 	return gameVersion + "-" + version, nil
 
 }
 
 type forge struct {
-	installer string
+	url func(version string) string
 }
 
 var Forge = forge{
-	installer: "https://maven.minecraftforge.net/net/minecraftforge/forge/%s/forge-%s-installer.jar",
+	url: func(version string) string {
+		return fmt.Sprintf("https://maven.minecraftforge.net/net/minecraftforge/forge/%s/forge-%s-installer.jar", version, version)
+	},
 }
 var Neoforge = forge{
-	installer: "https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-installer.jar",
+	url: func(version string) string {
+		return fmt.Sprintf("https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-installer.jar", version, version)
+	},
 }
 
 // FetchInstaller fetchs the Forge installer ZIP file and returns its contents.
-func (f forge) FetchInstaller(version string) (map[string]*zip.File, error) {
-	url := fmt.Sprintf(f.installer, version, version)
+func (forge forge) FetchInstaller(version string) (map[string]*zip.File, error) {
+	url := forge.url(version)
 	path := filepath.Join(env.CachesDir, "forge", path.Base(url))
 
 	if _, err := os.Stat(path); err != nil {
@@ -159,8 +167,8 @@ func (f forge) FetchInstaller(version string) (map[string]*zip.File, error) {
 }
 
 // FetchMeta retrieves the Forge version.json (version meta) and install_profile.json from the installer ZIP.
-func (f forge) FetchMeta(version string) (VersionMeta, ForgeInstallProfile, error) {
-	files, err := f.FetchInstaller(version)
+func (forge forge) FetchMeta(version string) (VersionMeta, ForgeInstallProfile, error) {
+	files, err := forge.FetchInstaller(version)
 
 	if err != nil {
 		return VersionMeta{}, ForgeInstallProfile{}, fmt.Errorf("fetch installer: %w", err)
@@ -216,12 +224,12 @@ func (f forge) FetchMeta(version string) (VersionMeta, ForgeInstallProfile, erro
 }
 
 // FetchPostProcessors retrieves arguments to run Forge's post processors for the specified game version.
-func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcessor, error) {
-	installerFiles, err := f.FetchInstaller(version)
+func (forge forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcessor, error) {
+	files, err := forge.FetchInstaller(version)
 	if err != nil {
 		return nil, fmt.Errorf("fetch installer: %w", err)
 	}
-	_, profile, err := f.FetchMeta(version)
+	_, profile, err := forge.FetchMeta(version)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve metadata: %w", err)
 	}
@@ -253,7 +261,7 @@ func (f forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProcesso
 		if strings.HasPrefix(v.Client, "/") {
 			path := filepath.Join(env.TmpDir, v.Client)
 
-			file, ok := installerFiles[v.Client[1:]]
+			file, ok := files[v.Client[1:]]
 			if !ok {
 				return nil, fmt.Errorf("embedded installer file not present")
 			}

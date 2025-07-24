@@ -17,8 +17,8 @@ const (
 )
 
 func init() {
-	auth.MSA.ClientID = clientID
-	auth.MSA.RedirectURI, _ = url.Parse(redirectURI)
+	auth.ClientID = clientID
+	auth.RedirectURI, _ = url.Parse(redirectURI)
 }
 
 type Login struct {
@@ -32,7 +32,7 @@ func (c *Login) Run(ctx *kong.Context) error {
 	if err != nil {
 		if c.NoBrowser {
 			cli.Info(cli.Translate("login.code.fetching"))
-			resp, err := auth.MSA.FetchDeviceCode()
+			resp, err := auth.FetchDeviceCode()
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
@@ -43,12 +43,12 @@ func (c *Login) Run(ctx *kong.Context) error {
 			}
 		} else {
 			cli.Info(cli.Translate("login.browser"))
-			url := auth.MSA.AuthCodeURL()
+			url := auth.AuthCodeURL()
 			cli.Info(cli.Translate("login.url"), url.String())
 
 			browser.OpenURL(url.String())
 			var err error
-			session, err = auth.AuthenticateWithRedirect()
+			session, err = auth.AuthenticateWithRedirect(cli.Translate("login.redirect"), cli.Translate("login.redirectfail"))
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}

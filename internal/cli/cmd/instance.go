@@ -32,7 +32,6 @@ func (c *Create) Run(ctx *kong.Context) error {
 	case "forge":
 		loader = launcher.LoaderForge
 	}
-
 	inst, err := launcher.CreateInstance(launcher.InstanceOptions{
 		GameVersion:   c.Version,
 		Name:          c.ID,
