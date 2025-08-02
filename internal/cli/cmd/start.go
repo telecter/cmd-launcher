@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/fatih/color"
 	"github.com/schollz/progressbar/v3"
 	"github.com/telecter/cmd-launcher/internal/cli"
 	"github.com/telecter/cmd-launcher/pkg/auth"
@@ -74,8 +75,8 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 	config := inst.Config
 	override := launcher.InstanceConfig{
 		WindowResolution: struct {
-			Width  int "json:\"width\""
-			Height int "json:\"height\""
+			Width  int "toml:\"width\" json:\"width\""
+			Height int "toml:\"height\" json:\"height\""
 		}{
 			Width:  c.Overrides.Width,
 			Height: c.Overrides.Height,
@@ -147,7 +148,7 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 		cli.Debug(cli.Translate("start.launch.gameargs"), gameArgs)
 		cli.Debug(cli.Translate("start.launch.info"), launchEnv.MainClass, launchEnv.GameDir)
 	}
-	cli.Success(cli.Translate("start.launch"), session.Username)
+	cli.Success(cli.Translate("start.launch"), color.New(color.Bold).Sprint(session.Username))
 
 	return launcher.Launch(launchEnv, launcher.ConsoleRunner)
 }

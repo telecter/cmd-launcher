@@ -91,10 +91,10 @@ type LaunchEnvironment struct {
 func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 	info, err := os.Stat(launchEnv.Java)
 	if err != nil {
-		return fmt.Errorf("java executable does not exist")
+		return fmt.Errorf("Java executable does not exist")
 	}
 	if info.Mode()&0111 == 0 || info.IsDir() {
-		return fmt.Errorf("java binary is not executable")
+		return fmt.Errorf("Java binary is not executable")
 	}
 
 	javaArgs := append(launchEnv.JavaArgs, "-cp", strings.Join(launchEnv.Classpath, string(os.PathListSeparator)), launchEnv.MainClass)
@@ -316,37 +316,36 @@ func fetchVersion(loader Loader, gameVersion string, loaderVersion string) (meta
 	}
 
 	switch loader {
-	case LoaderFabric:
-		loaderMeta, err = meta.Fabric.FetchMeta(version.ID, loaderVersion)
-		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve fabric metadata: %w", err)
+	case LoaderFabric, LoaderQuilt:
+		api := meta.Fabric
+		if loader == LoaderQuilt {
+			api = meta.Quilt
 		}
-	case LoaderQuilt:
-		loaderMeta, err = meta.Quilt.FetchMeta(version.ID, loaderVersion)
+		loaderMeta, err = api.FetchMeta(version.ID, loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve quilt metadata: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve Fabric/Quilt metadata: %w", err)
 		}
 	case LoaderNeoForge:
 		if loaderVersion == "latest" {
 			loaderVersion, err = meta.FetchNeoforgeVersion(version.ID)
 			if err != nil {
-				return meta.VersionMeta{}, fmt.Errorf("retrieve neoforge version: %w", err)
+				return meta.VersionMeta{}, fmt.Errorf("retrieve NeoForge version: %w", err)
 			}
 		}
 		loaderMeta, _, err = meta.Neoforge.FetchMeta(loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve neoforge metadata: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve NeoForge metadata: %w", err)
 		}
 	case LoaderForge:
 		if loaderVersion == "latest" {
 			loaderVersion, err = meta.FetchForgeVersion(version.ID)
 			if err != nil {
-				return meta.VersionMeta{}, fmt.Errorf("retrieve forge version: %w", err)
+				return meta.VersionMeta{}, fmt.Errorf("retrieve Forge version: %w", err)
 			}
 		}
 		loaderMeta, _, err = meta.Forge.FetchMeta(loaderVersion)
 		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve forge metadata: %w", err)
+			return meta.VersionMeta{}, fmt.Errorf("retrieve Forge metadata: %w", err)
 		}
 	}
 

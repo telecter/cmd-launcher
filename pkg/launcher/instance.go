@@ -7,27 +7,29 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pelletier/go-toml/v2"
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
 // An Instance represents a full installation of Minecraft and its information.
 type Instance struct {
-	Name          string         `json:"-"`
-	GameVersion   string         `json:"game_version"`
-	Loader        Loader         `json:"mod_loader"`
-	LoaderVersion string         `json:"mod_loader_version,omitempty"`
-	Config        InstanceConfig `json:"config"`
+	Name          string         `toml:"-" json:"-"`
+	GameVersion   string         `toml:"game_version" json:"game_version"`
+	Loader        Loader         `toml:"mod_loader" json:"mod_loader"`
+	LoaderVersion string         `toml:"mod_loader_version,omitempty" json:"mod_loader_version,omitempty"`
+	Config        InstanceConfig `toml:"config" json:"config"`
 }
 
-// WriteConfig marshals inst and writes it to the instance configuration file. This is used to save the instance configuration.
+// WriteConfig writes the instances configuration to its configuration file.
 //
 // The Name field is ignored, as it is based on the instance's directory.
-func (inst *Instance) WriteConfig() error {
-	data, _ := json.MarshalIndent(*inst, "", "    ")
-	return os.WriteFile(filepath.Join(inst.Dir(), "instance.json"), data, 0644)
+func (inst Instance) WriteConfig() error {
+	data, _ := toml.Marshal(inst)
+	return os.WriteFile(filepath.Join(inst.Dir(), "instance.toml"), data, 0644)
 }
 
-func (inst *Instance) Dir() string {
+// Dir returns the instance's directory
+func (inst Instance) Dir() string {
 	return filepath.Join(env.InstancesDir, inst.Name)
 }
 
@@ -43,14 +45,14 @@ func (inst *Instance) Rename(new string) error {
 // InstanceConfig represents the configurable values of an Instance.
 type InstanceConfig struct {
 	WindowResolution struct {
-		Width  int `json:"width"`
-		Height int `json:"height"`
-	} `json:"resolution"`
-	Java      string `json:"java"`
-	JavaArgs  string `json:"java_args"`
-	CustomJar string `json:"custom_jar"`
-	MinMemory int    `json:"min_memory"`
-	MaxMemory int    `json:"max_memory"`
+		Width  int `toml:"width" json:"width"`
+		Height int `toml:"height" json:"height"`
+	} `toml:"resolution" json:"resolution"                comment:"Game window resolution"`
+	Java      string `toml:"java" json:"java"             comment:"Path to a Java executable. If blank, a Mojang-provided JVM will be downloaded."`
+	JavaArgs  string `toml:"java_args" json:"java_args"   comment:"Extra arguments to pass to the JVM"`
+	CustomJar string `toml:"custom_jar" json:"custom_jar" comment:"Path to a custom JAR to use instead of the normal Minecraft client"`
+	MinMemory int    `toml:"min_memory" json:"min_memory" comment:"Minimum game memory, in MB"`
+	MaxMemory int    `toml:"max_memory" json:"max_memory" comment:"Maximum game memory, in MB"`
 }
 
 // InstanceOptions are options used to designate an instance's version and other parameters on creation.
@@ -65,7 +67,7 @@ type InstanceOptions struct {
 
 // CreateInstance creates a new instance with the specified options.
 func CreateInstance(options InstanceOptions) (Instance, error) {
-	if IsInstanceExist(options.Name) {
+	if DoesInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
 
@@ -107,18 +109,38 @@ func RemoveInstance(id string) error {
 
 // FetchInstance retrieves the instance with the specified ID.
 func FetchInstance(id string) (Instance, error) {
-	dir := filepath.Join(env.InstancesDir, id)
-	data, err := os.ReadFile(filepath.Join(dir, "instance.json"))
-	if errors.Is(err, os.ErrNotExist) {
+	if !DoesInstanceExist(id) {
 		return Instance{}, fmt.Errorf("instance does not exist")
+	}
+
+	dir := filepath.Join(env.InstancesDir, id)
+
+	unmarshaler := toml.Unmarshal
+	var data []byte
+	var err error
+
+	data, err = os.ReadFile(filepath.Join(dir, "instance.toml"))
+	if errors.Is(err, os.ErrNotExist) {
+		data, err = os.ReadFile(filepath.Join(dir, "instance.json"))
+		if errors.Is(err, os.ErrNotExist) {
+			return Instance{}, fmt.Errorf("instance configuration missing")
+		} else if err != nil {
+			return Instance{}, fmt.Errorf("read instance configuration (JSON): %w", err)
+		}
+		unmarshaler = json.Unmarshal
 	} else if err != nil {
-		return Instance{}, fmt.Errorf("read instance metadata: %w", err)
+		return Instance{}, fmt.Errorf("read instance configuration: %w", err)
 	}
+
 	var inst Instance
-	if err := json.Unmarshal(data, &inst); err != nil {
-		return Instance{}, fmt.Errorf("parse instance metadata: %w", err)
+	if err := unmarshaler(data, &inst); err != nil {
+		return Instance{}, fmt.Errorf("parse instance configuration: %w", err)
 	}
+
 	inst.Name = id
+
+	// If instance is using JSON config, migrate it to TOML. Also resets formatting of configuration if changed.
+	inst.WriteConfig()
 	return inst, nil
 }
 
@@ -144,8 +166,8 @@ func FetchAllInstances() ([]Instance, error) {
 	return insts, nil
 }
 
-// IsInstanceExist reports whether an instance with the specified ID exists.
-func IsInstanceExist(id string) bool {
-	_, err := FetchInstance(id)
+// DoesInstanceExist reports whether an instance with the specified ID exists.
+func DoesInstanceExist(id string) bool {
+	_, err := os.Stat(filepath.Join(env.InstancesDir, id))
 	return err == nil
 }

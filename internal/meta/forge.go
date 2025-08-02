@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/iancoleman/orderedmap"
 	"github.com/telecter/cmd-launcher/internal/network"
 	env "github.com/telecter/cmd-launcher/pkg"
 )
@@ -88,6 +89,25 @@ func FetchNeoforgeVersion(gameVersion string) (string, error) {
 	}
 
 	return version, nil
+}
+
+func FetchForgePromotions() (*orderedmap.OrderedMap, error) {
+	resp, err := http.Get("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := network.CheckResponse(resp); err != nil {
+		return nil, err
+	}
+	body, _ := io.ReadAll(resp.Body)
+	var data struct {
+		Promos orderedmap.OrderedMap `json:"promos"`
+	}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, fmt.Errorf("read promoted versions: %w", err)
+	}
+	return &data.Promos, nil
 }
 
 // FetchForgeVersion retrieves the best Forge loader version for the specified game version.

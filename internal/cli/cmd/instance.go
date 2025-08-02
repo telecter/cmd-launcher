@@ -134,8 +134,8 @@ type Instance struct {
 
 var defaultInstanceConfig = launcher.InstanceConfig{
 	WindowResolution: struct {
-		Width  int "json:\"width\""
-		Height int "json:\"height\""
+		Width  int "toml:\"width\" json:\"width\""
+		Height int "toml:\"height\" json:\"height\""
 	}{
 		Width:  1708,
 		Height: 960,

@@ -53,6 +53,7 @@ var translations = map[string]string{
 	"rename.arg.new":  "New name for instance",
 
 	"search":               "Search versions",
+	"search.complete":      "Found %d entries",
 	"search.table.version": "Version",
 	"search.table.type":    "Type",
 	"search.table.date":    "Release Date",

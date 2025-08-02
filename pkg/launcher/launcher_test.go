@@ -23,7 +23,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Vanilla",
 			options: InstanceOptions{
 				GameVersion: "release",
-				Name:        uuid.NewString(),
 				Loader:      LoaderVanilla,
 			},
 			wantError: false,
@@ -32,7 +31,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Vanilla Invalid Version",
 			options: InstanceOptions{
 				GameVersion: "not valid",
-				Name:        uuid.NewString(),
 				Loader:      LoaderVanilla,
 			},
 			wantError: true,
@@ -41,7 +39,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Fabric",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderFabric,
 				LoaderVersion: "latest",
 			},
@@ -51,7 +48,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Fabric Versioned",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderFabric,
 				LoaderVersion: "0.16.14",
 			},
@@ -61,7 +57,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Fabric Invalid Version",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderFabric,
 				LoaderVersion: "not valid",
 			},
@@ -71,7 +66,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Quilt",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderQuilt,
 				LoaderVersion: "latest",
 			},
@@ -81,7 +75,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Quilt Versioned",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderQuilt,
 				LoaderVersion: "0.29.0-beta.7",
 			},
@@ -91,7 +84,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Quilt Invalid Version",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderQuilt,
 				LoaderVersion: "not valid",
 			},
@@ -101,7 +93,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Forge",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderForge,
 				LoaderVersion: "latest",
 			},
@@ -111,7 +102,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Forge Versioned",
 			options: InstanceOptions{
 				GameVersion:   "1.21.5",
-				Name:          uuid.NewString(),
 				Loader:        LoaderForge,
 				LoaderVersion: "1.21.5-55.0.22",
 			},
@@ -121,7 +111,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "Forge Invalid Version",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderForge,
 				LoaderVersion: "not valid",
 			},
@@ -131,7 +120,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "NeoForge",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderNeoForge,
 				LoaderVersion: "latest",
 			},
@@ -141,7 +129,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "NeoForge Versioned",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderNeoForge,
 				LoaderVersion: "21.5.75",
 			},
@@ -151,7 +138,6 @@ func TestCreateInstance(t *testing.T) {
 			name: "NeoForge Invalid Version",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderNeoForge,
 				LoaderVersion: "not valid",
 			},
@@ -161,6 +147,7 @@ func TestCreateInstance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.options.Name = uuid.NewString()
 			_, err := CreateInstance(tt.options)
 			isError := err != nil
 			if tt.wantError != isError {
@@ -235,7 +222,6 @@ func TestPrepare(t *testing.T) {
 			name: "Vanilla",
 			options: InstanceOptions{
 				GameVersion: "release",
-				Name:        uuid.NewString(),
 				Loader:      LoaderVanilla,
 				Config: InstanceConfig{
 					Java: "java",
@@ -246,7 +232,6 @@ func TestPrepare(t *testing.T) {
 			name: "Vanilla with Mojang Java Download",
 			options: InstanceOptions{
 				GameVersion: "release",
-				Name:        uuid.NewString(),
 				Loader:      LoaderVanilla,
 			},
 		},
@@ -254,7 +239,6 @@ func TestPrepare(t *testing.T) {
 			name: "Fabric",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderFabric,
 				LoaderVersion: "latest",
 				Config: InstanceConfig{
@@ -266,7 +250,6 @@ func TestPrepare(t *testing.T) {
 			name: "Quilt",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderQuilt,
 				LoaderVersion: "latest",
 				Config: InstanceConfig{
@@ -278,7 +261,6 @@ func TestPrepare(t *testing.T) {
 			name: "Forge",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderForge,
 				LoaderVersion: "latest",
 				Config: InstanceConfig{
@@ -290,7 +272,6 @@ func TestPrepare(t *testing.T) {
 			name: "NeoForge",
 			options: InstanceOptions{
 				GameVersion:   "release",
-				Name:          uuid.NewString(),
 				Loader:        LoaderNeoForge,
 				LoaderVersion: "latest",
 				Config: InstanceConfig{
@@ -302,6 +283,7 @@ func TestPrepare(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.options.Name = uuid.NewString()
 			inst, err := CreateInstance(tt.options)
 			if err != nil {
 				t.Fatalf("unexpected error creating instance for test: %s", err)
