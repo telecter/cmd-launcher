@@ -441,6 +441,10 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 	os := strings.ReplaceAll(runtime.GOOS, "darwin", "mac-os")
 	arch := strings.ReplaceAll(runtime.GOARCH, "386", "i386")
 
+	if os == "windows" {
+		arch = strings.ReplaceAll(arch, "amd64", "x64")
+	}
+
 	if arch != "amd64" {
 		os = os + "-" + arch
 	}

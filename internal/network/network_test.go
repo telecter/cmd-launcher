@@ -54,7 +54,7 @@ func TestDownloadFile(t *testing.T) {
 			name: "Bad Path",
 			entry: network.DownloadEntry{
 				URL:  "https://resources.download.minecraft.net/5f/5ff04807c356f1beed0b86ccf659b44b9983e3fa",
-				Path: "/nopermission",
+				Path: "/CON",
 			},
 			wantError: true,
 		},
