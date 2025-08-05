@@ -41,12 +41,16 @@ func watcher(verbosity int) launcher.EventWatcher {
 			if verbosity > 0 {
 				cli.Info(cli.Translate("start.launch.metadata"))
 			}
+		case launcher.PostProcessingEvent:
+			cli.Info(cli.Translate("start.processing"))
 		}
 	}
 }
 
 type Start struct {
-	ID string `arg:"" name:"id" help:"${start_arg_id}"`
+	ID string `arg:"" help:"${start_arg_id}"`
+
+	Prepare bool `help:"${start_arg_prepare}"`
 
 	Options struct {
 		Username    string `help:"${start_arg_username}" short:"u"`
@@ -126,6 +130,11 @@ func (c *Start) Run(ctx *kong.Context, verbosity int) error {
 
 	if err != nil {
 		return err
+	}
+
+	if c.Prepare {
+		cli.Success(cli.Translate("start.prepared"))
+		return nil
 	}
 
 	if verbosity > 1 {

@@ -148,7 +148,7 @@ func TestCreateInstance(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.options.Name = uuid.NewString()
-			_, err := CreateInstance(tt.options)
+			inst, err := CreateInstance(tt.options)
 			isError := err != nil
 			if tt.wantError != isError {
 				t.Errorf("got error: %t; wanted error to be: %t", isError, tt.wantError)
@@ -156,7 +156,29 @@ func TestCreateInstance(t *testing.T) {
 					t.Log(err)
 				}
 			}
+			if _, err := os.Stat(inst.Dir()); err != nil {
+				t.Errorf("instance directory should be accessible; got error: %s", err)
+			}
 		})
+	}
+}
+
+func TestFetchAllInstances(t *testing.T) {
+	env.SetDirs(t.TempDir())
+	_, err := CreateInstance(InstanceOptions{
+		Name:        uuid.NewString(),
+		GameVersion: "release",
+		Loader:      LoaderVanilla,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error creating instance for test: %s", err)
+	}
+	insts, err := FetchAllInstances()
+	if err != nil {
+		t.Errorf("wanted no error; got: %s", err)
+	}
+	if len(insts) != 1 {
+		t.Errorf("wanted number of instances to be 1; got %d", len(insts))
 	}
 }
 
@@ -229,7 +251,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			name: "Vanilla with Mojang Java Download",
+			name: "Vanilla with Mojang JVM",
 			options: InstanceOptions{
 				GameVersion: "release",
 				Loader:      LoaderVanilla,

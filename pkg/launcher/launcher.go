@@ -64,6 +64,9 @@ type DownloadingEvent struct {
 	Total     int
 }
 
+// PostProcessingEvent is called when, usually Forge, pre-processing begins.
+type PostProcessingEvent struct{}
+
 // A Runner is a controller which manages the starting of the game.
 type Runner func(cmd *exec.Cmd) error
 
@@ -177,9 +180,13 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 			return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post processors: %w", err)
 		}
 	}
-	// Run any available processors
-	if err := postProcess(launchEnv, processors); err != nil {
-		return LaunchEnvironment{}, fmt.Errorf("run post processors: %w", err)
+
+	if len(processors) > 0 {
+		watcher(PostProcessingEvent{})
+		// Run any available processors
+		if err := postProcess(launchEnv, processors); err != nil {
+			return LaunchEnvironment{}, fmt.Errorf("run post processors: %w", err)
+		}
 	}
 
 	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options)

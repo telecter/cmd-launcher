@@ -77,8 +77,11 @@ var translations = map[string]string{
 	"start.arg.jvmargs":        "Extra JVM arguments",
 	"start.arg.minmemory":      "Minimum memory",
 	"start.arg.maxmemory":      "Maximum memory",
+	"start.arg.prepare":        "Install all necessary resources but do not start the game.",
 	"start.arg.opts":           "Game Options",
 	"start.arg.overrides":      "Configuration Overrides",
+	"start.prepared":           "Game prepared successfully.",
+	"start.processing":         "Post processors are being run. This may take some time.",
 	"start.launch.downloading": "Downloading files",
 	"start.launch.assets":      "Identified %d assets",
 	"start.launch.libraries":   "Identified %d libraries",
@@ -94,7 +97,7 @@ var translations = map[string]string{
 
 	"tip.internet":  "Check your internet connection.",
 	"tip.cache":     "Remote resources were not cached and were unable to be retrieved. Check your Internet connection.",
-	"tip.configure": "Configure this instance with the `instance.json` file within the instance directory.",
+	"tip.configure": "Configure this instance with the `instance.toml` file within the instance directory.",
 	"tip.nojvm":     "If a Mojang-provided JVM is not available, you can install it yourself and set the path to the Java executable in the instance configuration.",
 	"tip.noaccount": "To launch in offline mode, use the --username (-u) flag.",
 }
