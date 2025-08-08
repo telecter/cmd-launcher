@@ -92,7 +92,7 @@ You can log out via the `auth logout` command.
 
 ### Instance Configuration
 
-To change configuration values for an instance, navigate to the instance directory and open the `instance.json` file.
+To change configuration values for an instance, navigate to the instance directory and open the `instance.toml` file.
 
 Configurable values are:
 
@@ -106,25 +106,30 @@ Configurable values are:
 
 As mentioned previously, these values can be overriden with command line flags.
 
-**Example `instance.json` file**
+**Example `instance.toml` file**
 
-```json
-{
-  "game_version": "1.21.5",
-  "mod_loader": "fabric",
-  "mod_loader_version": "0.16.14",
-  "config": {
-    "resolution": {
-      "width": 1708,
-      "height": 960
-    },
-    "java": "/usr/bin/java",
-    "java_args": "",
-    "custom_jar": "",
-    "min_memory": 512,
-    "max_memory": 4096
-  }
-}
+```toml
+game_version = '1.21.8'
+mod_loader = 'fabric'
+mod_loader_version = '0.16.14'
+
+[config]
+# Path to a Java executable. If blank, a Mojang-provided JVM will be downloaded.
+java = '/usr/bin/java'
+# Extra arguments to pass to the JVM
+java_args = ''
+# Path to a custom JAR to use instead of the normal Minecraft client
+custom_jar = ''
+# Minimum game memory, in MB
+min_memory = 512
+# Maximum game memory, in MB
+max_memory = 4096
+
+# Game window resolution
+[config.resolution]
+width = 1708
+height = 960
+
 ```
 
 ### Search
