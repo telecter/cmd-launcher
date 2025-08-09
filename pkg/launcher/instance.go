@@ -67,6 +67,10 @@ type InstanceOptions struct {
 
 // CreateInstance creates a new instance with the specified options.
 func CreateInstance(options InstanceOptions) (Instance, error) {
+	if options.Name == "" {
+		return Instance{}, fmt.Errorf("invalid instance name")
+	}
+
 	if DoesInstanceExist(options.Name) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
@@ -95,9 +99,9 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 	return inst, nil
 }
 
-// RemoveInstance removes the instance with the specified ID.
-func RemoveInstance(id string) error {
-	inst, err := FetchInstance(id)
+// RemoveInstance removes the instance with the specified name.
+func RemoveInstance(name string) error {
+	inst, err := FetchInstance(name)
 	if err != nil {
 		return err
 	}
@@ -107,13 +111,17 @@ func RemoveInstance(id string) error {
 	return nil
 }
 
-// FetchInstance retrieves the instance with the specified ID.
-func FetchInstance(id string) (Instance, error) {
-	if !DoesInstanceExist(id) {
+// FetchInstance retrieves the instance with the specified name.
+func FetchInstance(name string) (Instance, error) {
+	if name == "" {
+		return Instance{}, fmt.Errorf("invalid instance name")
+	}
+
+	if !DoesInstanceExist(name) {
 		return Instance{}, fmt.Errorf("instance does not exist")
 	}
 
-	dir := filepath.Join(env.InstancesDir, id)
+	dir := filepath.Join(env.InstancesDir, name)
 
 	unmarshaler := toml.Unmarshal
 	var data []byte
@@ -137,14 +145,14 @@ func FetchInstance(id string) (Instance, error) {
 		return Instance{}, fmt.Errorf("parse instance configuration: %w", err)
 	}
 
-	inst.Name = id
+	inst.Name = name
 
 	// If instance is using JSON config, migrate it to TOML. Also resets formatting of configuration if changed.
 	inst.WriteConfig()
 	return inst, nil
 }
 
-// FetchAllInstances retrieves all valid instances within env.InstancesDir.
+// FetchAllInstances retrieves all valid instances within the instance directory.
 func FetchAllInstances() ([]Instance, error) {
 	entries, err := os.ReadDir(env.InstancesDir)
 	if errors.Is(err, os.ErrNotExist) {
@@ -166,8 +174,11 @@ func FetchAllInstances() ([]Instance, error) {
 	return insts, nil
 }
 
-// DoesInstanceExist reports whether an instance with the specified ID exists.
-func DoesInstanceExist(id string) bool {
-	_, err := os.Stat(filepath.Join(env.InstancesDir, id))
+// DoesInstanceExist reports whether an instance with the specified name exists.
+func DoesInstanceExist(name string) bool {
+	if name == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(env.InstancesDir, name))
 	return err == nil
 }

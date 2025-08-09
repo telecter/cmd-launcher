@@ -118,19 +118,19 @@ type AuthStore struct {
 	Minecraft minecraftAuthStore `json:"minecraft"`
 }
 
-// WriteToCache writes the store to the file specified in env.AuthStorePath
+// WriteToCache writes the store to the cache file.
 func (store *AuthStore) WriteToCache() error {
 	data, _ := json.MarshalIndent(store, "", "    ")
 	return os.WriteFile(env.AuthStorePath, data, 0644)
 }
 
-// Clear clears the store and writes it to the file specified in env.AuthStorePath
+// Clear clears the store and writes it to the cache file.
 func (store *AuthStore) Clear() error {
 	store = &AuthStore{}
 	return store.WriteToCache()
 }
 
-// ReadFromCache reads an AuthStore into the global store from the file specified in env.AuthStorePath
+// ReadFromCache reads an AuthStore into the global store from the cache file.
 //
 // This function should be run in order to load the authentication info from the cache. If it is not, the global AuthStore will be blank.
 func ReadFromCache() error {
