@@ -52,7 +52,7 @@ Use the `--version, -v` flag to set the game version. If no value is supplied, t
 When starting the game, the launcher will attempt to download a Java runtime from Mojang. If it can't find a suitable one, you will need to set one manually in the instance configuration.
 
 ```sh
-cmd-launcher inst create -v 1.21.5 -l fabric CoolInstance
+cmd-launcher inst create -v 1.21.8 -l fabric CoolInstance
 ```
 
 **Deleting instances**  
@@ -137,5 +137,5 @@ height = 960
 The `search` command can search for Minecraft or mod loader versions. It defaults to searching for game versions, but can also be used to search for Fabric and Quilt versions.
 
 ```bash
-cmd-launcher search [<query>] [--kind {versions, fabric, quilt}]
+cmd-launcher search [<query>] [--kind {versions, fabric, quilt, forge}]
 ```
