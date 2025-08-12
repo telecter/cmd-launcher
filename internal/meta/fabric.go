@@ -18,6 +18,7 @@ type FabricVersionList []struct {
 	Stable    bool   `json:"stable"`
 }
 
+// A fabricAPI is an instance of a Fabric Metadata API which contains version metadata for Fabric-modded Minecraft versions.
 type fabricAPI struct {
 	name string
 	url  string

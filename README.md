@@ -99,7 +99,7 @@ Configurable values are:
 - Game version
 - Mod loader and version (if not vanilla)
 - Window resolution
-- Java executable path (if empty, Mojang Java will be downloaded)
+- Java executable path (if empty, a Mojang-provided Java runtime will be downloaded)
 - Custom JAR path to use instead of downloading the normal client JAR
 - Extra Java args
 - Minimum and maximum memory
@@ -134,7 +134,7 @@ height = 960
 
 ### Search
 
-The `search` command can search for Minecraft or mod loader versions. It defaults to searching for game versions, but can also be used to search for Fabric and Quilt versions.
+The `search` command can search for Minecraft or mod loader versions. It defaults to searching for game versions, but can also be used to search for Fabric, Quilt, and Forge versions.
 
 ```bash
 cmd-launcher search [<query>] [--kind {versions, fabric, quilt, forge}]

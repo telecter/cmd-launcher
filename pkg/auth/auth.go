@@ -43,6 +43,7 @@ func AuthCodeURL() *url.URL {
 	return uri
 }
 
+// A deviceCodeResponse contains information about device codes to be entered by the user to complete authentication, when they expire, and how often they should be polled for.
 type deviceCodeResponse struct {
 	DeviceCode      string `json:"device_code"`
 	UserCode        string `json:"user_code"`
@@ -85,6 +86,7 @@ type msaResponse struct {
 	Scope        string `json:"scope"`
 	IDToken      string `json:"id_token"`
 	// error response
+
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
 }
@@ -157,6 +159,7 @@ type xstsResponse struct {
 	IssueInstant time.Time `json:"IssueInstant"`
 	NotAfter     time.Time `json:"NotAfter"`
 	// error response
+
 	XErr int `json:"XErr"`
 }
 
@@ -208,6 +211,7 @@ type minecraftProfile struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
 	// error response
+
 	Error        string `json:"error"`
 	ErrorMessage string `json:"errorMessage"`
 }

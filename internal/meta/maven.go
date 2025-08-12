@@ -26,6 +26,9 @@ type LibrarySpecifier struct {
 	Classifier string
 }
 
+// String returns the string form of the specifier.
+//
+// It is formatted as: group:artifact:version:classifier
 func (specifier LibrarySpecifier) String() string {
 	p := []string{specifier.Group, specifier.Artifact, specifier.Version}
 	if specifier.Classifier != "" {
@@ -33,6 +36,8 @@ func (specifier LibrarySpecifier) String() string {
 	}
 	return strings.Join(p, ":")
 }
+
+// Path returns the relative path to the JAR file described by the specifier.
 func (specifier LibrarySpecifier) Path() string {
 	t := ".jar"
 	if strings.HasSuffix(specifier.Version, "@zip") {
@@ -63,6 +68,7 @@ func (specifier *LibrarySpecifier) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// NewLibrarySpecifier creates a new LibrarySpecifier from its string form.
 func NewLibrarySpecifier(s string) (LibrarySpecifier, error) {
 	p := strings.Split(s, ":")
 	if len(p) < 3 {

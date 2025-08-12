@@ -91,6 +91,7 @@ func FetchNeoforgeVersion(gameVersion string) (string, error) {
 	return version, nil
 }
 
+// FetchForgePromotions retrieves a map of Minecraft versions to their respective recommended Forge versions.
 func FetchForgePromotions() (*orderedmap.OrderedMap, error) {
 	resp, err := http.Get("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json")
 	if err != nil {

@@ -86,6 +86,7 @@ func StartDownloadEntries(entries []DownloadEntry) chan error {
 	return results
 }
 
+// HTTPStatusError is an error type returned when an HTTP response finishes with a status code >= 300 or < 200
 type HTTPStatusError struct {
 	URL        string
 	Method     string
@@ -96,9 +97,9 @@ func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("%s %s (%d)", e.Method, e.URL, e.StatusCode)
 }
 
-// CheckResponse ensures the status code of an http.Response is successful, returning an HTTPStatusError if not.
+// CheckResponse ensures the status code of an HTTP response is successful, returning an HTTPStatusError if not.
 func CheckResponse(resp *http.Response) error {
-	if resp.StatusCode > 299 || resp.StatusCode < 200 {
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
 		return &HTTPStatusError{
 			URL:        resp.Request.URL.String(),
 			Method:     resp.Request.Method,

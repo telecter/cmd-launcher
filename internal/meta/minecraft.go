@@ -417,6 +417,7 @@ func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
 	return assetIndex, nil
 }
 
+// FetchJavaManifestList retrieves the list of Mojang-provided Java runtimes.
 func FetchJavaManifestList() (JavaManifestList, error) {
 	cache := network.Cache[JavaManifestList]{
 		Path: filepath.Join(env.CachesDir, "minecraft", "java_all.json"),
@@ -432,6 +433,9 @@ func FetchJavaManifestList() (JavaManifestList, error) {
 var ErrJavaBadSystem = errors.New("system is unsupported")
 var ErrJavaNoVersion = errors.New("required version unavailable for this system")
 
+// FetchJavaManifest retrieves the manifest for the specified Mojang-provided Java runtime.
+//
+// It contains information, among other things, about what files to install for the runtime.
 func FetchJavaManifest(name string) (JavaManifest, error) {
 	list, err := FetchJavaManifestList()
 	if err != nil {
