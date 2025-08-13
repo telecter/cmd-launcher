@@ -18,20 +18,17 @@ import (
 )
 
 const (
-	name        = "cmd-launcher"
-	description = "A minimal command line Minecraft launcher."
-	version     = "1.2.0"
-	license     = "Licensed MIT"
-	copyright   = "Copyright (c) 2024-2025 telecter"
+	name    = "cmd-launcher"
+	version = "1.3.0"
 )
 
 type aboutCmd struct{}
 
 func (aboutCmd) Run(ctx *kong.Context) error {
 	color.New(color.Bold).Println(name, version)
-	color.New(color.Underline).Println(description)
-	fmt.Println(copyright)
-	fmt.Println(license)
+	color.New(color.Underline).Println(cli.Translate("launcher.description"))
+	fmt.Println(cli.Translate("launcher.copyright"))
+	fmt.Println(cli.Translate("launcher.license"))
 	return nil
 }
 
@@ -103,7 +100,7 @@ func main() {
 	parser := kong.Must(&CLI{},
 		kong.UsageOnError(),
 		kong.Name(name),
-		kong.Description(description),
+		kong.Description(cli.Translate("launcher.description")),
 		kong.ConfigureHelp(kong.HelpOptions{
 			NoExpandSubcommands: true,
 		}),

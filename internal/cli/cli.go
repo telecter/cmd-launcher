@@ -102,6 +102,14 @@ var en = translations{
 	"tip.configure": "Configure this instance with the `instance.toml` file within the instance directory.",
 	"tip.nojvm":     "If a Mojang-provided JVM is not available, you can install it yourself and set the path to the Java executable in the instance configuration.",
 	"tip.noaccount": "To launch in offline mode, use the --username (-u) flag.",
+
+	"launcher.description": "A minimal command-line Minecraft launcher.",
+	"launcher.license":     "Licensed MIT",
+	"launcher.copyright":   "Copyright 2024-2025 telecter",
+	"launcher.error":       "Error",
+	"launcher.warning":     "Warning",
+	"launcher.debug":       "Debug",
+	"launcher.tip":         "Tip",
 }
 
 var de = translations{
@@ -127,9 +135,9 @@ var de = translations{
 	"create":                   "Neue Instanze erstellen",
 	"create.complete":          "Instanz '%s' mit Minecraft %s (%s%s) erstellt",
 	"create.arg.id":            "Instanzname",
-	"create.arg.loader":        "Mod-Loader",
+	"create.arg.loader":        "Mod Loader",
 	"create.arg.version":       "Spielversion",
-	"create.arg.loaderversion": "Mod-Loader Version",
+	"create.arg.loaderversion": "Mod Loader Version",
 
 	"delete":          "Instanze löschen",
 	"delete.confirm":  "Sind Sie sicher, dass Sie diese Instanz löschen wollen?",
@@ -165,7 +173,7 @@ var de = translations{
 	"start.arg.width":          "Spielfensterbreite",
 	"start.arg.height":         "Spielfensterhöhe",
 	"start.arg.jvm":            "JVM-Pfad",
-	"start.arg.jvmargs":        "JVM-Argumente",
+	"start.arg.jvmargs":        "JVM Argumente",
 	"start.arg.minmemory":      "Minimale Arbeitsspeicherauslastung",
 	"start.arg.maxmemory":      "Maximale Arbeitsspeicherauslastung",
 	"start.arg.prepare":        "Alle gebrauchten Spielressourcen herunterladen, aber das Spiel nicht starten.",
@@ -177,7 +185,7 @@ var de = translations{
 	"start.launch.assets":      "%d Ressourcen identifiziert",
 	"start.launch.libraries":   "%d Bibliotheken identifiziert",
 	"start.launch.metadata":    "Versiondaten heruntergeladen",
-	"start.launch.jvmargs":     "JVM-Argumente: %s",
+	"start.launch.jvmargs":     "JVM Argumente: %s",
 	"start.launch.gameargs":    "Spielargumente: %s",
 	"start.launch.info":        "Hauptklasse %q starten. Spielverzeichnis ist %q.",
 	"start.launch":             "Spiel mit Benutzername '%s' starten ...",
@@ -189,8 +197,16 @@ var de = translations{
 	"tip.internet":  "Stellen Sie fest, dass Ihre Internetverbindung funktioniert.",
 	"tip.cache":     "Onlineressourcen waren nicht im Cache und konnten nicht heruntergeladen werden. Überprüfen Sie Ihre Internetverbindung.",
 	"tip.configure": "Configure this instance with the `instance.toml` file within the instance directory.",
-	"tip.nojvm":     "Falls ein JVM von Mojang nicht verfügbar ist, können Sie es selbst installieren und den Pfad zur Java-Datei in der Instanzkonfiguration feststellen.",
+	"tip.nojvm":     "Falls ein JVM von Mojang nicht verfügbar ist, können Sie es selbst installieren und den Pfad zur Java Datei in der Instanzkonfiguration feststellen.",
 	"tip.noaccount": "Um in Offlinemodus zu starten, verwenden Sie den --username (-u) Parameter.",
+
+	"launcher.description": "Ein minimalistiches Minecraft Launcher für die Command Line.",
+	"launcher.license":     "MIT-Lizenz",
+	"launcher.copyright":   "Copyright 2024-2025 telecter",
+	"launcher.error":       "Fehler",
+	"launcher.warning":     "Warnung",
+	"launcher.debug":       "Debug",
+	"launcher.tip":         "Tip",
 }
 
 var lang = en
@@ -237,7 +253,7 @@ func Success(format string, a ...any) {
 //
 // Indicates that there may be an issue.
 func Warning(format string, a ...any) {
-	color.New(color.Bold, color.FgYellow).Print("| Warning: ")
+	color.New(color.Bold, color.FgYellow).Printf("| %s: ", Translate("launcher.warning"))
 	fmt.Printf(format+"\n", a...)
 }
 
@@ -245,7 +261,7 @@ func Warning(format string, a ...any) {
 //
 // Used to print information messages useful for debugging the launcher.
 func Debug(format string, a ...any) {
-	color.New(color.Bold, color.FgMagenta).Print("| Debug: ")
+	color.New(color.Bold, color.FgMagenta).Printf("| %s: ", Translate("launcher.debug"))
 	fmt.Printf(format+"\n", a...)
 }
 
@@ -253,12 +269,15 @@ func Debug(format string, a ...any) {
 //
 // Indicates a fatal error.
 func Error(format string, a ...any) {
-	color.New(color.Bold, color.FgRed).Print("| Error: ")
+	color.New(color.Bold, color.FgRed).Printf("| %s: ", Translate("launcher.error"))
 	fmt.Printf(format+"\n", a...)
 }
 
+// Tip prints a tip message.
+//
+// Indicates an action that should be performed.
 func Tip(format string, a ...any) {
-	color.New(color.Bold, color.FgYellow).Print("| Tip: ")
+	color.New(color.Bold, color.FgYellow).Printf("| %s: ", Translate("launcher.tip"))
 	fmt.Printf(format+"\n", a...)
 }
 
