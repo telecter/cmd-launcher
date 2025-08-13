@@ -9,10 +9,12 @@ import (
 	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/internal/network"
 	"github.com/telecter/cmd-launcher/pkg/auth"
+	"golang.org/x/text/language"
 )
 
-// Map of translation strings to human-readable text.
-var translations = map[string]string{
+type translations map[string]string
+
+var en = translations{
 	"instance":    "Manage Minecraft instances",
 	"auth":        "Manage account authentication",
 	"about":       "Display launcher version and about",
@@ -102,26 +104,128 @@ var translations = map[string]string{
 	"tip.noaccount": "To launch in offline mode, use the --username (-u) flag.",
 }
 
+var de = translations{
+	"instance":    "Minecraft-Instanze verwalten",
+	"auth":        "Konto-Authentifizierung verwalten",
+	"about":       "Version und andere Informationen anzeigen",
+	"list":        "Alle Instanze auflisten",
+	"completions": "Befehl ausstoßen, der Tab-Vervollständigungen einrichtet",
+
+	"login":               "Anmelden",
+	"login.code.fetching": "Gerätcode laden ...",
+	"login.code":          "Verwenden Sie den Code %s auf %s, um sich anzumelden.",
+	"login.browser":       "Ein Webbrowser wird geöffnet, um Authentifizierung fortzufahren.",
+	"login.url":           "Falls der Webbrowser nicht öffnet, bitte öffnen Sie diesen URL: %s",
+	"login.complete":      "Angemeldet als %s",
+	"login.redirect":      "Angemeldet! Sie können dieses Fenster schließen und zum Launcher zurückkehren.",
+	"login.redirectfail":  "Anmeldung fehlgeschlagen: Ein Fehler ist während der Authentifizierung aufgetreten.",
+	"login.arg.nobrowser": "Gerätcode statt Webbrowser für Authentifizierung verwenden.",
+
+	"logout":          "Abmelden",
+	"logout.complete": "Abgemeldet.",
+
+	"create":                   "Neue Instanze erstellen",
+	"create.complete":          "Instanz '%s' mit Minecraft %s (%s%s) erstellt",
+	"create.arg.id":            "Instanzname",
+	"create.arg.loader":        "Mod-Loader",
+	"create.arg.version":       "Spielversion",
+	"create.arg.loaderversion": "Mod-Loader Version",
+
+	"delete":          "Instanze löschen",
+	"delete.confirm":  "Sind Sie sicher, dass Sie diese Instanz löschen wollen?",
+	"delete.warning":  "'%s' wird für immer verloren sein (eine lange Zeit!) [y/n] ",
+	"delete.complete": "Instanz '%s' gelöscht",
+	"delete.abort":    "Abgebrochen.",
+	"delete.arg.id":   "Instanz zum Löschen",
+	"delete.arg.yes":  "Zu allen Fragen automatisch zustimmen.",
+
+	"rename":          "Instanze umbenennen",
+	"rename.complete": "Instanz umbennant.",
+	"rename.arg.id":   "Instanz zum Umbenennen",
+	"rename.arg.new":  "Neuen Name für die Instanz",
+
+	"search":               "Versionen suchen",
+	"search.complete":      "%d Ergebnise gefunden",
+	"search.table.version": "Version",
+	"search.table.type":    "Typ",
+	"search.table.date":    "Veröffentlicht am",
+	"search.table.name":    "Name",
+	"search.arg.query":     "Suchanfrage",
+	"search.arg.kind":      "Suchtyp",
+	"search.arg.reverse":   "Liste umgekehrt anzeigen",
+
+	"start":                    "Instanze starten",
+	"start.arg.id":             "Instanz zum Starten",
+	"start.arg.username":       "Benutzername (Offlinemodus)",
+	"start.arg.server":         "Einem Server beitreten beim Spielstart",
+	"start.arg.world":          "Einer Welt beitreten beim Spielstart",
+	"start.arg.demo":           "Spiel im Testmodus starten",
+	"start.arg.disablemp":      "Mehrspielermodus deaktivieren",
+	"start.arg.disablechat":    "Chat deaktivieren",
+	"start.arg.width":          "Spielfensterbreite",
+	"start.arg.height":         "Spielfensterhöhe",
+	"start.arg.jvm":            "JVM-Pfad",
+	"start.arg.jvmargs":        "JVM-Argumente",
+	"start.arg.minmemory":      "Minimale Arbeitsspeicherauslastung",
+	"start.arg.maxmemory":      "Maximale Arbeitsspeicherauslastung",
+	"start.arg.prepare":        "Alle gebrauchten Spielressourcen herunterladen, aber das Spiel nicht starten.",
+	"start.arg.opts":           "Spieleinstellungen",
+	"start.arg.overrides":      "Konfigurationüberschreibungen",
+	"start.prepared":           "Spiel erfolgreich vorbereitet.",
+	"start.processing":         "Nachbearbeitungen sind jetzt im Gange. Dies kann einige Zeit dauern.",
+	"start.launch.downloading": "Dateien herunterladen ...",
+	"start.launch.assets":      "%d Ressourcen identifiziert",
+	"start.launch.libraries":   "%d Bibliotheken identifiziert",
+	"start.launch.metadata":    "Versiondaten heruntergeladen",
+	"start.launch.jvmargs":     "JVM-Argumente: %s",
+	"start.launch.gameargs":    "Spielargumente: %s",
+	"start.launch.info":        "Hauptklasse %q starten. Spielverzeichnis ist %q.",
+	"start.launch":             "Spiel mit Benutzername '%s' starten ...",
+
+	"arg.verbosity": "Gesprächigkeit ändern",
+	"arg.dir":       "Wurzelverzeichnis für Launcherdateien",
+	"arg.nocolor":   "Farben nicht anzeigen. Die NO_COLOR Umgebungsvariable kann auch benutzt werden.",
+
+	"tip.internet":  "Stellen Sie fest, dass Ihre Internetverbindung funktioniert.",
+	"tip.cache":     "Onlineressourcen waren nicht im Cache und konnten nicht heruntergeladen werden. Überprüfen Sie Ihre Internetverbindung.",
+	"tip.configure": "Configure this instance with the `instance.toml` file within the instance directory.",
+	"tip.nojvm":     "Falls ein JVM von Mojang nicht verfügbar ist, können Sie es selbst installieren und den Pfad zur Java-Datei in der Instanzkonfiguration feststellen.",
+	"tip.noaccount": "Um in Offlinemodus zu starten, verwenden Sie den --username (-u) Parameter.",
+}
+
+var lang = en
+
+// SetLang changes the language to the specified language, if translations for it exist.
+func SetLang(tag language.Tag) {
+	switch tag {
+	case language.German:
+		lang = de
+	default:
+		lang = en
+	}
+}
+
+// Translations returns the map of output translations for the current language.
 func Translations() map[string]string {
-	return translations
+	return lang
 }
 
 // Translate takes a translation string and looks up its human-readable text. If not available, it returns the same translation string.
 func Translate(key string) string {
-	t, ok := translations[key]
+	t, ok := lang[key]
 	if !ok {
 		return key
 	}
 	return t
 }
 
-// Info prints an general info message.
+// Info prints an general informational message.
 func Info(format string, a ...any) {
 	color.New(color.Bold, color.FgBlue).Print("| ")
 	fmt.Printf(format+"\n", a...)
 }
 
-// Success prints a success info message.
+// Success prints a success information message.
 //
 // Indicates a command or task has successfully completed.
 func Success(format string, a ...any) {
@@ -160,15 +264,19 @@ func Tip(format string, a ...any) {
 
 // Tips prints a tip message based on an error, if any are available.
 func Tips(err error) {
+	// General internet connection related issues
 	if errors.Is(err, &net.OpError{}) {
 		Tip(Translate("tip.internet"))
 	}
+	// A cache couldn't be updated from the remote source
 	if errors.Is(err, network.ErrNotCached) {
 		Tip(Translate("tip.cache"))
 	}
+	// Mojang-provided JVM isn't working
 	if errors.Is(err, meta.ErrJavaBadSystem) || errors.Is(err, meta.ErrJavaNoVersion) {
 		Tip(Translate("tip.nojvm"))
 	}
+	// Not logged in
 	if errors.Is(err, auth.ErrNoAccount) {
 		Tip(Translate("tip.noaccount"))
 	}

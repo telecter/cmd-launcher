@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Xuanwo/go-locale"
 	"github.com/alecthomas/kong"
 	"github.com/fatih/color"
 	"github.com/telecter/cmd-launcher/internal/cli"
@@ -24,9 +25,9 @@ const (
 	copyright   = "Copyright (c) 2024-2025 telecter"
 )
 
-type about struct{}
+type aboutCmd struct{}
 
-func (about) Run(ctx *kong.Context) error {
+func (aboutCmd) Run(ctx *kong.Context) error {
 	color.New(color.Bold).Println(name, version)
 	color.New(color.Underline).Println(description)
 	fmt.Println(copyright)
@@ -35,11 +36,11 @@ func (about) Run(ctx *kong.Context) error {
 }
 
 type CLI struct {
-	Start       cmd.Start        `cmd:"" help:"${start}"`
-	Instance    cmd.Instance     `cmd:"" help:"${instance}" aliases:"inst"`
-	Auth        cmd.Auth         `cmd:"" help:"${auth}"`
-	Search      cmd.Search       `cmd:"" help:"${search}"`
-	About       about            `cmd:"" help:"${about}"`
+	Start       cmd.StartCmd     `cmd:"" help:"${start}"`
+	Instance    cmd.InstanceCmd  `cmd:"" help:"${instance}" aliases:"inst"`
+	Auth        cmd.AuthCmd      `cmd:"" help:"${auth}"`
+	Search      cmd.SearchCmd    `cmd:"" help:"${search}"`
+	About       aboutCmd         `cmd:"" help:"${about}"`
 	Completions komplete.Command `cmd:"" help:"${completions}"`
 	Verbosity   string           `help:"${arg_verbosity}" enum:"info,extra,debug" default:"info"`
 	Dir         string           `help:"${arg_dir}" type:"path" placeholder:"PATH"`
@@ -71,11 +72,34 @@ func (c *CLI) AfterApply(ctx *kong.Context) error {
 	return nil
 }
 
-func main() {
+func vars() kong.Vars {
 	vars := make(kong.Vars)
 	for k, v := range cli.Translations() {
 		vars[strings.ReplaceAll(k, ".", "_")] = v
 	}
+	return vars
+}
+
+func valueFormatter(value *kong.Value) string {
+	if value.Enum != "" {
+		return fmt.Sprintf("%s [%s]", value.Help, strings.Join(value.EnumSlice(), ", "))
+	}
+	return value.Help
+}
+
+func groups() kong.Groups {
+	return kong.Groups{
+		"overrides": cli.Translate("start.arg.overrides"),
+		"opts":      cli.Translate("start.arg.opts"),
+	}
+}
+
+func main() {
+	lang, err := locale.Detect()
+	if err == nil {
+		cli.SetLang(lang)
+	}
+
 	parser := kong.Must(&CLI{},
 		kong.UsageOnError(),
 		kong.Name(name),
@@ -83,17 +107,9 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			NoExpandSubcommands: true,
 		}),
-		kong.ValueFormatter(func(value *kong.Value) string {
-			if value.Enum != "" {
-				return fmt.Sprintf("%s [%s]", value.Help, strings.Join(value.EnumSlice(), ", "))
-			}
-			return value.Help
-		}),
-		kong.Groups{
-			"overrides": cli.Translate("start.arg.overrides"),
-			"opts":      cli.Translate("start.arg.opts"),
-		},
-		vars,
+		kong.ValueFormatter(valueFormatter),
+		groups(),
+		vars(),
 	)
 	komplete.Run(parser)
 

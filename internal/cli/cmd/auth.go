@@ -21,11 +21,11 @@ func init() {
 	auth.RedirectURI, _ = url.Parse(redirectURI)
 }
 
-type Login struct {
+type LoginCmd struct {
 	NoBrowser bool `help:"${login_arg_nobrowser}"`
 }
 
-func (c *Login) Run(ctx *kong.Context) error {
+func (c *LoginCmd) Run(ctx *kong.Context) error {
 	var session auth.Session
 
 	session, err := auth.Authenticate()
@@ -58,15 +58,15 @@ func (c *Login) Run(ctx *kong.Context) error {
 	return nil
 }
 
-type Logout struct{}
+type LogoutCmd struct{}
 
-func (c *Logout) Run(ctx *kong.Context) error {
+func (c *LogoutCmd) Run(ctx *kong.Context) error {
 	auth.Store.Clear()
 	cli.Info(cli.Translate("logout.complete"))
 	return nil
 }
 
-type Auth struct {
-	Login  Login  `cmd:"" help:"${login}"`
-	Logout Logout `cmd:"" help:"${logout}"`
+type AuthCmd struct {
+	Login  LoginCmd  `cmd:"" help:"${login}"`
+	Logout LogoutCmd `cmd:"" help:"${logout}"`
 }

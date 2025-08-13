@@ -11,14 +11,14 @@ import (
 	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
-type Create struct {
+type CreateCmd struct {
 	ID            string `arg:"" help:"${create_arg_id}"`
 	Loader        string `help:"${create_arg_loader}" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
 	Version       string `help:"${create_arg_version}" default:"release" short:"v"`
 	LoaderVersion string `help:"${create_arg_loaderversion}" default:"latest"`
 }
 
-func (c *Create) Run(ctx *kong.Context) error {
+func (c *CreateCmd) Run(ctx *kong.Context) error {
 	var loader launcher.Loader
 	switch c.Loader {
 	case "fabric":
@@ -52,12 +52,12 @@ func (c *Create) Run(ctx *kong.Context) error {
 	return nil
 }
 
-type Delete struct {
+type DeleteCmd struct {
 	ID  string `arg:"" name:"id" help:"${delete_arg_id}"`
 	Yes bool   `name:"yes" short:"y" help:"${delete_arg_yes}"`
 }
 
-func (c *Delete) Run(ctx *kong.Context) error {
+func (c *DeleteCmd) Run(ctx *kong.Context) error {
 	inst, err := launcher.FetchInstance(c.ID)
 	if err != nil {
 		return err
@@ -82,12 +82,12 @@ func (c *Delete) Run(ctx *kong.Context) error {
 	return nil
 }
 
-type Rename struct {
+type RenameCmd struct {
 	ID  string `arg:"" help:"${rename_arg_id}"`
 	New string `arg:"" help:"${rename_arg_new}"`
 }
 
-func (c *Rename) Run(ctx *kong.Context) error {
+func (c *RenameCmd) Run(ctx *kong.Context) error {
 	inst, err := launcher.FetchInstance(c.ID)
 	if err != nil {
 		return err
@@ -99,9 +99,9 @@ func (c *Rename) Run(ctx *kong.Context) error {
 	return nil
 }
 
-type List struct{}
+type ListCmd struct{}
 
-func (c *List) Run(ctx *kong.Context) error {
+func (c *ListCmd) Run(ctx *kong.Context) error {
 	var rows []table.Row
 	instances, err := launcher.FetchAllInstances()
 	if err != nil {
@@ -125,11 +125,11 @@ func (c *List) Run(ctx *kong.Context) error {
 	return nil
 }
 
-type Instance struct {
-	Create Create `cmd:"" help:"${create}"`
-	Delete Delete `cmd:"" help:"${delete}"`
-	Rename Rename `cmd:"" help:"${rename}"`
-	List   List   `cmd:"" help:"${list}"`
+type InstanceCmd struct {
+	Create CreateCmd `cmd:"" help:"${create}"`
+	Delete DeleteCmd `cmd:"" help:"${delete}"`
+	Rename RenameCmd `cmd:"" help:"${rename}"`
+	List   ListCmd   `cmd:"" help:"${list}"`
 }
 
 var defaultInstanceConfig = launcher.InstanceConfig{

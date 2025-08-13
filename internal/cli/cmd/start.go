@@ -47,7 +47,7 @@ func watcher(verbosity int) launcher.EventWatcher {
 	}
 }
 
-type Start struct {
+type StartCmd struct {
 	ID string `arg:"" help:"${start_arg_id}"`
 
 	Prepare bool `help:"${start_arg_prepare}"`
@@ -70,7 +70,7 @@ type Start struct {
 	} `embed:"" group:"overrides"`
 }
 
-func (c *Start) Run(ctx *kong.Context, verbosity int) error {
+func (c *StartCmd) Run(ctx *kong.Context, verbosity int) error {
 	inst, err := launcher.FetchInstance(c.ID)
 	if err != nil {
 		return err

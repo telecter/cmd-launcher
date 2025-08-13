@@ -13,13 +13,13 @@ import (
 	"github.com/telecter/cmd-launcher/internal/meta"
 )
 
-type Search struct {
+type SearchCmd struct {
 	Query   string `arg:"" help:"${search_arg_query}" optional:""`
 	Kind    string `help:"${search_arg_kind}" short:"k" enum:"versions,fabric,quilt,forge" default:"versions"`
 	Reverse bool   `short:"r" help:"${search_arg_reverse}"`
 }
 
-func (c *Search) Run(ctx *kong.Context) error {
+func (c *SearchCmd) Run(ctx *kong.Context) error {
 	var rows []table.Row
 	var header table.Row
 
