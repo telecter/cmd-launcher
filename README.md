@@ -2,7 +2,8 @@
 
 # cmd-launcher
 
-A minimal command line Minecraft launcher.
+A minimal command line Minecraft launcher.  
+EN | [DE](README_de.md)
 
 [![Build](https://github.com/telecter/cmd-launcher/actions/workflows/build.yml/badge.svg)](https://github.com/telecter/cmd-launcher/actions/workflows/build.yml)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/telecter/cmd-launcher)
