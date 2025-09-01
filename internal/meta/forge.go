@@ -175,6 +175,9 @@ func (forge forge) FetchInstaller(version string) (map[string]*zip.File, error) 
 	}
 
 	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("open: %s", err)
+	}
 
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {

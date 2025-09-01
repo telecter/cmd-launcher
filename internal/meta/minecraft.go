@@ -80,6 +80,7 @@ type JavaManifest struct {
 func (manifest JavaManifest) DownloadEntries(runtimeName string) (entries []network.DownloadEntry, symlinks map[string]string) {
 	symlinks = make(map[string]string)
 	dir := filepath.Join(env.JavaDir, runtimeName)
+
 	for name, file := range manifest.Files {
 		path := filepath.Join(dir, name)
 
@@ -456,7 +457,6 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 	_, ok := list[os]
 	if !ok {
 		return JavaManifest{}, ErrJavaBadSystem
-
 	}
 	_, ok = list[os][name]
 	if !ok {
@@ -470,13 +470,14 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 	ref := list[os][name][0].Manifest
 
 	cache := network.Cache[JavaManifest]{
-		Path: filepath.Join(env.CachesDir, "minecraft", "java-"+name+".json"),
+		Path: filepath.Join(env.CachesDir, "minecraft", name+".json"),
 		URL:  ref.URL,
 	}
 
 	var manifest JavaManifest
-	if err := cache.Read(&manifest); err == nil {
+	if err := cache.Read(&manifest); err != nil {
 		return JavaManifest{}, err
 	}
+
 	return manifest, nil
 }
