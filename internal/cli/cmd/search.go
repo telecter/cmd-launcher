@@ -9,10 +9,11 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/telecter/cmd-launcher/internal/cli"
+	"github.com/telecter/cmd-launcher/internal/cli/output"
 	"github.com/telecter/cmd-launcher/internal/meta"
 )
 
+// SearchCmd enables search of game and mod loader versions.
 type SearchCmd struct {
 	Query   string `arg:"" help:"${search_arg_query}" optional:""`
 	Kind    string `help:"${search_arg_kind}" short:"k" enum:"versions,fabric,quilt,forge" default:"versions"`
@@ -26,9 +27,9 @@ func (c *SearchCmd) Run(ctx *kong.Context) error {
 	switch c.Kind {
 	case "versions":
 		header = table.Row{
-			cli.Translate("search.table.version"),
-			cli.Translate("search.table.type"),
-			cli.Translate("search.table.date"),
+			output.Translate("search.table.version"),
+			output.Translate("search.table.type"),
+			output.Translate("search.table.date"),
 		}
 		manifest, err := meta.FetchVersionManifest()
 		if err != nil {
@@ -41,7 +42,7 @@ func (c *SearchCmd) Run(ctx *kong.Context) error {
 		}
 	case "fabric", "quilt":
 		header = table.Row{
-			cli.Translate("search.table.version"),
+			output.Translate("search.table.version"),
 		}
 		var versions meta.FabricVersionList
 
@@ -61,7 +62,7 @@ func (c *SearchCmd) Run(ctx *kong.Context) error {
 		}
 	case "forge":
 		header = table.Row{
-			cli.Translate("search.table.version"),
+			output.Translate("search.table.version"),
 			"Game Version",
 			"Type",
 		}
@@ -86,7 +87,7 @@ func (c *SearchCmd) Run(ctx *kong.Context) error {
 		slices.Reverse(rows)
 	}
 
-	cli.Success(cli.Translate("search.complete"), len(rows))
+	output.Success(output.Translate("search.complete"), len(rows))
 	t := table.NewWriter()
 	t.SetStyle(table.StyleLight)
 	t.SetOutputMirror(os.Stdout)

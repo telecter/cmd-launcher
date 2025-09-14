@@ -3,76 +3,133 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"net"
+	"os"
+	"strings"
 
+	"github.com/Xuanwo/go-locale"
+	"github.com/alecthomas/kong"
 	"github.com/fatih/color"
-	"github.com/telecter/cmd-launcher/internal/meta"
-	"github.com/telecter/cmd-launcher/internal/network"
+	"github.com/telecter/cmd-launcher/internal/cli/cmd"
+	"github.com/telecter/cmd-launcher/internal/cli/output"
+	env "github.com/telecter/cmd-launcher/pkg"
 	"github.com/telecter/cmd-launcher/pkg/auth"
+	"go.abhg.dev/komplete"
 )
 
-// Info prints an general informational message.
-func Info(format string, a ...any) {
-	color.New(color.Bold, color.FgBlue).Print("| ")
-	fmt.Printf(format+"\n", a...)
+const (
+	name    = "cmd-launcher"
+	version = "1.4.0"
+)
+
+type aboutCmd struct{}
+
+func (aboutCmd) Run(ctx *kong.Context) error {
+	color.New(color.Bold).Println(name, version)
+	color.New(color.Underline).Println(output.Translate("launcher.description"))
+	fmt.Println(output.Translate("launcher.copyright"))
+	fmt.Println(output.Translate("launcher.license"))
+	return nil
 }
 
-// Success prints a success information message.
-//
-// Indicates a command or task has successfully completed.
-func Success(format string, a ...any) {
-	color.New(color.Bold, color.FgGreen).Print("| ")
-	fmt.Printf(format+"\n", a...)
+type CLI struct {
+	Start       cmd.StartCmd     `cmd:"" help:"${start}"`
+	Instance    cmd.InstanceCmd  `cmd:"" help:"${instance}" aliases:"inst"`
+	Auth        cmd.AuthCmd      `cmd:"" help:"${auth}"`
+	Search      cmd.SearchCmd    `cmd:"" help:"${search}"`
+	About       aboutCmd         `cmd:"" help:"${about}"`
+	Completions komplete.Command `cmd:"" help:"${completions}"`
+	Verbosity   string           `help:"${arg_verbosity}" enum:"info,extra,debug" default:"info"`
+	Dir         string           `help:"${arg_dir}" type:"path" placeholder:"PATH"`
+	NoColor     bool             `help:"${arg_nocolor}"`
 }
 
-// Warning prints a cautionary message.
-//
-// Indicates that there may be an issue.
-func Warning(format string, a ...any) {
-	color.New(color.Bold, color.FgYellow).Printf("| %s: ", Translate("launcher.warning"))
-	fmt.Printf(format+"\n", a...)
-}
-
-// Debug prints a debug message.
-//
-// Used to print information messages useful for debugging the launcher.
-func Debug(format string, a ...any) {
-	color.New(color.Bold, color.FgMagenta).Printf("| %s: ", Translate("launcher.debug"))
-	fmt.Printf(format+"\n", a...)
-}
-
-// Error prints an error message.
-//
-// Indicates a fatal error.
-func Error(format string, a ...any) {
-	color.New(color.Bold, color.FgRed).Printf("| %s: ", Translate("launcher.error"))
-	fmt.Printf(format+"\n", a...)
-}
-
-// Tip prints a tip message.
-//
-// Indicates an action that should be performed.
-func Tip(format string, a ...any) {
-	color.New(color.Bold, color.FgYellow).Printf("| %s: ", Translate("launcher.tip"))
-	fmt.Printf(format+"\n", a...)
-}
-
-// Tips prints a tip message based on an error, if any are available.
-func Tips(err error) {
-	// General internet connection related issues
-	if errors.Is(err, &net.OpError{}) {
-		Tip(Translate("tip.internet"))
+func (c *CLI) AfterApply(ctx *kong.Context) error {
+	var verbosity int
+	switch c.Verbosity {
+	case "info":
+		verbosity = 0
+	case "extra":
+		verbosity = 1
+	case "debug":
+		verbosity = 2
 	}
-	// A cache couldn't be updated from the remote source
-	if errors.Is(err, network.ErrNotCached) {
-		Tip(Translate("tip.cache"))
+	ctx.Bind(verbosity)
+	if c.Dir != "" {
+		if err := env.SetDirs(c.Dir); err != nil {
+			return err
+		}
 	}
-	// Mojang-provided JVM isn't working
-	if errors.Is(err, meta.ErrJavaBadSystem) || errors.Is(err, meta.ErrJavaNoVersion) {
-		Tip(Translate("tip.nojvm"))
+	if err := auth.ReadFromCache(); err != nil {
+		return fmt.Errorf("read auth store: %w", err)
 	}
-	// Not logged in
-	if errors.Is(err, auth.ErrNoAccount) {
-		Tip(Translate("tip.noaccount"))
+	if c.NoColor {
+		color.NoColor = true
 	}
+	return nil
+}
+
+func vars() kong.Vars {
+	vars := make(kong.Vars)
+	for k, v := range output.Translations() {
+		vars[strings.ReplaceAll(k, ".", "_")] = v
+	}
+	return vars
+}
+
+func valueFormatter(value *kong.Value) string {
+	if value.Enum != "" {
+		return fmt.Sprintf("%s [%s]", value.Help, strings.Join(value.EnumSlice(), ", "))
+	}
+	return value.Help
+}
+
+func groups() kong.Groups {
+	return kong.Groups{
+		"overrides": output.Translate("start.arg.overrides"),
+		"opts":      output.Translate("start.arg.opts"),
+	}
+}
+
+// Start creates the CLI parser and runs it. It returns an exit handler and code.
+func Run() (func(int), int) {
+	lang, err := locale.Detect()
+	if err == nil {
+		output.SetLang(lang)
+	}
+
+	parser := kong.Must(&CLI{},
+		kong.UsageOnError(),
+		kong.Name(name),
+		kong.Description(output.Translate("launcher.description")),
+		kong.ConfigureHelp(kong.HelpOptions{
+			NoExpandSubcommands: true,
+		}),
+		kong.ValueFormatter(valueFormatter),
+		groups(),
+		vars(),
+	)
+	komplete.Run(parser)
+
+	ctx, err := parser.Parse(os.Args[1:])
+	if err != nil {
+		exitCode := 1
+		var parseErr *kong.ParseError
+		if errors.As(err, &parseErr) {
+			parseErr.Context.PrintUsage(false)
+			exitCode = parseErr.ExitCode()
+		}
+		output.Error("%s", err)
+		return parser.Exit, exitCode
+	}
+
+	if err := ctx.Run(); err != nil {
+		output.Error("%s", err)
+		output.Tips(err)
+		var coder kong.ExitCoder
+		if errors.As(err, &coder) {
+			return ctx.Exit, coder.ExitCode()
+		}
+		return ctx.Exit, 1
+	}
+	return ctx.Exit, 0
 }

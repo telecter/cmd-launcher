@@ -7,10 +7,11 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/telecter/cmd-launcher/internal/cli"
+	"github.com/telecter/cmd-launcher/internal/cli/output"
 	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
+// CreateCmd creates a new instance with specified parameters.
 type CreateCmd struct {
 	ID            string `arg:"" help:"${create_arg_id}"`
 	Loader        string `help:"${create_arg_loader}" enum:"fabric,quilt,neoforge,forge,vanilla" default:"vanilla" short:"l"`
@@ -47,11 +48,12 @@ func (c *CreateCmd) Run(ctx *kong.Context) error {
 	if l != "" {
 		l = " " + l
 	}
-	cli.Success(cli.Translate("create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
-	cli.Tip(cli.Translate("tip.configure"))
+	output.Success(output.Translate("create.complete"), color.New(color.Bold).Sprint(inst.Name), inst.GameVersion, inst.Loader, l)
+	output.Tip(output.Translate("tip.configure"))
 	return nil
 }
 
+// DeleteCmd removes the specified instance.
 type DeleteCmd struct {
 	ID  string `arg:"" name:"id" help:"${delete_arg_id}"`
 	Yes bool   `name:"yes" short:"y" help:"${delete_arg_yes}"`
@@ -66,8 +68,8 @@ func (c *DeleteCmd) Run(ctx *kong.Context) error {
 	if !delete {
 		var input string
 
-		cli.Warning(cli.Translate("delete.confirm"))
-		fmt.Printf(cli.Translate("delete.warning"), color.New(color.Bold).Sprint(inst.Name))
+		output.Warning(output.Translate("delete.confirm"))
+		fmt.Printf(output.Translate("delete.warning"), color.New(color.Bold).Sprint(inst.Name))
 		fmt.Scanln(&input)
 		delete = input == "y" || input == "Y"
 	}
@@ -75,13 +77,14 @@ func (c *DeleteCmd) Run(ctx *kong.Context) error {
 		if err := launcher.RemoveInstance(c.ID); err != nil {
 			return fmt.Errorf("remove instance: %w", err)
 		}
-		cli.Success(cli.Translate("delete.complete"), color.New(color.Bold).Sprint(inst.Name))
+		output.Success(output.Translate("delete.complete"), color.New(color.Bold).Sprint(inst.Name))
 	} else {
-		cli.Info(cli.Translate("delete.abort"))
+		output.Info(output.Translate("delete.abort"))
 	}
 	return nil
 }
 
+// RenameCmd renames the specified instance.
 type RenameCmd struct {
 	ID  string `arg:"" help:"${rename_arg_id}"`
 	New string `arg:"" help:"${rename_arg_new}"`
@@ -95,10 +98,11 @@ func (c *RenameCmd) Run(ctx *kong.Context) error {
 	if err := inst.Rename(c.New); err != nil {
 		return fmt.Errorf("rename instance: %w", err)
 	}
-	cli.Success(cli.Translate("rename.complete"))
+	output.Success(output.Translate("rename.complete"))
 	return nil
 }
 
+// ListCmd lists all installed instances.
 type ListCmd struct{}
 
 func (c *ListCmd) Run(ctx *kong.Context) error {
@@ -116,15 +120,16 @@ func (c *ListCmd) Run(ctx *kong.Context) error {
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{
 		"#",
-		cli.Translate("search.table.name"),
-		cli.Translate("search.table.version"),
-		cli.Translate("search.table.type"),
+		output.Translate("search.table.name"),
+		output.Translate("search.table.version"),
+		output.Translate("search.table.type"),
 	})
 	t.AppendRows(rows)
 	t.Render()
 	return nil
 }
 
+// InstanceCmd enables management of Minecraft instances.
 type InstanceCmd struct {
 	Create CreateCmd `cmd:"" help:"${create}"`
 	Delete DeleteCmd `cmd:"" help:"${delete}"`

@@ -1,4 +1,4 @@
-package cli
+package output
 
 import "golang.org/x/text/language"
 

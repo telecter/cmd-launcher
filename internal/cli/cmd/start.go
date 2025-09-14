@@ -8,14 +8,14 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/fatih/color"
 	"github.com/schollz/progressbar/v3"
-	"github.com/telecter/cmd-launcher/internal/cli"
+	"github.com/telecter/cmd-launcher/internal/cli/output"
 	"github.com/telecter/cmd-launcher/pkg/auth"
 	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
 func watcher(verbosity int) launcher.EventWatcher {
 	var bar = progressbar.NewOptions(0,
-		progressbar.OptionSetDescription(cli.Translate("start.launch.downloading")),
+		progressbar.OptionSetDescription(output.Translate("start.launch.downloading")),
 		progressbar.OptionSetWriter(os.Stdout),
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionShowCount(),
@@ -31,22 +31,23 @@ func watcher(verbosity int) launcher.EventWatcher {
 			bar.Add(1)
 		case launcher.AssetsResolvedEvent:
 			if verbosity > 0 {
-				cli.Info(cli.Translate("start.launch.assets"), e.Total)
+				output.Info(output.Translate("start.launch.assets"), e.Total)
 			}
 		case launcher.LibrariesResolvedEvent:
 			if verbosity > 0 {
-				cli.Info(cli.Translate("start.launch.libraries"), e.Total)
+				output.Info(output.Translate("start.launch.libraries"), e.Total)
 			}
 		case launcher.MetadataResolvedEvent:
 			if verbosity > 0 {
-				cli.Info(cli.Translate("start.launch.metadata"))
+				output.Info(output.Translate("start.launch.metadata"))
 			}
 		case launcher.PostProcessingEvent:
-			cli.Info(cli.Translate("start.processing"))
+			output.Info(output.Translate("start.processing"))
 		}
 	}
 }
 
+// StartCmd runs an instance with the specified options.
 type StartCmd struct {
 	ID string `arg:"" help:"${start_arg_id}"`
 
@@ -133,12 +134,12 @@ func (c *StartCmd) Run(ctx *kong.Context, verbosity int) error {
 	}
 
 	if c.Prepare {
-		cli.Success(cli.Translate("start.prepared"))
+		output.Success(output.Translate("start.prepared"))
 		return nil
 	}
 
 	if verbosity > 1 {
-		cli.Debug(cli.Translate("start.launch.jvmargs"), launchEnv.JavaArgs)
+		output.Debug(output.Translate("start.launch.jvmargs"), launchEnv.JavaArgs)
 
 		var gameArgs []string
 		var hideNext bool
@@ -154,10 +155,10 @@ func (c *StartCmd) Run(ctx *kong.Context, verbosity int) error {
 				hideNext = false
 			}
 		}
-		cli.Debug(cli.Translate("start.launch.gameargs"), gameArgs)
-		cli.Debug(cli.Translate("start.launch.info"), launchEnv.MainClass, launchEnv.GameDir)
+		output.Debug(output.Translate("start.launch.gameargs"), gameArgs)
+		output.Debug(output.Translate("start.launch.info"), launchEnv.MainClass, launchEnv.GameDir)
 	}
-	cli.Success(cli.Translate("start.launch"), color.New(color.Bold).Sprint(session.Username))
+	output.Success(output.Translate("start.launch"), color.New(color.Bold).Sprint(session.Username))
 
 	return launcher.Launch(launchEnv, launcher.ConsoleRunner)
 }

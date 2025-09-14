@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/fatih/color"
 	"github.com/pkg/browser"
-	"github.com/telecter/cmd-launcher/internal/cli"
+	"github.com/telecter/cmd-launcher/internal/cli/output"
 	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
@@ -21,6 +21,7 @@ func init() {
 	auth.RedirectURI, _ = url.Parse(redirectURI)
 }
 
+// LoginCmd authenticates and logs into an account.
 type LoginCmd struct {
 	NoBrowser bool `help:"${login_arg_nobrowser}"`
 }
@@ -31,41 +32,43 @@ func (c *LoginCmd) Run(ctx *kong.Context) error {
 	session, err := auth.Authenticate()
 	if err != nil {
 		if c.NoBrowser {
-			cli.Info(cli.Translate("login.code.fetching"))
+			output.Info(output.Translate("login.code.fetching"))
 			resp, err := auth.FetchDeviceCode()
 			if err != nil {
 				return fmt.Errorf("fetch device code: %w", err)
 			}
-			cli.Info(cli.Translate("login.code"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
+			output.Info(output.Translate("login.code"), color.BlueString(resp.UserCode), color.BlueString(resp.VerificationURI))
 			session, err = auth.AuthenticateWithCode(resp)
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}
 		} else {
-			cli.Info(cli.Translate("login.browser"))
+			output.Info(output.Translate("login.browser"))
 			url := auth.AuthCodeURL()
-			cli.Info(cli.Translate("login.url"), url.String())
+			output.Info(output.Translate("login.url"), url.String())
 
 			browser.OpenURL(url.String())
 			var err error
-			session, err = auth.AuthenticateWithRedirect(cli.Translate("login.redirect"), cli.Translate("login.redirectfail"))
+			session, err = auth.AuthenticateWithRedirect(output.Translate("login.redirect"), output.Translate("login.redirectfail"))
 			if err != nil {
 				return fmt.Errorf("add account: %w", err)
 			}
 		}
 	}
-	cli.Success(cli.Translate("login.complete"), color.New(color.Bold).Sprint(session.Username))
+	output.Success(output.Translate("login.complete"), color.New(color.Bold).Sprint(session.Username))
 	return nil
 }
 
+// LogoutCmd logs out of the current account.
 type LogoutCmd struct{}
 
 func (c *LogoutCmd) Run(ctx *kong.Context) error {
 	auth.Store.Clear()
-	cli.Info(cli.Translate("logout.complete"))
+	output.Info(output.Translate("logout.complete"))
 	return nil
 }
 
+// AuthCmd enables management of an account.
 type AuthCmd struct {
 	Login  LoginCmd  `cmd:"" help:"${login}"`
 	Logout LogoutCmd `cmd:"" help:"${logout}"`
