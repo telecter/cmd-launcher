@@ -60,7 +60,7 @@ Wenn Sie eine Instanz löschen möchten, führen Sie den `inst delete` Befehl au
 ### Das Spiel starten
 
 > **WICHTIG!**
-> Diesen Launcher ist nicht für Versionen < 1.14 geprüft. Es könnte manchmal für diese Versionen nicht funktioniern, aber ich versuche diese Probleme zu korrigieren!
+> Dieser Launcher ist nicht für Versionen < 1.14 geprüft. Es könnte manchmal für diese Versionen nicht funktioniern, aber ich versuche diese Probleme zu korrigieren!
 
 Um Minecraft zu starten, führen Sie einfach den `start` Befehl gefolgt von dem Name der Instanz aus, die Sie starten wollen.
 
