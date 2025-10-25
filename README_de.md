@@ -10,10 +10,10 @@ Ein minimalisticher Minecraft Launcher für die Command Line.
 [![Go Reference](https://pkg.go.dev/badge/github.com/telecter/cmd-launcher.svg)](https://pkg.go.dev/github.com/telecter/cmd-launcher)
 
 - [Installation](#installation)
-  - [Von Source installieren](#von-source-installieren)
+  - [Aus Sourcecode](#aus-sourcecode)
 - [Verwendung](#verwendung)
   - [Instanze](#instanze)
-  - [Das Spiel starten](#das-spiel-starten)
+  - [Spiel starten](#spiel-starten)
   - [Authentifizierung](#authentifizierung)
   - [Instanzkonfiguration](#instanzkonfiguration)
   - [Suchen](#suchen)
@@ -30,11 +30,11 @@ Stell erst sicher dass [Go](https://go.dev) installiert ist.
 go install github.com/telecter/cmd-launcher@latest
 ```
 
-### Von Source installieren
+### Aus Sourcecode
 
 1. Repository klonen: `git clone https://github.com/telecter/cmd-launcher`
 2. In dem Sourcecode-Verzeichnis, führe `go run .` aus um den Launcher zu bauen und starten.
-3. Wenn Sie bereit sind, kompiliere die ausführbare Datei mit `go build .`
+3. Wenn du bereit bist, kompiliere die ausführbare Datei mit `go build .`
 
 ## Verwendung
 
