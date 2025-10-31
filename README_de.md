@@ -132,7 +132,7 @@ height = 960
 
 ### Suchen
 
-Der `search` Befehl kann für Minecraft oder Modloader Versionen suchen. Normalerweise sucht er nach Spielversionen, aber er kann auch nach Fabric, Quilt, oder Forge Versionen suchen.
+Der `search` Befehl kann nach Minecraft oder Modloader Versionen suchen. Normalerweise sucht er nach Spielversionen, aber er kann auch nach Fabric, Quilt, oder Forge Versionen suchen.
 
 ```bash
 cmd-launcher search [<query>] [--kind {versions, fabric, quilt, forge}]
