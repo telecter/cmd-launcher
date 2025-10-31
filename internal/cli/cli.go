@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/telecter/cmd-launcher/internal/cli/cmd"
 	"github.com/telecter/cmd-launcher/internal/cli/output"
+	"github.com/telecter/cmd-launcher/internal/meta"
+	"github.com/telecter/cmd-launcher/internal/network"
 	env "github.com/telecter/cmd-launcher/pkg"
 	"github.com/telecter/cmd-launcher/pkg/auth"
 	"go.abhg.dev/komplete"
@@ -90,6 +93,26 @@ func groups() kong.Groups {
 	}
 }
 
+// tips prints a tip message based on an error, if any are available.
+func tips(err error) {
+	// General internet connection related issues
+	if errors.Is(err, &net.OpError{}) {
+		output.Tip(output.Translate("tip.internet"))
+	}
+	// A cache couldn't be updated from the remote source
+	if errors.Is(err, network.ErrNotCached) {
+		output.Tip(output.Translate("tip.cache"))
+	}
+	// Mojang-provided JVM isn't working
+	if errors.Is(err, meta.ErrJavaBadSystem) || errors.Is(err, meta.ErrJavaNoVersion) {
+		output.Tip(output.Translate("tip.nojvm"))
+	}
+	// Not logged in
+	if errors.Is(err, auth.ErrNoAccount) {
+		output.Tip(output.Translate("tip.noaccount"))
+	}
+}
+
 // Start creates the CLI parser and runs it. It returns an exit handler and code.
 func Run() (func(int), int) {
 	lang, err := locale.Detect()
@@ -124,7 +147,7 @@ func Run() (func(int), int) {
 
 	if err := ctx.Run(); err != nil {
 		output.Error("%s", err)
-		output.Tips(err)
+		tips(err)
 		var coder kong.ExitCoder
 		if errors.As(err, &coder) {
 			return ctx.Exit, coder.ExitCode()

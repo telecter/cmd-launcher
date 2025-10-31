@@ -94,10 +94,10 @@ type LaunchEnvironment struct {
 func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 	info, err := os.Stat(launchEnv.Java)
 	if err != nil {
-		return fmt.Errorf("Java executable does not exist")
+		return fmt.Errorf("Java executable does not exist") //lint:ignore ST1005 should be capitalized
 	}
 	if info.Mode()&0111 == 0 || info.IsDir() {
-		return fmt.Errorf("Java binary is not executable")
+		return fmt.Errorf("Java binary is not executable") //lint:ignore ST1005 should be capitalized
 	}
 
 	javaArgs := append(launchEnv.JavaArgs, "-cp", strings.Join(launchEnv.Classpath, string(os.PathListSeparator)), launchEnv.MainClass)
@@ -152,7 +152,7 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 	if launchEnv.Java == "" {
 		manifest, err := meta.FetchJavaManifest(version.JavaVersion.Component)
 		if err != nil {
-			return LaunchEnvironment{}, fmt.Errorf("fetch java manifest: %w", err)
+			return LaunchEnvironment{}, fmt.Errorf("fetch Java manifest: %w", err)
 		}
 		var entries []network.DownloadEntry
 		entries, symlinks = manifest.DownloadEntries(version.JavaVersion.Component)
@@ -172,12 +172,12 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 	case LoaderForge:
 		processors, err = meta.Forge.FetchPostProcessors(version.ID, version.LoaderID)
 		if err != nil {
-			return LaunchEnvironment{}, fmt.Errorf("fetch forge post processors: %w", err)
+			return LaunchEnvironment{}, fmt.Errorf("fetch Forge post processors: %w", err)
 		}
 	case LoaderNeoForge:
 		processors, err = meta.Neoforge.FetchPostProcessors(version.ID, version.LoaderID)
 		if err != nil {
-			return LaunchEnvironment{}, fmt.Errorf("fetch neoforge post processors: %w", err)
+			return LaunchEnvironment{}, fmt.Errorf("fetch NeoForge post processors: %w", err)
 		}
 	}
 
@@ -246,8 +246,12 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options L
 		"--assetIndex", version.AssetIndex.ID,
 		"--version", version.ID,
 		"--versionType", version.Type,
-		"--width", strconv.Itoa(options.WindowResolution.Width),
-		"--height", strconv.Itoa(options.WindowResolution.Height),
+	}
+
+	gameOptions, _ := os.ReadFile(filepath.Join(launchEnv.GameDir, "options.txt"))
+	if !strings.Contains(string(gameOptions), "fullscreen:true") {
+		game = append(game, "--width", strconv.Itoa(options.WindowResolution.Width))
+		game = append(game, "--height", strconv.Itoa(options.WindowResolution.Height))
 	}
 
 	switch {

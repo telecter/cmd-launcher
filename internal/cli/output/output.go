@@ -1,14 +1,9 @@
 package output
 
 import (
-	"errors"
 	"fmt"
-	"net"
 
 	"github.com/fatih/color"
-	"github.com/telecter/cmd-launcher/internal/meta"
-	"github.com/telecter/cmd-launcher/internal/network"
-	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
 // Info prints an general informational message.
@@ -55,24 +50,4 @@ func Error(format string, a ...any) {
 func Tip(format string, a ...any) {
 	color.New(color.Bold, color.FgYellow).Printf("| %s: ", Translate("launcher.tip"))
 	fmt.Printf(format+"\n", a...)
-}
-
-// Tips prints a tip message based on an error, if any are available.
-func Tips(err error) {
-	// General internet connection related issues
-	if errors.Is(err, &net.OpError{}) {
-		Tip(Translate("tip.internet"))
-	}
-	// A cache couldn't be updated from the remote source
-	if errors.Is(err, network.ErrNotCached) {
-		Tip(Translate("tip.cache"))
-	}
-	// Mojang-provided JVM isn't working
-	if errors.Is(err, meta.ErrJavaBadSystem) || errors.Is(err, meta.ErrJavaNoVersion) {
-		Tip(Translate("tip.nojvm"))
-	}
-	// Not logged in
-	if errors.Is(err, auth.ErrNoAccount) {
-		Tip(Translate("tip.noaccount"))
-	}
 }
