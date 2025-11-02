@@ -21,7 +21,7 @@ import (
 
 const (
 	name    = "cmd-launcher"
-	version = "1.4.0"
+	version = "1.5.0"
 )
 
 type aboutCmd struct{}
@@ -39,8 +39,8 @@ type CLI struct {
 	Instance    cmd.InstanceCmd  `cmd:"" help:"${instance}" aliases:"inst"`
 	Auth        cmd.AuthCmd      `cmd:"" help:"${auth}"`
 	Search      cmd.SearchCmd    `cmd:"" help:"${search}"`
-	About       aboutCmd         `cmd:"" help:"${about}"`
 	Completions komplete.Command `cmd:"" help:"${completions}"`
+	About       aboutCmd         `cmd:"" help:"${about}"`
 
 	Verbosity string `help:"${arg_verbosity}" enum:"info,extra,debug" default:"info"`
 	Dir       string `help:"${arg_dir}" type:"path" placeholder:"PATH"`
