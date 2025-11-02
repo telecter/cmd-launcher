@@ -1,9 +1,6 @@
 name: release
 
 on:
-  push:
-    tags:
-      - 'v*'
   release:
     types: [created]
 
@@ -13,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.24.9'
 
@@ -23,17 +20,12 @@ jobs:
         run: |
           mkdir -p dist
           GOOS=linux GOARCH=amd64 go build -o dist/cmd-launcher-linux-amd64 .
-          GOOS=linux GOARCH=arm64 go build -o dist/cmd-launcher-linux-arm64
+          GOOS=linux GOARCH=arm64 go build -o dist/cmd-launcher-linux-arm64 .
           GOOS=windows GOARCH=amd64 go build -o dist/cmd-launcher-windows-amd64.exe .
           GOOS=darwin GOARCH=arm64 go build -o dist/cmd-launcher-darwin-arm64 .
 
       - name: Upload binaries to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/cmd-launcher-linux-amd64
-            dist/cmd-launcher-linux-arm64
-            dist/cmd-launcher-windows-amd64.exe
-            dist/cmd-launcher-darwin-arm64
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run:
+          gh release upload --clobber ${{ github.event.release.tag_name }} dist/* 
