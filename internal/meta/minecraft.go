@@ -338,7 +338,7 @@ func FetchVersionManifest() (VersionManifest, error) {
 	}
 
 	var manifest VersionManifest
-	if err := cache.Read(&manifest); err != nil {
+	if err := cache.Get(&manifest); err != nil {
 		return VersionManifest{}, err
 	}
 
@@ -367,7 +367,7 @@ func FetchVersionMeta(id string) (VersionMeta, error) {
 				RemoteSha1: v.Sha1,
 			}
 			var versionMeta VersionMeta
-			if err := cache.Read(&versionMeta); err != nil {
+			if err := cache.Get(&versionMeta); err != nil {
 				return VersionMeta{}, err
 			}
 			return versionMeta, nil
@@ -412,7 +412,7 @@ func DownloadAssetIndex(versionMeta VersionMeta) (AssetIndex, error) {
 	}
 
 	var assetIndex AssetIndex
-	if err := cache.Read(&assetIndex); err != nil {
+	if err := cache.Get(&assetIndex); err != nil {
 		return AssetIndex{}, err
 	}
 	return assetIndex, nil
@@ -425,7 +425,7 @@ func FetchJavaManifestList() (JavaManifestList, error) {
 		URL:  JavaRuntimesURL,
 	}
 	var list JavaManifestList
-	if err := cache.Read(&list); err != nil {
+	if err := cache.Get(&list); err != nil {
 		return JavaManifestList{}, err
 	}
 	return list, nil
@@ -475,7 +475,7 @@ func FetchJavaManifest(name string) (JavaManifest, error) {
 	}
 
 	var manifest JavaManifest
-	if err := cache.Read(&manifest); err != nil {
+	if err := cache.Get(&manifest); err != nil {
 		return JavaManifest{}, err
 	}
 

@@ -21,16 +21,18 @@ type Cache[T any] struct {
 	Unmarshaler func(data []byte, v any) error // Custom unmarshal function. Defaults to JSON.
 }
 
-// Read reads the contents of the cache into v.
-func (cache Cache[T]) Read(v *T) error {
+// Get checks the cache and checks if it is valid. If it is, its contents are returned. If not, they are fetched and then returned.
+func (cache Cache[T]) Get(v *T) error {
 	download := true
 	if _, err := os.Stat(cache.Path); err == nil {
-		sum, err := cache.Sha1()
-		if err != nil {
-			return err
-		}
-		if cache.RemoteSha1 == "" || cache.RemoteSha1 == sum {
-			download = false
+		if cache.RemoteSha1 != "" {
+			sum, err := cache.Sha1()
+			if err != nil {
+				return err
+			}
+			if cache.RemoteSha1 == "" || cache.RemoteSha1 == sum {
+				download = false
+			}
 		}
 	}
 

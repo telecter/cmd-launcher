@@ -39,10 +39,14 @@ func (specifier LibrarySpecifier) String() string {
 
 // Path returns the relative path to the JAR file described by the specifier.
 func (specifier LibrarySpecifier) Path() string {
-	t := ".jar"
-	if strings.HasSuffix(specifier.Version, "@zip") {
-		specifier.Version = strings.ReplaceAll(specifier.Version, "@zip", "")
-		t = ".zip"
+	ext := ".jar"
+
+	for _, part := range []*string{&specifier.Version, &specifier.Classifier} {
+		if before, after, found := strings.Cut(*part, "@"); found {
+			*part = before
+			ext = "." + after
+			break
+		}
 	}
 
 	p := []string{specifier.Group, specifier.Artifact, specifier.Version}
@@ -52,7 +56,7 @@ func (specifier LibrarySpecifier) Path() string {
 	if specifier.Classifier != "" {
 		filename += "-" + specifier.Classifier
 	}
-	filename += t
+	filename += ext
 	return strings.Join([]string{p[0], p[1], p[2], filename}, "/")
 }
 func (specifier LibrarySpecifier) MarshalJSON() ([]byte, error) {

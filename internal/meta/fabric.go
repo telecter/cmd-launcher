@@ -41,7 +41,7 @@ func (api fabricAPI) FetchVersions() (FabricVersionList, error) {
 		AlwaysFetch: true,
 	}
 	var versions FabricVersionList
-	if err := cache.Read(&versions); err != nil {
+	if err := cache.Get(&versions); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +65,7 @@ func (api fabricAPI) FetchMeta(gameVersion, loaderVersion string) (VersionMeta, 
 	}
 
 	var fabricMeta VersionMeta
-	if err := cache.Read(&fabricMeta); err != nil {
+	if err := cache.Get(&fabricMeta); err != nil {
 		var statusErr *network.HTTPStatusError
 		if errors.As(err, &statusErr) && (statusErr.StatusCode == 400 || statusErr.StatusCode == 404) {
 			return VersionMeta{}, fmt.Errorf("invalid or unsuitable game/Fabric version")

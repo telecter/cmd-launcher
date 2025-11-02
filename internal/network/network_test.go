@@ -122,7 +122,7 @@ func TestCache_Read(t *testing.T) {
 	cache := genCache(t.TempDir())
 
 	var data meta.VersionMeta
-	if err := cache.Read(&data); err != nil {
+	if err := cache.Get(&data); err != nil {
 		t.Errorf("wanted no error; got: %s", err)
 	}
 }
@@ -131,7 +131,7 @@ func TestCache_Sha1(t *testing.T) {
 	cache := genCache(t.TempDir())
 
 	var data meta.VersionMeta
-	if err := cache.Read(&data); err != nil {
+	if err := cache.Get(&data); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 

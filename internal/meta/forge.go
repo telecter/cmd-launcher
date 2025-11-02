@@ -381,7 +381,7 @@ func (forge forge) FetchPostProcessors(gameVersion, version string) ([]ForgeProc
 				arg = strings.Trim(arg, "[]")
 				specifier, err := NewLibrarySpecifier(arg)
 				if err != nil {
-					return nil, fmt.Errorf("processor argument contains invalid library specifier")
+					return nil, fmt.Errorf("processor argument library specifier: %w", err)
 				}
 				arg = filepath.Join(env.LibrariesDir, specifier.Path())
 			} else if arg[0] == '\'' && arg[len(arg)-1] == '\'' {

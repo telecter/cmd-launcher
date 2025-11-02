@@ -41,9 +41,10 @@ type CLI struct {
 	Search      cmd.SearchCmd    `cmd:"" help:"${search}"`
 	About       aboutCmd         `cmd:"" help:"${about}"`
 	Completions komplete.Command `cmd:"" help:"${completions}"`
-	Verbosity   string           `help:"${arg_verbosity}" enum:"info,extra,debug" default:"info"`
-	Dir         string           `help:"${arg_dir}" type:"path" placeholder:"PATH"`
-	NoColor     bool             `help:"${arg_nocolor}"`
+
+	Verbosity string `help:"${arg_verbosity}" enum:"info,extra,debug" default:"info"`
+	Dir       string `help:"${arg_dir}" type:"path" placeholder:"PATH"`
+	NoColor   bool   `help:"${arg_nocolor}"`
 }
 
 func (c *CLI) AfterApply(ctx *kong.Context) error {
