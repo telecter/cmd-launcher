@@ -22,9 +22,11 @@ EN | [DE](README_de.md)
 
 ## Installation
 
-You can download prebuilt binaries from the Releases tab here on GitHub. Builds of the latest commit are available at [nightly.link](https://nightly.link/telecter/cmd-launcher/workflows/build/main)
+### Binaries
+You can download prebuilt binaries from the Releases tab here on GitHub.  
+Builds of the latest commit are available at [nightly.link](https://nightly.link/telecter/cmd-launcher/workflows/build/main).
 
-
+### Via go install
 Make sure you have [Go](https://go.dev) installed.
 
 **To install the latest version, run:**
