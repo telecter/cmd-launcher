@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-const MAX_CONCURRENT_DOWNLOADS = 6
+const MaxConcurrentDownloads = 6
 
 type DownloadEntry struct {
 	URL      string
@@ -67,7 +67,7 @@ func DownloadFile(entry DownloadEntry) error {
 func StartDownloadEntries(entries []DownloadEntry) chan error {
 	var wg sync.WaitGroup
 	results := make(chan error)
-	d := make(chan struct{}, MAX_CONCURRENT_DOWNLOADS)
+	d := make(chan struct{}, MaxConcurrentDownloads)
 	for _, entry := range entries {
 		wg.Add(1)
 		go func(entry DownloadEntry) {

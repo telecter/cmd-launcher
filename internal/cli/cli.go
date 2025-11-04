@@ -127,6 +127,7 @@ func Run() (func(int), int) {
 		kong.Description(output.Translate("launcher.description")),
 		kong.ConfigureHelp(kong.HelpOptions{
 			NoExpandSubcommands: true,
+			Compact:             true,
 		}),
 		kong.ValueFormatter(valueFormatter),
 		groups(),
