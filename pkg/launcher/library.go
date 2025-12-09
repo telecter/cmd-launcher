@@ -36,7 +36,7 @@ func filterLibraries(libraries []meta.Library) (installed []meta.Library, requir
 	return installed, required
 }
 
-// patchLibrary takes library and applies any applicable fixes to it.
+// patchLibrary takes library and replaces it with any applicable fixed libraries.
 func patchLibrary(library meta.Library) meta.Library {
 	specifier := library.Specifier
 	if specifier.Group == "org.lwjgl" &&
