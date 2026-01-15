@@ -92,12 +92,8 @@ type LaunchEnvironment struct {
 //
 // The Java executable is checked and the classpath and command arguments are finalized.
 func Launch(launchEnv LaunchEnvironment, runner Runner) error {
-	info, err := os.Stat(launchEnv.Java)
-	if err != nil {
+	if _, err := os.Stat(launchEnv.Java); err != nil {
 		return fmt.Errorf("Java executable does not exist") //lint:ignore ST1005 should be capitalized
-	}
-	if info.Mode()&0111 == 0 || info.IsDir() {
-		return fmt.Errorf("Java binary is not executable") //lint:ignore ST1005 should be capitalized
 	}
 
 	javaArgs := append(launchEnv.JavaArgs, "-cp", strings.Join(launchEnv.Classpath, string(os.PathListSeparator)), launchEnv.MainClass)
