@@ -116,7 +116,7 @@ func (c *StartCmd) Run(ctx *kong.Context, verbosity int) error {
 	}
 
 	launchEnv, err := launcher.Prepare(
-		inst,
+		&inst,
 		launcher.LaunchOptions{
 			Session: session,
 

@@ -103,7 +103,7 @@ func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 }
 
 // Prepare prepares the instance to be launched, returning a LaunchEnvironment, with the provided options and sends events to watcher.
-func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (LaunchEnvironment, error) {
+func Prepare(inst *Instance, options LaunchOptions, watcher EventWatcher) (LaunchEnvironment, error) {
 	var downloads []network.DownloadEntry
 
 	version, err := fetchVersion(inst.Loader, inst.GameVersion, inst.LoaderVersion)
@@ -154,7 +154,13 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 		entries, symlinks = manifest.DownloadEntries(version.JavaVersion.Component)
 		downloads = append(downloads, entries...)
 
-		launchEnv.Java = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", "java")
+		javaBin := "java"
+		if runtime.GOOS == "windows" {
+			javaBin = "java.exe"
+		}
+		launchEnv.Java = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", javaBin)
+		inst.Config.Java = launchEnv.Java
+		inst.WriteConfig()
 	}
 
 	if err := download(downloads, symlinks, watcher); err != nil {
