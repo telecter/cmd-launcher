@@ -161,6 +161,13 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 		return LaunchEnvironment{}, fmt.Errorf("download files: %w", err)
 	}
 
+	// Extract LWJGL 2 natives for legacy versions (pre-1.13).
+	// This is a no-op for modern versions that use LWJGL 3.
+	allLibs := append(installedLibs, requiredLibs...)
+	if err := extractNatives(inst.Dir(), allLibs); err != nil {
+		return LaunchEnvironment{}, fmt.Errorf("extract natives: %w", err)
+	}
+
 	// Fetch Forge post processors, if any
 
 	var processors []meta.ForgeProcessor
@@ -185,10 +192,10 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 		}
 	}
 
-	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options)
+	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options, allLibs)
 
 	// Finalize classpath
-	for _, library := range append(installedLibs, requiredLibs...) {
+	for _, library := range allLibs {
 		if library.SkipOnClasspath {
 			continue
 		}
@@ -231,7 +238,7 @@ func download(entries []network.DownloadEntry, symlinks map[string]string, watch
 
 // createArgs takes data from a launch environment, version metadata, and environment options to
 // create a set of game and Java arguments to pass when starting the game.
-func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options LaunchOptions) (java, game []string) {
+func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options LaunchOptions, libs []meta.Library) (java, game []string) {
 	// Game arguments
 	game = []string{
 		"--username", options.Session.Username,
@@ -296,6 +303,16 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options L
 			java = append(java, arg)
 		}
 	}
+
+	// Legacy LWJGL 2 (pre-1.13) requires natives extracted into a directory.
+	// Inject java.library.path only when such JARs are present in the resolved set.
+	for _, lib := range libs {
+		if isLegacyNativesJar(lib.Artifact.RuntimePath()) {
+			java = append(java, fmt.Sprintf("-Djava.library.path=%s", nativesDir(launchEnv.GameDir)))
+			break
+		}
+	}
+
 	return java, game
 }
 
