@@ -154,13 +154,11 @@ func Prepare(inst *Instance, options LaunchOptions, watcher EventWatcher) (Launc
 		entries, symlinks = manifest.DownloadEntries(version.JavaVersion.Component)
 		downloads = append(downloads, entries...)
 
-		javaBin := "java"
+		java := "java"
 		if runtime.GOOS == "windows" {
-			javaBin = "java.exe"
+			java = "java.exe"
 		}
-		launchEnv.Java = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", javaBin)
-		inst.Config.Java = launchEnv.Java
-		inst.WriteConfig()
+		launchEnv.Java = filepath.Join(env.JavaDir, version.JavaVersion.Component, "bin", java)
 	}
 
 	if err := download(downloads, symlinks, watcher); err != nil {
