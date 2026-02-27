@@ -311,7 +311,7 @@ func TestPrepare(t *testing.T) {
 				t.Fatalf("unexpected error creating instance for test: %s", err)
 			}
 
-			_, err = Prepare(inst, LaunchOptions{
+			_, err = Prepare(&inst, LaunchOptions{
 				Session: auth.Session{
 					Username: "testing",
 				},
