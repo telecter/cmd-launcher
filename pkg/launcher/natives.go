@@ -11,37 +11,16 @@ import (
 	"github.com/telecter/cmd-launcher/internal/meta"
 )
 
-// nativesDir returns the path to the natives extraction directory for an instance.
-func nativesDir(instDir string) string {
-	return filepath.Join(instDir, "natives")
-}
-
-// isLegacyNativesJar reports whether a library artifact path is a LWJGL2-style
-// natives JAR that must be extracted manually (pre-1.14 / LWJGL 2).
-func isLegacyNativesJar(artifactPath string) bool {
-	base := filepath.Base(artifactPath)
-	if !strings.Contains(base, "natives-") {
-		return false
-	}
-
-	return strings.Contains(artifactPath, "lwjgl-platform") ||
-		strings.Contains(artifactPath, "jinput-platform") ||
-		strings.Contains(artifactPath, "org/lwjgl/lwjgl/")
-}
-
 // extractNatives extracts all native DLLs/SOs from legacy LWJGL 2 natives JARs
-// into <instDir>/natives/.
-func extractNatives(instDir string, libraries []meta.Library) error {
-	dest := nativesDir(instDir)
+// into dest.
+func extractNatives(dest string, libraries []meta.Library) error {
+	for _, library := range libraries {
+		for _, native := range library.Natives {
+			path := native.Artifact.RuntimePath()
 
-	for _, lib := range libraries {
-		path := lib.Artifact.RuntimePath()
-		if !isLegacyNativesJar(path) {
-			continue
-		}
-
-		if err := extractJar(path, dest); err != nil {
-			return fmt.Errorf("extract natives from %s: %w", filepath.Base(path), err)
+			if err := extractJar(path, dest); err != nil {
+				return fmt.Errorf("extract natives from %s: %w", filepath.Base(path), err)
+			}
 		}
 	}
 
@@ -51,6 +30,23 @@ func extractNatives(instDir string, libraries []meta.Library) error {
 // extractJar extracts the contents of a ZIP/JAR at src into the directory dest,
 // skipping files that already exist and META-INF entries.
 func extractJar(src, dest string) error {
+	var extractFile = func(f *zip.File, dest string) error {
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+
+		out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		_, err = io.Copy(out, rc)
+		return err
+	}
+
 	r, err := zip.OpenReader(src)
 	if err != nil {
 		return err
@@ -83,22 +79,4 @@ func extractJar(src, dest string) error {
 	}
 
 	return nil
-}
-
-// extractFile writes a single zip.File entry to outPath.
-func extractFile(f *zip.File, outPath string) error {
-	rc, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer rc.Close()
-
-	out, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, rc)
-	return err
 }

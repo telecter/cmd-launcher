@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/telecter/cmd-launcher/internal/cli/output"
+	"github.com/telecter/cmd-launcher/internal/meta"
 	"github.com/telecter/cmd-launcher/pkg/launcher"
 )
 
@@ -20,18 +21,18 @@ type CreateCmd struct {
 }
 
 func (c *CreateCmd) Run(ctx *kong.Context) error {
-	var loader launcher.Loader
+	var loader meta.Loader
 	switch c.Loader {
 	case "fabric":
-		loader = launcher.LoaderFabric
+		loader = meta.LoaderFabric
 	case "quilt":
-		loader = launcher.LoaderQuilt
+		loader = meta.LoaderQuilt
 	case "vanilla":
-		loader = launcher.LoaderVanilla
+		loader = meta.LoaderVanilla
 	case "neoforge":
-		loader = launcher.LoaderNeoForge
+		loader = meta.LoaderNeoForge
 	case "forge":
-		loader = launcher.LoaderForge
+		loader = meta.LoaderForge
 	}
 	inst, err := launcher.CreateInstance(launcher.InstanceOptions{
 		GameVersion:   c.Version,

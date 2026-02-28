@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/telecter/cmd-launcher/internal/meta"
 	env "github.com/telecter/cmd-launcher/pkg"
 )
 
@@ -15,7 +16,7 @@ import (
 type Instance struct {
 	Name          string         `toml:"-" json:"-"`
 	GameVersion   string         `toml:"game_version" json:"game_version"`
-	Loader        Loader         `toml:"mod_loader" json:"mod_loader"`
+	Loader        meta.Loader    `toml:"mod_loader" json:"mod_loader"`
 	LoaderVersion string         `toml:"mod_loader_version,omitempty" json:"mod_loader_version,omitempty"`
 	Config        InstanceConfig `toml:"config" json:"config"`
 }
@@ -31,6 +32,11 @@ func (inst Instance) WriteConfig() error {
 // Dir returns the instance's directory
 func (inst Instance) Dir() string {
 	return filepath.Join(env.InstancesDir, inst.Name)
+}
+
+// NativesDir returns the path to the instance's natives extraction directory.
+func (inst Instance) NativesDir() string {
+	return filepath.Join(inst.Dir(), "natives")
 }
 
 // Rename renames instance to the specified new name
@@ -59,7 +65,7 @@ type InstanceConfig struct {
 type InstanceOptions struct {
 	Name          string
 	GameVersion   string
-	Loader        Loader
+	Loader        meta.Loader
 	LoaderVersion string
 
 	Config InstanceConfig
@@ -75,7 +81,7 @@ func CreateInstance(options InstanceOptions) (Instance, error) {
 		return Instance{}, fmt.Errorf("instance already exists")
 	}
 
-	version, err := fetchVersion(options.Loader, options.GameVersion, options.LoaderVersion)
+	version, err := meta.FetchAllVersionMeta(options.Loader, options.GameVersion, options.LoaderVersion)
 	if err != nil {
 		return Instance{}, err
 	}

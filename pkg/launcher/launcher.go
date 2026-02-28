@@ -16,17 +16,6 @@ import (
 	"github.com/telecter/cmd-launcher/pkg/auth"
 )
 
-// Loader represents a game mod loader.
-type Loader string
-
-const (
-	LoaderVanilla  Loader = "vanilla"
-	LoaderFabric   Loader = "fabric"
-	LoaderQuilt    Loader = "quilt"
-	LoaderNeoForge Loader = "neoforge"
-	LoaderForge    Loader = "forge"
-)
-
 // LaunchOptions represents configuration options when preparing an instance to be launched.
 type LaunchOptions struct {
 	Session auth.Session
@@ -106,7 +95,7 @@ func Launch(launchEnv LaunchEnvironment, runner Runner) error {
 func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (LaunchEnvironment, error) {
 	var downloads []network.DownloadEntry
 
-	version, err := fetchVersion(inst.Loader, inst.GameVersion, inst.LoaderVersion)
+	version, err := meta.FetchAllVersionMeta(inst.Loader, inst.GameVersion, inst.LoaderVersion)
 	if err != nil {
 		return LaunchEnvironment{}, fmt.Errorf("retrieve metadata: %w", err)
 	}
@@ -125,8 +114,15 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 
 	installedLibs, requiredLibs := filterLibraries(version.Libraries)
 	if !options.skipLibraries {
-		for _, library := range requiredLibs {
-			downloads = append(downloads, library.Artifact.DownloadEntry())
+		for _, lib := range requiredLibs {
+			if lib.ShouldInstall {
+				downloads = append(downloads, lib.Artifact.DownloadEntry())
+			}
+			for _, native := range lib.Natives {
+				if !native.Artifact.IsDownloaded() {
+					downloads = append(downloads, native.Artifact.DownloadEntry())
+				}
+			}
 		}
 	}
 	watcher(LibrariesResolvedEvent{
@@ -164,7 +160,7 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 	// Extract LWJGL 2 natives for legacy versions (pre-1.13).
 	// This is a no-op for modern versions that use LWJGL 3.
 	allLibs := append(installedLibs, requiredLibs...)
-	if err := extractNatives(inst.Dir(), allLibs); err != nil {
+	if err := extractNatives(inst.NativesDir(), allLibs); err != nil {
 		return LaunchEnvironment{}, fmt.Errorf("extract natives: %w", err)
 	}
 
@@ -172,12 +168,12 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 
 	var processors []meta.ForgeProcessor
 	switch inst.Loader {
-	case LoaderForge:
+	case meta.LoaderForge:
 		processors, err = meta.Forge.FetchPostProcessors(version.ID, version.LoaderID)
 		if err != nil {
 			return LaunchEnvironment{}, fmt.Errorf("fetch Forge post processors: %w", err)
 		}
-	case LoaderNeoForge:
+	case meta.LoaderNeoForge:
 		processors, err = meta.Neoforge.FetchPostProcessors(version.ID, version.LoaderID)
 		if err != nil {
 			return LaunchEnvironment{}, fmt.Errorf("fetch NeoForge post processors: %w", err)
@@ -192,7 +188,7 @@ func Prepare(inst Instance, options LaunchOptions, watcher EventWatcher) (Launch
 		}
 	}
 
-	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options, allLibs)
+	launchEnv.JavaArgs, launchEnv.GameArgs = createArgs(launchEnv, version, options, inst.NativesDir())
 
 	// Finalize classpath
 	for _, library := range allLibs {
@@ -238,7 +234,7 @@ func download(entries []network.DownloadEntry, symlinks map[string]string, watch
 
 // createArgs takes data from a launch environment, version metadata, and environment options to
 // create a set of game and Java arguments to pass when starting the game.
-func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options LaunchOptions, libs []meta.Library) (java, game []string) {
+func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options LaunchOptions, nativesDir string) (java, game []string) {
 	// Game arguments
 	game = []string{
 		"--username", options.Session.Username,
@@ -306,11 +302,8 @@ func createArgs(launchEnv LaunchEnvironment, version meta.VersionMeta, options L
 
 	// Legacy LWJGL 2 (pre-1.13) requires natives extracted into a directory.
 	// Inject java.library.path only when such JARs are present in the resolved set.
-	for _, lib := range libs {
-		if isLegacyNativesJar(lib.Artifact.RuntimePath()) {
-			java = append(java, fmt.Sprintf("-Djava.library.path=%s", nativesDir(launchEnv.GameDir)))
-			break
-		}
+	if nativesDir != "" {
+		java = append(java, fmt.Sprintf("-Djava.library.path=%s", nativesDir))
 	}
 
 	return java, game
@@ -327,51 +320,4 @@ func postProcess(launchEnv LaunchEnvironment, processors []meta.ForgeProcessor) 
 		}
 	}
 	return nil
-}
-
-// fetchVersion returns a VersionMeta containing both information for the base game, and specified mod loader.
-func fetchVersion(loader Loader, gameVersion string, loaderVersion string) (meta.VersionMeta, error) {
-	var loaderMeta meta.VersionMeta
-	var err error
-
-	version, err := meta.FetchVersionMeta(gameVersion)
-	if err != nil {
-		return meta.VersionMeta{}, fmt.Errorf("retrieve version metadata: %w", err)
-	}
-
-	switch loader {
-	case LoaderFabric, LoaderQuilt:
-		api := meta.Fabric
-		if loader == LoaderQuilt {
-			api = meta.Quilt
-		}
-		loaderMeta, err = api.FetchMeta(version.ID, loaderVersion)
-		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve Fabric/Quilt metadata: %w", err)
-		}
-	case LoaderNeoForge:
-		if loaderVersion == "latest" {
-			loaderVersion, err = meta.FetchNeoforgeVersion(version.ID)
-			if err != nil {
-				return meta.VersionMeta{}, fmt.Errorf("retrieve NeoForge version: %w", err)
-			}
-		}
-		loaderMeta, _, err = meta.Neoforge.FetchMeta(loaderVersion)
-		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve NeoForge metadata: %w", err)
-		}
-	case LoaderForge:
-		if loaderVersion == "latest" {
-			loaderVersion, err = meta.FetchForgeVersion(version.ID)
-			if err != nil {
-				return meta.VersionMeta{}, fmt.Errorf("retrieve Forge version: %w", err)
-			}
-		}
-		loaderMeta, _, err = meta.Forge.FetchMeta(loaderVersion)
-		if err != nil {
-			return meta.VersionMeta{}, fmt.Errorf("retrieve Forge metadata: %w", err)
-		}
-	}
-
-	return meta.MergeVersionMeta(version, loaderMeta), nil
 }
