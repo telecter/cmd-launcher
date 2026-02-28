@@ -13,24 +13,19 @@ import (
 // It also runs patchLibrary on each library.
 func filterLibraries(libraries []meta.Library) (installed []meta.Library, required []meta.Library) {
 	for _, library := range libraries {
-		all := []meta.Library{library}
-		all = append(all, library.Natives...)
-
 		if !library.ShouldInstall {
 			continue
 		}
-
-		for _, library := range all {
-			if library.Artifact.URL == "" {
-				installed = append(installed, library)
-				continue
-			}
-			library = patchLibrary(library)
-			if library.Artifact.IsDownloaded() {
-				installed = append(installed, library)
-			} else {
-				required = append(required, library)
-			}
+		if library.Artifact.URL == "" {
+			library.ShouldInstall = false
+			required = append(required, library)
+			continue
+		}
+		library = patchLibrary(library)
+		if library.Artifact.IsDownloaded() {
+			installed = append(installed, library)
+		} else {
+			required = append(required, library)
 		}
 	}
 	return installed, required
