@@ -66,8 +66,6 @@ If you want to delete an instance, use the `inst delete` command followed by the
 
 ### Starting the Game
 
-> [!IMPORTANT]
-> This launcher has not been tested for versions < 1.14. It may not work, but I am working on fixing these issues.
 
 To start Minecraft, simply run the `start` command followed by the name of the instance you want to start.
 
