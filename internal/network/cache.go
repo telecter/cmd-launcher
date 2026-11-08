@@ -30,9 +30,11 @@ func (cache Cache[T]) Get(v *T) error {
 			if err != nil {
 				return err
 			}
-			if cache.RemoteSha1 == "" || cache.RemoteSha1 == sum {
+			if cache.RemoteSha1 == sum {
 				download = false
 			}
+		} else {
+			download = false
 		}
 	}
 

@@ -20,13 +20,22 @@ EN | [DE](README_de.md)
 
 [API Documentation](docs/API.md)
 
+## Planned Features
+- [ ] Modrinth integration
+- [ ] Check for local Java installations before using Mojang
+- [ ] Support for switching between multiple accounts
+
+Hopefully I'll get around to these at some point, but feel free to make contributions!
+
 ## Installation
 
 ### Binaries
+
 You can download prebuilt binaries from the Releases tab here on GitHub.  
 Builds of the latest commit are available at [nightly.link](https://nightly.link/telecter/cmd-launcher/workflows/build/main).
 
 ### Via go install
+
 Make sure you have [Go](https://go.dev) installed.
 
 **To install the latest version, run:**
@@ -57,6 +66,8 @@ Use the `--version, -v` flag to set the game version. If no value is supplied, t
 
 When starting the game, the launcher will attempt to download a Java runtime from Mojang. If it can't find a suitable one, you will need to set one manually in the instance configuration.
 
+By default, the launcher will create files in `$HOME/.minecraft.`
+
 ```sh
 cmd-launcher inst create -v 1.21.8 -l fabric CoolInstance
 ```
@@ -65,7 +76,6 @@ cmd-launcher inst create -v 1.21.8 -l fabric CoolInstance
 If you want to delete an instance, use the `inst delete` command followed by the instance name.
 
 ### Starting the Game
-
 
 To start Minecraft, simply run the `start` command followed by the name of the instance you want to start.
 
@@ -143,3 +153,4 @@ The `search` command can search for Minecraft or mod loader versions. It default
 ```bash
 cmd-launcher search [<query>] [--kind {versions, fabric, quilt, forge}]
 ```
+
