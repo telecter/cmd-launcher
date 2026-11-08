@@ -21,7 +21,7 @@ import (
 
 const (
 	name    = "cmd-launcher"
-	version = "1.6.1"
+	version = "1.6.2"
 )
 
 type aboutCmd struct{}
